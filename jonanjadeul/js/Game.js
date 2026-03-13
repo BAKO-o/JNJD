@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.4.0'; // Phase 3+: XP 젬 수집, 모듈 드랍, 포탄 추가
+const VERSION = 'v0.5.0'; // 선체 다각형 히트박스, 10종 적 타입
 
 // ── 맵 설정 (화면 크기와 무관한 고정 월드 크기)
 const WORLD_W = 3200;

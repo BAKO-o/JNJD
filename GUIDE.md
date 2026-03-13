@@ -1,5 +1,5 @@
 # GUIDE.md — JONANJADEUL (조난자들) 개발자 가이드
-> 버전: v0.2.0 (Phase 1 + Phase 2)
+> 버전: v0.5.0
 > 최종 갱신: 2026-03-13
 
 ---
@@ -51,12 +51,13 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 | `Player.js` | `this.maxSpeed` | 최대 속도 상한 (px/s) | 260 |
 | `Player.js` | `this.maxHp` | 최대 HP | 100 |
 | `EnemyManager.js` | `MAX_ENEMIES` | 적 풀 크기 | 300 |
-| `EnemyManager.js` | `ENEMY_SPEED_BASE` | 적 기본 속도 (Wave1: 52~70, Wave10: ~113 px/s) | 58 px/s |
+| `EnemyManager.js` | `ENEMY_SPEED_BASE` | 적 기본 속도 (웨이브 배율 적용 전) | 58 px/s |
 | `EnemyManager.js` | `MODULE_DROP_CHANCE` | 적 처치 시 모듈 드랍 확률 | 0.15 (15%) |
 | `EnemyManager.js` | `WAVE_INTERVAL` | 웨이브 간격 | 15s |
-| `EnemyManager.js` | `SPAWN_PER_WAVE` | 웨이브당 스폰 수 | 12 |
+| `EnemyManager.js` | `SPAWN_PER_WAVE` | 웨이브당 기본 스폰 수 | 12 |
 | `EnemyManager.js` | XP Gem `collectRadius` | 젬 흡수 시작 거리 | 200 px |
 | `EnemyManager.js` | XP Gem `speed` | 젬 흡수 이동속도 | 320 px/s |
+| `EnemyManager.js` | `ENEMY_TYPES` | 10종 적 타입 | RAIDER·JUGGERNAUT·SWARM·LANCER·ANCHOR·ZIGZAGGER·DASHER·SHADE·BOMBER·SPLITTER |
 | `WeaponSystem.js` | `MAX_PROJECTILES` | 투사체 풀 크기 (자동+포탄 공유) | 500 |
 | `WeaponSystem.js` | `PROJ_SPEED` | 자동무기 투사체 속도 | 420 px/s |
 | `WeaponSystem.js` | `DEFAULT_WEAPON.cooldown` | 자동무기 발사 쿨다운 | 0.72s |
@@ -225,6 +226,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-13 | v0.5.0 | 선체 다각형 히트박스(삼각형 분할+모듈 셀 직사각형), 10종 적 타입(RAIDER·JUGGERNAUT·SWARM·LANCER·ANCHOR·ZIGZAGGER·DASHER·SHADE·BOMBER·SPLITTER), 타입별 AI(지그재그·돌진·분열), Collision.js에 polyCircle/polyCircleWrapped 추가 |
 | 2026-03-13 | v0.4.0 | 수정 5건: XP 젬 흡수거리·속도 증가(120→200, 200→320), 적 처치 15% 모듈 드랍, Q키 조립화면 수동 진입, 레벨업→항상 업그레이드 카드, 마우스 클릭 포탄(범위공격) 추가 |
 | 2026-03-13 | v0.3.0 | Phase 3: TetrisGrid.js 신규 — 7종 테트리스 모듈 조립, 캔버스 기반 BUILDING UI, hitboxRadius 동적 재계산, 짝수 레벨 조립·홀수 레벨 업그레이드 라우팅 |
 | 2026-03-13 | v0.2.1 | 버그 수정: 별 배경 시차 스크롤 추가 (layer 0/1 시차 계수 0.12/0.38), 플레이어 drag 0.88→0.96 (실효 최대속도 72→217 px/s), 적 기본속도 80→58 px/s |

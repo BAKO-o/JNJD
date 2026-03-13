@@ -462,6 +462,9 @@ const TetrisGrid = (() => {
     ctx.closePath();
   }
 
+  /** 그리드 Map 읽기 전용 반환 (Player.getHitPolygons() 에서 모듈 셀 좌표 참조용) */
+  function getGrid() { return grid; }
+
   // ── 공개 API
   return {
     init,
@@ -470,6 +473,7 @@ const TetrisGrid = (() => {
     nextModule,
     hasQueued,
     getQueueSize,
+    getGrid,
     canPlace,
     place,
     recalcHitbox,

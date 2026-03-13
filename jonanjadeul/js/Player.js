@@ -3,6 +3,7 @@
  *
  * Phase 1: WASD 이동, 마우스 방향 회전, Wraparound 맵 처리
  * Phase 3 확장: 모듈 부착 시 hitboxRadius 재계산 (TetrisGrid.js 에서 호출)
+ * v0.5.0: getHitPolygons() — 선체+모듈 볼록 다각형 배열 반환 (정확 히트박스)
  */
 
 class Player {
@@ -157,6 +158,45 @@ class Player {
 
     // 함선 본체
     Renderer.drawPlayer(screenCx, screenCy, this.angle, this.radius);
+  }
+
+  /**
+   * 충돌 판정용 볼록 다각형 배열 반환 (월드 좌표)
+   * 선체 오목형 → 두 삼각형으로 분할 + 각 모듈 셀 → 직사각형 (볼록)
+   * @returns {Array<Array<{x,y}>>}
+   */
+  getHitPolygons() {
+    const cos  = Math.cos(this.angle);
+    const sin  = Math.sin(this.angle);
+    // 로컬 좌표 → 월드 좌표 변환 헬퍼
+    const t = (lx, ly) => ({
+      x: this.x + lx * cos - ly * sin,
+      y: this.y + lx * sin + ly * cos,
+    });
+
+    const r = this.radius;
+    // 선체 정점 (로컬: right=앞, down=오른쪽)
+    // 오목형 → 삼각형 두 개로 분할
+    const tri1 = [ t(r, 0), t(-r * 0.6, -r * 0.7), t(-r * 0.35, 0) ];
+    const tri2 = [ t(r, 0), t(-r * 0.35, 0), t(-r * 0.6,  r * 0.7) ];
+    const polys = [tri1, tri2];
+
+    // 모듈 셀 (TetrisGrid 전역 참조)
+    if (window.TetrisGrid) {
+      const CELL = 22, HALF = 11;
+      for (const [key, type] of TetrisGrid.getGrid()) {
+        if (type === 'CORE') continue;
+        const [gx, gy] = key.split(',').map(Number);
+        const lx = gx * CELL, ly = gy * CELL;
+        polys.push([
+          t(lx - HALF, ly - HALF),
+          t(lx + HALF, ly - HALF),
+          t(lx + HALF, ly + HALF),
+          t(lx - HALF, ly + HALF),
+        ]);
+      }
+    }
+    return polys;
   }
 
   /** 월드 좌표 → 화면 좌표 변환 헬퍼 (다른 엔티티가 플레이어 기준 위치 계산 시 사용) */
