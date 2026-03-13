@@ -152,6 +152,10 @@ class Player {
     const blinking = this.invincibleTime > 0 && Math.floor(this.invincibleTime / 0.1) % 2 === 0;
     if (blinking) return;
 
+    // 부착된 모듈을 함선 아래 레이어에 먼저 그린다 (회전 적용)
+    TetrisGrid.drawShipModules(Renderer.getCtx(), screenCx, screenCy, this.angle);
+
+    // 함선 본체
     Renderer.drawPlayer(screenCx, screenCy, this.angle, this.radius);
   }
 

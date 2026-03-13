@@ -64,14 +64,25 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 
 ### `Game.js` (IIFE, `window.Game`)
 - 메인 게임 루프 (`requestAnimationFrame`)
-- 상태머신: `START → PLAYING ↔ PAUSED → LEVELUP → GAMEOVER`
-- HUD 업데이트, 파티클, 업그레이드 카드 UI
+- 상태머신: `START → PLAYING ↔ PAUSED → LEVELUP / BUILDING → GAMEOVER`
+- HUD 업데이트, 파티클, 업그레이드 카드 UI, BUILDING 조립 화면
 - **진입점**: `window.addEventListener('DOMContentLoaded', init)`
+
+### `TetrisGrid.js` (IIFE, `window.TetrisGrid`)
+- `init()`: 그리드 초기화, 코어(0,0) 배치
+- `offerRandom()`: 랜덤 모듈 pending으로 설정, 유효 슬롯 계산
+- `handleClick(sx,sy,cx,cy,player)`: 클릭→그리드 좌표 변환→배치 시도
+- `recalcHitbox(player)`: 부착 모듈 기반 `player.hitboxRadius` 재계산
+- `drawOnCanvas(ctx,cx,cy,mouseX,mouseY)`: BUILDING 상태 조립 UI 렌더
+- `drawShipModules(ctx,cx,cy,angle)`: 게임플레이 중 모듈 렌더 (회전 적용)
+- **모듈 7종**: HULL_1/2, GUN_1/2, THRUSTER, WING_L/R
 
 ### `InputHandler.js` (IIFE, `window.InputHandler`)
 - `state.up/down/left/right`: WASD 상태
 - `state.mouseX/Y`: 화면 마우스 좌표
-- `consumePause()`: ESC/P 플래그 소비 (한 프레임 한 번)
+- `consumePause()`: ESC/P 플래그 소비
+- `consumeClick()`: mousedown 클릭 플래그 소비 (조립 화면 전용)
+- `consumeSkip()`: Space 건너뛰기 플래그 소비 (조립 화면 전용)
 
 ### `Renderer.js` (IIFE, `window.Renderer`)
 - `init(canvas)`: 캔버스 초기화, resize 이벤트 등록
@@ -197,6 +208,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-13 | v0.3.0 | Phase 3: TetrisGrid.js 신규 — 7종 테트리스 모듈 조립, 캔버스 기반 BUILDING UI, hitboxRadius 동적 재계산, 짝수 레벨 조립·홀수 레벨 업그레이드 라우팅 |
 | 2026-03-13 | v0.2.1 | 버그 수정: 별 배경 시차 스크롤 추가 (layer 0/1 시차 계수 0.12/0.38), 플레이어 drag 0.88→0.96 (실효 최대속도 72→217 px/s), 적 기본속도 80→58 px/s |
 | 2026-03-13 | v0.2.0 | Phase 1+2 구현: 엔진 코어, WASD 이동, Wraparound, 자동 무기, 오브젝트 풀, 적 AI, XP 시스템, 레벨업 팝업 |
 | 2026-03-13 | -      | 기존 개미 식민지 시뮬레이터 → `archive/antcolony/` 이동 |

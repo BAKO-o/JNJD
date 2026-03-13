@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.2.1'; // 별 시차 스크롤 + 속도 밸런스 패치
+const VERSION = 'v0.3.0'; // Phase 3: 테트리스 모듈 조립 시스템
 
 // ── 맵 설정 (화면 크기와 무관한 고정 월드 크기)
 const WORLD_W = 3200;
@@ -21,6 +21,7 @@ const STATE = {
   PLAYING:  'PLAYING',
   PAUSED:   'PAUSED',
   LEVELUP:  'LEVELUP',
+  BUILDING: 'BUILDING', // Phase 3: 테트리스 모듈 조립
   GAMEOVER: 'GAMEOVER',
 };
 
@@ -207,6 +208,7 @@ const Game = (() => {
     player = new Player(WORLD_W, WORLD_H);
     EnemyManager.init(WORLD_W, WORLD_H);
     WeaponSystem.init(WORLD_W, WORLD_H);
+    TetrisGrid.init();
     particles.length = 0;
     elapsedTime = 0;
 
@@ -224,6 +226,7 @@ const Game = (() => {
     prevState = state;
     state     = newState;
 
+    // DOM 오버레이 제어 (BUILDING은 캔버스 기반이므로 DOM 불필요)
     elOverlayPause.classList.toggle('hidden',    state !== STATE.PAUSED);
     elOverlayLevelup.classList.toggle('hidden',  state !== STATE.LEVELUP);
     elOverlayGameover.classList.toggle('hidden', state !== STATE.GAMEOVER);
@@ -280,6 +283,8 @@ const Game = (() => {
 
     if (state === STATE.PLAYING) {
       update(dt);
+    } else if (state === STATE.BUILDING) {
+      updateBuilding();
     }
 
     render();
@@ -311,11 +316,40 @@ const Game = (() => {
     // 게임오버 체크
     if (player.isDead) { gameOver(); return; }
 
-    // 레벨업
-    if (levelUp) { showLevelUp(); }
+    // 레벨업: 짝수 레벨 → 모듈 조립, 홀수 레벨 → 업그레이드 카드
+    if (levelUp) {
+      if (player.level % 2 === 0) {
+        TetrisGrid.offerRandom();
+        setState(STATE.BUILDING);
+      } else {
+        showLevelUp();
+      }
+    }
 
     // HUD 갱신
     updateHUD();
+  }
+
+  /**
+   * BUILDING 상태 업데이트 — 조립 화면 클릭 및 건너뛰기 처리
+   * 적·투사체 업데이트는 일시정지됨
+   */
+  function updateBuilding() {
+    // 스킵: Space
+    if (InputHandler.consumeSkip()) {
+      setState(STATE.PLAYING);
+      return;
+    }
+    // 클릭: 유효 슬롯에 배치 시도
+    if (InputHandler.consumeClick()) {
+      const { cx, cy } = screenCenter();
+      const placed = TetrisGrid.handleClick(
+        InputHandler.state.mouseX,
+        InputHandler.state.mouseY,
+        cx, cy, player
+      );
+      if (placed) setState(STATE.PLAYING);
+    }
   }
 
   function updateHUD() {
@@ -360,8 +394,14 @@ const Game = (() => {
     // 플레이어 (화면 중앙 고정)
     player.draw(cx, cy);
 
-    // ── 사거리 표시 (디버그용, 필요 시 주석 해제)
-    // drawWeaponRange(cx, cy, 350);
+    // BUILDING: 조립 UI를 게임 화면 위에 오버레이로 그린다
+    if (state === STATE.BUILDING) {
+      TetrisGrid.drawOnCanvas(
+        Renderer.getCtx(), cx, cy,
+        InputHandler.state.mouseX,
+        InputHandler.state.mouseY
+      );
+    }
   }
 
   // ────────────────────────────── 엔트리 포인트 ──────────────────────────────

@@ -7,14 +7,16 @@
 const InputHandler = (() => {
   // 현재 입력 상태 스냅샷
   const state = {
-    up: false,     // W
-    down: false,   // S
-    left: false,   // A
-    right: false,  // D
-    mouseX: 0,     // 화면 기준 마우스 X
-    mouseY: 0,     // 화면 기준 마우스 Y
-    mouseAngle: 0, // 플레이어→마우스 방향각 (라디안), Game에서 매 프레임 갱신
-    pause: false,  // ESC 또는 P (한 프레임만 true — 폴링 후 리셋)
+    up: false,      // W
+    down: false,    // S
+    left: false,    // A
+    right: false,   // D
+    mouseX: 0,      // 화면 기준 마우스 X
+    mouseY: 0,      // 화면 기준 마우스 Y
+    mouseAngle: 0,  // 플레이어→마우스 방향각 (라디안), Game에서 매 프레임 갱신
+    pause: false,   // ESC 또는 P (한 프레임만 true — 폴링 후 리셋)
+    clicked: false, // 마우스 클릭 (mousedown → true, consumeClick()으로 소비)
+    skip: false,    // Space 건너뛰기 (조립 UI 전용, consumeSkip()으로 소비)
   };
 
   // 키 코드 → state 필드 매핑
@@ -33,6 +35,11 @@ const InputHandler = (() => {
     if (e.repeat) return; // 키 반복 이벤트 무시
     if (KEY_MAP[e.code]) state[KEY_MAP[e.code]] = true;
     if (e.code === 'Escape' || e.code === 'KeyP') state.pause = true;
+    if (e.code === 'Space') { e.preventDefault(); state.skip = true; }
+  }
+
+  function onMouseDown() {
+    state.clicked = true;
   }
 
   function onKeyUp(e) {
@@ -49,6 +56,7 @@ const InputHandler = (() => {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mousedown', onMouseDown);
   }
 
   /** 일시정지 플래그를 소비하고 반환 (한 프레임에 한 번만 true) */
@@ -58,7 +66,21 @@ const InputHandler = (() => {
     return v;
   }
 
-  return { init, state, consumePause };
+  /** 클릭 플래그를 소비하고 반환 (조립 화면 클릭 감지용) */
+  function consumeClick() {
+    const v = state.clicked;
+    state.clicked = false;
+    return v;
+  }
+
+  /** Space 건너뛰기 플래그를 소비하고 반환 */
+  function consumeSkip() {
+    const v = state.skip;
+    state.skip = false;
+    return v;
+  }
+
+  return { init, state, consumePause, consumeClick, consumeSkip };
 })();
 
 // ES Module 방식으로 전역 접근 허용
