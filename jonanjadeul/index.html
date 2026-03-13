@@ -28,6 +28,7 @@
       <div class="hud-stat">⏱ <span id="timer">00:00</span></div>
       <div class="hud-stat">💀 <span id="kill-count">0</span></div>
       <div class="hud-stat" id="wave-info">Wave <span id="wave-num">1</span></div>
+      <div class="hud-stat" id="wave-kill-info">🎯 <span id="wave-kill">0/8</span></div>
       <div class="hud-stat hidden" id="module-badge">📦 <span id="module-count">0</span> <span class="hud-key-hint">[Q]</span></div>
     </div>
   </div>
@@ -46,6 +47,14 @@
       <h2>🚀 레벨 업!</h2>
       <p class="levelup-sub">업그레이드를 선택하세요</p>
       <div id="upgrade-choices" class="upgrade-grid"></div>
+    </div>
+  </div>
+
+  <!-- 웨이브 휴식 오버레이 -->
+  <div id="overlay-rest" class="overlay hidden" style="pointer-events:none;background:rgba(0,2,20,0.55)">
+    <div class="overlay-box" style="background:transparent;border:none;box-shadow:none;text-align:center">
+      <div style="font-size:1.4rem;color:#93c5fd;letter-spacing:.1em">다음 웨이브 준비</div>
+      <div id="rest-timer" style="font-size:4.5rem;font-weight:bold;color:#ffffff;text-shadow:0 0 20px #60a5fa">6</div>
     </div>
   </div>
 

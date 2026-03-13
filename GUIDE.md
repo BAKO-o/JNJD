@@ -53,8 +53,12 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 | `EnemyManager.js` | `MAX_ENEMIES` | 적 풀 크기 | 300 |
 | `EnemyManager.js` | `ENEMY_SPEED_BASE` | 적 기본 속도 (웨이브 배율 적용 전) | 58 px/s |
 | `EnemyManager.js` | `MODULE_DROP_CHANCE` | 적 처치 시 모듈 드랍 확률 | 0.15 (15%) |
-| `EnemyManager.js` | `WAVE_INTERVAL` | 웨이브 간격 | 15s |
-| `EnemyManager.js` | `SPAWN_PER_WAVE` | 웨이브당 기본 스폰 수 | 12 |
+| `EnemyManager.js` | `KILL_BASE` | Wave 1 킬 목표 | 8 |
+| `EnemyManager.js` | `KILL_PER_WAVE` | 웨이브당 킬 목표 증가 | 4 |
+| `EnemyManager.js` | `REST_DURATION` | 웨이브 사이 휴식 시간 | 6s |
+| `EnemyManager.js` | `SPAWN_PER_WAVE` | 웨이브당 기본 스폰 수 | 6 |
+| `EnemyManager.js` | `MODULE_DROP_COLLECT_RADIUS` | 모듈 드랍 수집 반지름 | 40 px |
+| `EnemyManager.js` | `MODULE_DROP_LIFETIME` | 모듈 드랍 유효 시간 | 30s |
 | `EnemyManager.js` | XP Gem `collectRadius` | 젬 흡수 시작 거리 | 200 px |
 | `EnemyManager.js` | XP Gem `speed` | 젬 흡수 이동속도 | 320 px/s |
 | `EnemyManager.js` | `ENEMY_TYPES` | 10종 적 타입 | RAIDER·JUGGERNAUT·SWARM·LANCER·ANCHOR·ZIGZAGGER·DASHER·SHADE·BOMBER·SPLITTER |
@@ -87,7 +91,9 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `recalcHitbox(player)`: 부착 모듈 기반 `player.hitboxRadius` 재계산
 - `drawOnCanvas(ctx,cx,cy,mouseX,mouseY)`: BUILDING 상태 조립 UI 렌더
 - `drawShipModules(ctx,cx,cy,angle)`: 게임플레이 중 모듈 렌더 (회전 적용)
-- **모듈 7종**: HULL_1/2, GUN_1/2, THRUSTER, WING_L/R
+- `randomModuleKey()`: 랜덤 모듈 키 반환 (EnemyManager ModuleDrop 생성 시 호출)
+- `queueModule(typeKey)`: 특정 모듈을 대기 큐에 추가 (ModuleDrop 수집 시 호출)
+- **모듈 17종**: HULL_1/2, GUN_1/2, THRUSTER, WING_L/R + WPN_GATLING/SPREAD/SNIPER/MISSILE/FLAK/ORBIT/LASER/MINE/CHAIN/NOVA
 
 ### `InputHandler.js` (IIFE, `window.InputHandler`)
 - `state.up/down/left/right`: WASD 상태
@@ -105,6 +111,7 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `drawProjectile(sx, sy, radius, color)`: 투사체 + 글로우
 - `drawXpGem(sx, sy)`: XP 다이아몬드
 - `drawParticle(sx, sy, radius, alpha, color)`: 폭발 파티클
+- `drawModuleDrop(sx, sy, moduleType)`: 모듈 드랍 아이템 (무기=빨강, 일반=파랑)
 
 ### `Player.js` (Class, `window.Player`)
 - `update(dt, input, screenCx, screenCy)`: 이동, 회전, wraparound
@@ -115,14 +122,15 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 ### `EnemyManager.js` (IIFE, `window.EnemyManager`)
 - `init(ww, wh)`: 풀 초기화
 - `update(dt, player)`: 웨이브 스폰, AI 이동, XP 젬 흡수 → `{levelUp}`
-- `damageEnemy(enemy, dmg)`: 데미지 적용 + 파괴 시 젬 드랍
+- `damageEnemy(enemy, dmg)`: 데미지 적용 + 파괴 시 젬 & ModuleDrop 드랍
 - `getActiveEnemies()`: 활성 적 배열 반환
-- `getStats()`: `{waveNumber, totalKills}`
+- `getStats()`: `{waveNumber, totalKills, waveKills, waveKillTarget, restTimer, isResting}`
 
 ### `WeaponSystem.js` (IIFE, `window.WeaponSystem`)
 - `init(ww, wh)`: 풀 초기화
-- `update(dt, player, activeEnemies, clicked)`: 자동 타겟팅, 발사, 포탄(클릭), 충돌
+- `update(dt, player, activeEnemies, clicked)`: 자동 타겟팅, 발사, 포탄(클릭), 보조 무기, 충돌
   - `clicked=true` → 포탄 발사 (CANNON_COOLDOWN 준수, 함선 방향, 스플래시 데미지)
+- `addSecondary(type)`: 보조 무기 장착 (TetrisGrid._applyBonus에서 호출)
 - `upgradeWeapon(key, value)`: 무기 스탯 변경
 - `getWeaponStat(key)`: 현재 무기 스탯 읽기
 
@@ -226,6 +234,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-13 | v0.6.0 | 웨이브 킬 목표 시스템(KILL_BASE+KILL_PER_WAVE), 물리 모듈 드랍(ModuleDrop 풀), 10종 무기 모듈(WPN_GATLING·SPREAD·SNIPER·MISSILE·FLAK·ORBIT·LASER·MINE·CHAIN·NOVA), WeaponSystem 보조 무기 시스템(호밍·체인·궤도·기뢰 등), 웨이브 휴식 오버레이 |
 | 2026-03-13 | v0.5.0 | 선체 다각형 히트박스(삼각형 분할+모듈 셀 직사각형), 10종 적 타입(RAIDER·JUGGERNAUT·SWARM·LANCER·ANCHOR·ZIGZAGGER·DASHER·SHADE·BOMBER·SPLITTER), 타입별 AI(지그재그·돌진·분열), Collision.js에 polyCircle/polyCircleWrapped 추가 |
 | 2026-03-13 | v0.4.0 | 수정 5건: XP 젬 흡수거리·속도 증가(120→200, 200→320), 적 처치 15% 모듈 드랍, Q키 조립화면 수동 진입, 레벨업→항상 업그레이드 카드, 마우스 클릭 포탄(범위공격) 추가 |
 | 2026-03-13 | v0.3.0 | Phase 3: TetrisGrid.js 신규 — 7종 테트리스 모듈 조립, 캔버스 기반 BUILDING UI, hitboxRadius 동적 재계산, 짝수 레벨 조립·홀수 레벨 업그레이드 라우팅 |

@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.5.0'; // 선체 다각형 히트박스, 10종 적 타입
+const VERSION = 'v0.6.0'; // 웨이브 킬 목표, 물리 모듈 드랍, 10종 무기 모듈
 
 // ── 맵 설정 (화면 크기와 무관한 고정 월드 크기)
 const WORLD_W = 3200;
@@ -54,6 +54,10 @@ const Game = (() => {
   const elTimer      = document.getElementById('timer');
   const elKillCount  = document.getElementById('kill-count');
   const elWaveNum    = document.getElementById('wave-num');
+
+  const elWaveKill    = document.getElementById('wave-kill');
+  const elRestOverlay = document.getElementById('overlay-rest');
+  const elRestTimer   = document.getElementById('rest-timer');
 
   const elOverlayPause    = document.getElementById('overlay-pause');
   const elOverlayLevelup  = document.getElementById('overlay-levelup');
@@ -378,6 +382,15 @@ const Game = (() => {
     const stats = EnemyManager.getStats();
     elKillCount.textContent = stats.totalKills;
     elWaveNum.textContent   = stats.waveNumber;
+    elWaveKill.textContent  = `${stats.waveKills}/${stats.waveKillTarget}`;
+
+    // 휴식 오버레이
+    if (stats.isResting) {
+      elRestOverlay.classList.remove('hidden');
+      elRestTimer.textContent = Math.ceil(stats.restTimer);
+    } else {
+      elRestOverlay.classList.add('hidden');
+    }
 
     // 모듈 뱃지
     const qSize = TetrisGrid.getQueueSize();

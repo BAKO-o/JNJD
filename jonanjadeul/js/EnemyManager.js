@@ -15,11 +15,17 @@ const EnemyManager = (() => {
   const ENEMY_DAMAGE     = 10;   // 기본 접촉 데미지
   const CONTACT_COOLDOWN = 1.2;
 
-  const MODULE_DROP_CHANCE = 0.15;
+  const MODULE_DROP_CHANCE          = 0.15;
+  const MAX_MODULE_DROPS            = 50;
+  const MODULE_DROP_COLLECT_RADIUS  = 40;  // 수집 반지름(px)
+  const MODULE_DROP_LIFETIME        = 30;  // 아이템 유효 시간(s)
 
-  const WAVE_INTERVAL  = 15;
-  const SPAWN_PER_WAVE = 6;   // 웨이브당 기본 스폰 수 (12→6)
+  const SPAWN_PER_WAVE = 6;   // 웨이브당 기본 스폰 수
   const SPAWN_MARGIN   = 60;
+
+  const REST_DURATION  = 6;   // 웨이브 사이 휴식 시간(s)
+  const KILL_BASE      = 8;   // Wave 1 킬 목표
+  const KILL_PER_WAVE  = 4;   // 웨이브당 킬 목표 증가량
 
   // ── XP Gem 풀
   const MAX_GEMS = 500;
@@ -53,16 +59,20 @@ const EnemyManager = (() => {
   }
 
   // ── 풀 배열
-  const enemies = [];
-  const gems    = [];
+  const enemies     = [];
+  const gems        = [];
+  const moduleDrops = [];
 
   // ── 게임 상태
   let worldW, worldH;
-  let waveTimer    = 0;
-  let waveNumber   = 1;
-  let totalKills   = 0;
-  let spawnPending = 0;
-  let spawnTimer   = 0;
+  let waveNumber     = 1;
+  let totalKills     = 0;
+  let waveKills      = 0;
+  let waveKillTarget = KILL_BASE;
+  let isResting      = false;
+  let restTimer      = 0;
+  let spawnPending   = 0;
+  let spawnTimer     = 0;
 
   // ── 플레이어 참조 (SPLITTER 스폰용, update에서 갱신)
   let _player = null;
@@ -91,6 +101,11 @@ const EnemyManager = (() => {
     };
   }
 
+  /** ModuleDrop 오브젝트 팩토리 */
+  function createModuleDrop() {
+    return { active: false, x: 0, y: 0, moduleType: '', lifetime: 0 };
+  }
+
   /** XP Gem 오브젝트 팩토리 */
   function createGem() {
     return {
@@ -106,9 +121,14 @@ const EnemyManager = (() => {
   function init(ww, wh) {
     worldW = ww;
     worldH = wh;
-    for (let i = 0; i < MAX_ENEMIES; i++) enemies.push(createEnemy());
-    for (let i = 0; i < MAX_GEMS; i++)    gems.push(createGem());
-    waveTimer = WAVE_INTERVAL * 0.5;
+    for (let i = 0; i < MAX_ENEMIES; i++)      enemies.push(createEnemy());
+    for (let i = 0; i < MAX_GEMS; i++)          gems.push(createGem());
+    for (let i = 0; i < MAX_MODULE_DROPS; i++)  moduleDrops.push(createModuleDrop());
+    waveKills      = 0;
+    waveKillTarget = KILL_BASE;
+    isResting      = false;
+    restTimer      = 0;
+    spawnPending   = SPAWN_PER_WAVE;  // Wave 1 초기 스폰
   }
 
   /** 풀에서 비활성 enemy 꺼내기 */
@@ -120,6 +140,12 @@ const EnemyManager = (() => {
   /** 풀에서 비활성 gem 꺼내기 */
   function acquireGem() {
     for (const g of gems) { if (!g.active) return g; }
+    return null;
+  }
+
+  /** 풀에서 비활성 moduleDrop 꺼내기 */
+  function acquireModuleDrop() {
+    for (const d of moduleDrops) { if (!d.active) return d; }
     return null;
   }
 
@@ -224,12 +250,23 @@ const EnemyManager = (() => {
     _player = player;
     let didLevelUp = false;
 
-    // ── 웨이브 타이머
-    waveTimer -= dt;
-    if (waveTimer <= 0) {
-      waveTimer = WAVE_INTERVAL;
-      waveNumber++;
-      spawnPending += SPAWN_PER_WAVE + (waveNumber - 1) * 2;
+    // ── 웨이브 킬 목표 시스템
+    if (isResting) {
+      restTimer -= dt;
+      if (restTimer <= 0) {
+        isResting = false;
+        waveNumber++;
+        waveKills      = 0;
+        waveKillTarget = KILL_BASE + (waveNumber - 1) * KILL_PER_WAVE;
+        spawnPending  += SPAWN_PER_WAVE + (waveNumber - 1) * 2;
+      }
+    } else {
+      if (waveKills >= waveKillTarget) {
+        isResting = true;
+        restTimer = REST_DURATION;
+        // 현재 활성 적 모두 제거
+        for (const e of enemies) e.active = false;
+      }
     }
 
     // ── 스폰 (0.15s 간격)
@@ -347,6 +384,18 @@ const EnemyManager = (() => {
       }
     }
 
+    // ── ModuleDrop 수집
+    for (const d of moduleDrops) {
+      if (!d.active) continue;
+      d.lifetime -= dt;
+      if (d.lifetime <= 0) { d.active = false; continue; }
+      const { dx: ddx, dy: ddy } = Collision.wrappedDelta(d.x, d.y, player.x, player.y, worldW, worldH);
+      if (Math.hypot(ddx, ddy) < MODULE_DROP_COLLECT_RADIUS) {
+        d.active = false;
+        TetrisGrid.queueModule(d.moduleType);
+      }
+    }
+
     return { levelUp: didLevelUp };
   }
 
@@ -359,6 +408,7 @@ const EnemyManager = (() => {
     if (enemy.hp <= 0) {
       enemy.active = false;
       totalKills++;
+      waveKills++;
 
       // XP Gem 드랍
       const gem = acquireGem();
@@ -369,9 +419,16 @@ const EnemyManager = (() => {
         gem.value  = enemy.xpValue;
       }
 
-      // 모듈 드랍 (15% 확률)
+      // 모듈 드랍 (15% 확률) — 맵에 물리적으로 드랍
       if (Math.random() < MODULE_DROP_CHANCE) {
-        TetrisGrid.queueRandomModule();
+        const drop = acquireModuleDrop();
+        if (drop) {
+          drop.active     = true;
+          drop.x          = enemy.x;
+          drop.y          = enemy.y;
+          drop.moduleType = TetrisGrid.randomModuleKey();
+          drop.lifetime   = MODULE_DROP_LIFETIME;
+        }
       }
 
       // SPLITTER: 분열체이면 SWARM 3마리 스폰
@@ -403,24 +460,38 @@ const EnemyManager = (() => {
       if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
       Renderer.drawXpGem(sx, sy);
     }
+
+    // 모듈 드랍 아이템
+    for (const d of moduleDrops) {
+      if (!d.active) continue;
+      const { sx, sy } = player.worldToScreen(d.x, d.y, worldW, worldH);
+      if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
+      Renderer.drawModuleDrop(sx, sy, d.moduleType);
+    }
   }
 
   /** 활성 적 배열 반환 (WeaponSystem 타겟팅용) */
   function getActiveEnemies() { return enemies.filter(e => e.active); }
 
   /** 통계 */
-  function getStats() { return { waveNumber, totalKills }; }
+  function getStats() {
+    return { waveNumber, totalKills, waveKills, waveKillTarget, restTimer, isResting };
+  }
 
   /** 리셋 */
   function reset(ww, wh) {
     worldW = ww; worldH = wh;
-    for (const e of enemies) e.active = false;
-    for (const g of gems)    g.active = false;
-    waveTimer    = WAVE_INTERVAL * 0.5;
-    waveNumber   = 1;
-    totalKills   = 0;
-    spawnPending = 0;
-    spawnTimer   = 0;
+    for (const e of enemies)     e.active = false;
+    for (const g of gems)        g.active = false;
+    for (const d of moduleDrops) d.active = false;
+    waveNumber     = 1;
+    totalKills     = 0;
+    waveKills      = 0;
+    waveKillTarget = KILL_BASE;
+    isResting      = false;
+    restTimer      = 0;
+    spawnPending   = SPAWN_PER_WAVE;
+    spawnTimer     = 0;
   }
 
   return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset };

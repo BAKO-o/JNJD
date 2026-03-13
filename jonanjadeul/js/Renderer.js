@@ -423,6 +423,34 @@ const Renderer = (() => {
     ctx.globalAlpha = 1;
   }
 
+  /**
+   * 모듈 드랍 아이템 렌더
+   * @param {number} sx - 화면 X
+   * @param {number} sy - 화면 Y
+   * @param {string} moduleType - 모듈 타입 키 (WPN_ 으로 시작하면 무기)
+   */
+  function drawModuleDrop(sx, sy, moduleType) {
+    const isWeapon = moduleType.startsWith('WPN_');
+    ctx.save();
+    // 외부 글로우
+    ctx.beginPath();
+    ctx.arc(sx, sy, 14, 0, Math.PI * 2);
+    ctx.fillStyle = isWeapon ? 'rgba(220,38,38,0.25)' : 'rgba(14,116,144,0.25)';
+    ctx.fill();
+    // 내부 원
+    ctx.beginPath();
+    ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+    ctx.fillStyle = isWeapon ? '#dc2626' : '#0891b2';
+    ctx.fill();
+    // 아이콘
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isWeapon ? 'W' : 'M', sx, sy);
+    ctx.restore();
+  }
+
   /** 컨텍스트 직접 접근용 getter */
   function getCtx() { return ctx; }
   function getCanvas() { return canvas; }
@@ -433,6 +461,7 @@ const Renderer = (() => {
     init, clear, drawStars,
     drawPlayer, drawEnemy,
     drawProjectile, drawCannonball, drawXpGem, drawParticle,
+    drawModuleDrop,
     getCtx, getCanvas, getWidth, getHeight,
   };
 })();

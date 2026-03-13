@@ -73,6 +73,78 @@ const TetrisGrid = (() => {
       desc: 'HP +20 / 속도 +8%',
       bonus: { hp: 20, speed: 0.08 },
     },
+
+    // ── 무기 모듈 10종
+    WPN_GATLING: {
+      name: '개틀링포',
+      cells: [{gx:0,gy:0}],
+      color: '#dc2626',
+      desc: '빠른 3방향 연사',
+      bonus: { weapon: 'WPN_GATLING' },
+    },
+    WPN_SPREAD: {
+      name: '산탄포',
+      cells: [{gx:0,gy:0},{gx:1,gy:0}],
+      color: '#ea580c',
+      desc: '5발 부채꼴 발사',
+      bonus: { weapon: 'WPN_SPREAD' },
+    },
+    WPN_SNIPER: {
+      name: '저격포',
+      cells: [{gx:0,gy:0},{gx:0,gy:1}],
+      color: '#7c3aed',
+      desc: '고데미지 단발 저격',
+      bonus: { weapon: 'WPN_SNIPER' },
+    },
+    WPN_MISSILE: {
+      name: '유도탄',
+      cells: [{gx:0,gy:0},{gx:1,gy:0}],
+      color: '#0891b2',
+      desc: '호밍 미사일 발사',
+      bonus: { weapon: 'WPN_MISSILE' },
+    },
+    WPN_FLAK: {
+      name: '플랙포',
+      cells: [{gx:0,gy:0}],
+      color: '#ca8a04',
+      desc: '8방향 근거리 폭발',
+      bonus: { weapon: 'WPN_FLAK' },
+    },
+    WPN_ORBIT: {
+      name: '궤도포',
+      cells: [{gx:0,gy:0},{gx:0,gy:1}],
+      color: '#059669',
+      desc: '3개 공전 탄',
+      bonus: { weapon: 'WPN_ORBIT' },
+    },
+    WPN_LASER: {
+      name: '레이저포',
+      cells: [{gx:0,gy:0}],
+      color: '#2563eb',
+      desc: '초고속 단일 연사',
+      bonus: { weapon: 'WPN_LASER' },
+    },
+    WPN_MINE: {
+      name: '기뢰',
+      cells: [{gx:0,gy:0},{gx:1,gy:0}],
+      color: '#7f1d1d',
+      desc: '정지 기뢰 설치',
+      bonus: { weapon: 'WPN_MINE' },
+    },
+    WPN_CHAIN: {
+      name: '연쇄탄',
+      cells: [{gx:0,gy:0}],
+      color: '#9d174d',
+      desc: '연쇄 충격파 3회',
+      bonus: { weapon: 'WPN_CHAIN' },
+    },
+    WPN_NOVA: {
+      name: '노바포',
+      cells: [{gx:0,gy:0},{gx:0,gy:1}],
+      color: '#6d28d9',
+      desc: '전방향 12발 폭발',
+      bonus: { weapon: 'WPN_NOVA' },
+    },
   };
 
   const MODULE_KEYS = Object.keys(MODULE_DEFS);
@@ -148,11 +220,24 @@ const TetrisGrid = (() => {
   }
 
   /**
-   * 랜덤 모듈 타입을 큐에 추가 (EnemyManager 드랍 시 호출)
+   * 랜덤 모듈 타입 키 반환 (EnemyManager 드랍 시 호출)
+   */
+  function randomModuleKey() {
+    return MODULE_KEYS[Math.floor(Math.random() * MODULE_KEYS.length)];
+  }
+
+  /**
+   * 특정 모듈 타입을 큐에 추가 (ModuleDrop 수집 시 호출)
+   */
+  function queueModule(typeKey) {
+    if (MODULE_DEFS[typeKey]) moduleQueue.push(typeKey);
+  }
+
+  /**
+   * 랜덤 모듈 타입을 큐에 추가 (하위 호환)
    */
   function queueRandomModule() {
-    const key = MODULE_KEYS[Math.floor(Math.random() * MODULE_KEYS.length)];
-    moduleQueue.push(key);
+    moduleQueue.push(randomModuleKey());
   }
 
   /**
@@ -211,6 +296,9 @@ const TetrisGrid = (() => {
     if (bonus.cooldownMult) {
       const cur = WeaponSystem.getWeaponStat('cooldown') ?? 0.72;
       WeaponSystem.upgradeWeapon('cooldown', Math.max(0.15, cur * bonus.cooldownMult));
+    }
+    if (bonus.weapon) {
+      WeaponSystem.addSecondary(bonus.weapon);
     }
   }
 
@@ -469,6 +557,8 @@ const TetrisGrid = (() => {
   return {
     init,
     offerRandom,
+    randomModuleKey,
+    queueModule,
     queueRandomModule,
     nextModule,
     hasQueued,
