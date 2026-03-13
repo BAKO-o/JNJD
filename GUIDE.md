@@ -21,6 +21,7 @@ JNJD/
         ├── Player.js
         ├── EnemyManager.js
         ├── WeaponSystem.js
+        ├── TetrisGrid.js
         └── Collision.js
 ```
 
@@ -51,12 +52,19 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 | `Player.js` | `this.maxHp` | 최대 HP | 100 |
 | `EnemyManager.js` | `MAX_ENEMIES` | 적 풀 크기 | 300 |
 | `EnemyManager.js` | `ENEMY_SPEED_BASE` | 적 기본 속도 (Wave1: 52~70, Wave10: ~113 px/s) | 58 px/s |
+| `EnemyManager.js` | `MODULE_DROP_CHANCE` | 적 처치 시 모듈 드랍 확률 | 0.15 (15%) |
 | `EnemyManager.js` | `WAVE_INTERVAL` | 웨이브 간격 | 15s |
 | `EnemyManager.js` | `SPAWN_PER_WAVE` | 웨이브당 스폰 수 | 12 |
-| `WeaponSystem.js` | `MAX_PROJECTILES` | 투사체 풀 크기 | 500 |
-| `WeaponSystem.js` | `PROJ_SPEED` | 투사체 속도 | 420 px/s |
-| `WeaponSystem.js` | `DEFAULT_WEAPON.cooldown` | 발사 쿨다운 | 0.72s |
+| `EnemyManager.js` | XP Gem `collectRadius` | 젬 흡수 시작 거리 | 200 px |
+| `EnemyManager.js` | XP Gem `speed` | 젬 흡수 이동속도 | 320 px/s |
+| `WeaponSystem.js` | `MAX_PROJECTILES` | 투사체 풀 크기 (자동+포탄 공유) | 500 |
+| `WeaponSystem.js` | `PROJ_SPEED` | 자동무기 투사체 속도 | 420 px/s |
+| `WeaponSystem.js` | `DEFAULT_WEAPON.cooldown` | 자동무기 발사 쿨다운 | 0.72s |
 | `WeaponSystem.js` | `DEFAULT_WEAPON.range` | 자동 사거리 | 350 px |
+| `WeaponSystem.js` | `CANNON_SPEED` | 수동 포탄 속도 | 260 px/s |
+| `WeaponSystem.js` | `CANNON_DAMAGE` | 포탄 데미지 (스플래시 공유) | 5 |
+| `WeaponSystem.js` | `CANNON_SPLASH_R` | 포탄 스플래시 반지름 | 65 px |
+| `WeaponSystem.js` | `CANNON_COOLDOWN` | 포탄 재사용 대기 | 1.5s |
 
 ---
 
@@ -69,8 +77,11 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - **진입점**: `window.addEventListener('DOMContentLoaded', init)`
 
 ### `TetrisGrid.js` (IIFE, `window.TetrisGrid`)
-- `init()`: 그리드 초기화, 코어(0,0) 배치
-- `offerRandom()`: 랜덤 모듈 pending으로 설정, 유효 슬롯 계산
+- `init()`: 그리드·큐 초기화, 코어(0,0) 배치
+- `queueRandomModule()`: 랜덤 모듈을 대기 큐에 추가 (EnemyManager 드랍 시 호출)
+- `nextModule()`: 큐에서 다음 모듈을 꺼내 pending으로 설정 (Q키 시 호출)
+- `hasQueued()`: 큐 또는 pending에 모듈이 있으면 true
+- `getQueueSize()`: HUD 뱃지용 총 대기 모듈 수
 - `handleClick(sx,sy,cx,cy,player)`: 클릭→그리드 좌표 변환→배치 시도
 - `recalcHitbox(player)`: 부착 모듈 기반 `player.hitboxRadius` 재계산
 - `drawOnCanvas(ctx,cx,cy,mouseX,mouseY)`: BUILDING 상태 조립 UI 렌더
@@ -81,8 +92,9 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `state.up/down/left/right`: WASD 상태
 - `state.mouseX/Y`: 화면 마우스 좌표
 - `consumePause()`: ESC/P 플래그 소비
-- `consumeClick()`: mousedown 클릭 플래그 소비 (조립 화면 전용)
+- `consumeClick()`: mousedown 클릭 플래그 소비 (PLAYING: 포탄 발사, BUILDING: 배치)
 - `consumeSkip()`: Space 건너뛰기 플래그 소비 (조립 화면 전용)
+- `consumeOpenAssembly()`: Q 키 플래그 소비 (모듈 조립화면 열기)
 
 ### `Renderer.js` (IIFE, `window.Renderer`)
 - `init(canvas)`: 캔버스 초기화, resize 이벤트 등록
@@ -108,7 +120,8 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 
 ### `WeaponSystem.js` (IIFE, `window.WeaponSystem`)
 - `init(ww, wh)`: 풀 초기화
-- `update(dt, player, activeEnemies)`: 자동 타겟팅, 발사, 충돌
+- `update(dt, player, activeEnemies, clicked)`: 자동 타겟팅, 발사, 포탄(클릭), 충돌
+  - `clicked=true` → 포탄 발사 (CANNON_COOLDOWN 준수, 함선 방향, 스플래시 데미지)
 - `upgradeWeapon(key, value)`: 무기 스탯 변경
 - `getWeaponStat(key)`: 현재 무기 스탯 읽기
 
@@ -126,8 +139,12 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 START ──[출발하기 클릭]──▶ PLAYING
 PLAYING ──[ESC/P]──▶ PAUSED ──[ESC/P]──▶ PLAYING
 PLAYING ──[레벨업]──▶ LEVELUP ──[카드 선택]──▶ PLAYING
+PLAYING ──[Q키 + 보유 모듈]──▶ BUILDING ──[클릭 배치]──▶ PLAYING
 PLAYING ──[HP=0]──▶ GAMEOVER ──[다시 시작]──▶ PLAYING
 ```
+
+> **v0.4.0 변경**: 레벨업 시 항상 LEVELUP(업그레이드 카드). BUILDING은 Q키로 수동 진입.
+> 모듈은 적 처치 시 15% 확률로 드랍되며, 📦 뱃지로 보유 수를 표시한다.
 
 ---
 
@@ -208,6 +225,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-13 | v0.4.0 | 수정 5건: XP 젬 흡수거리·속도 증가(120→200, 200→320), 적 처치 15% 모듈 드랍, Q키 조립화면 수동 진입, 레벨업→항상 업그레이드 카드, 마우스 클릭 포탄(범위공격) 추가 |
 | 2026-03-13 | v0.3.0 | Phase 3: TetrisGrid.js 신규 — 7종 테트리스 모듈 조립, 캔버스 기반 BUILDING UI, hitboxRadius 동적 재계산, 짝수 레벨 조립·홀수 레벨 업그레이드 라우팅 |
 | 2026-03-13 | v0.2.1 | 버그 수정: 별 배경 시차 스크롤 추가 (layer 0/1 시차 계수 0.12/0.38), 플레이어 drag 0.88→0.96 (실효 최대속도 72→217 px/s), 적 기본속도 80→58 px/s |
 | 2026-03-13 | v0.2.0 | Phase 1+2 구현: 엔진 코어, WASD 이동, Wraparound, 자동 무기, 오브젝트 풀, 적 AI, XP 시스템, 레벨업 팝업 |

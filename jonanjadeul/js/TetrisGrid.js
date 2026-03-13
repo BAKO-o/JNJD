@@ -17,8 +17,9 @@ const TetrisGrid = (() => {
   const grid = new Map();
 
   // ── 현재 배치 대기 중인 모듈
-  let pending    = null;   // { type, name, cells, color, desc, bonus }
-  let validSlots = [];     // 배치 가능한 앵커 위치 [{gx,gy}]
+  let pending     = null;  // { type, name, cells, color, desc, bonus }
+  let validSlots  = [];    // 배치 가능한 앵커 위치 [{gx,gy}]
+  let moduleQueue = [];    // 드랍된 모듈 대기 큐 (타입 문자열 배열)
 
   // ── 모듈 정의
   // cells: 앵커(0,0) 기준 차지하는 셀 오프셋 배열
@@ -82,8 +83,9 @@ const TetrisGrid = (() => {
   function init() {
     grid.clear();
     grid.set('0,0', 'CORE');
-    pending    = null;
-    validSlots = [];
+    pending     = null;
+    validSlots  = [];
+    moduleQueue = [];
   }
 
   // ────────────────── 슬롯 계산 ──────────────────
@@ -143,6 +145,37 @@ const TetrisGrid = (() => {
     pending = { type: key, ...def, cells: def.cells.map(c => ({...c})) };
     validSlots = _calcValidSlots();
     return pending;
+  }
+
+  /**
+   * 랜덤 모듈 타입을 큐에 추가 (EnemyManager 드랍 시 호출)
+   */
+  function queueRandomModule() {
+    const key = MODULE_KEYS[Math.floor(Math.random() * MODULE_KEYS.length)];
+    moduleQueue.push(key);
+  }
+
+  /**
+   * 큐에서 다음 모듈을 꺼내 pending으로 설정 (Q키 누를 때 Game.js에서 호출)
+   * @returns {boolean} 성공 여부
+   */
+  function nextModule() {
+    if (moduleQueue.length === 0) return false;
+    const key = moduleQueue.shift();
+    const def = MODULE_DEFS[key];
+    pending = { type: key, ...def, cells: def.cells.map(c => ({...c})) };
+    validSlots = _calcValidSlots();
+    return true;
+  }
+
+  /** 큐 또는 pending에 모듈이 있으면 true */
+  function hasQueued() {
+    return moduleQueue.length > 0 || pending !== null;
+  }
+
+  /** HUD 뱃지용: 총 대기 모듈 수 */
+  function getQueueSize() {
+    return moduleQueue.length + (pending ? 1 : 0);
   }
 
   /**
@@ -433,6 +466,10 @@ const TetrisGrid = (() => {
   return {
     init,
     offerRandom,
+    queueRandomModule,
+    nextModule,
+    hasQueued,
+    getQueueSize,
     canPlace,
     place,
     recalcHitbox,

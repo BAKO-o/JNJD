@@ -14,9 +14,10 @@ const InputHandler = (() => {
     mouseX: 0,      // 화면 기준 마우스 X
     mouseY: 0,      // 화면 기준 마우스 Y
     mouseAngle: 0,  // 플레이어→마우스 방향각 (라디안), Game에서 매 프레임 갱신
-    pause: false,   // ESC 또는 P (한 프레임만 true — 폴링 후 리셋)
-    clicked: false, // 마우스 클릭 (mousedown → true, consumeClick()으로 소비)
-    skip: false,    // Space 건너뛰기 (조립 UI 전용, consumeSkip()으로 소비)
+    pause: false,        // ESC 또는 P (한 프레임만 true — 폴링 후 리셋)
+    clicked: false,      // 마우스 클릭 (mousedown → true, consumeClick()으로 소비)
+    skip: false,         // Space 건너뛰기 (조립 UI 전용, consumeSkip()으로 소비)
+    openAssembly: false, // Q 키 — 모듈 조립화면 열기 (consumeOpenAssembly()으로 소비)
   };
 
   // 키 코드 → state 필드 매핑
@@ -36,6 +37,7 @@ const InputHandler = (() => {
     if (KEY_MAP[e.code]) state[KEY_MAP[e.code]] = true;
     if (e.code === 'Escape' || e.code === 'KeyP') state.pause = true;
     if (e.code === 'Space') { e.preventDefault(); state.skip = true; }
+    if (e.code === 'KeyQ') state.openAssembly = true;
   }
 
   function onMouseDown() {
@@ -80,7 +82,14 @@ const InputHandler = (() => {
     return v;
   }
 
-  return { init, state, consumePause, consumeClick, consumeSkip };
+  /** Q키 모듈 조립화면 열기 플래그를 소비하고 반환 */
+  function consumeOpenAssembly() {
+    const v = state.openAssembly;
+    state.openAssembly = false;
+    return v;
+  }
+
+  return { init, state, consumePause, consumeClick, consumeSkip, consumeOpenAssembly };
 })();
 
 // ES Module 방식으로 전역 접근 허용

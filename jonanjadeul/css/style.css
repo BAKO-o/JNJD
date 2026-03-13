@@ -121,8 +121,9 @@ body {
   backdrop-filter: blur(4px);
 }
 
-.overlay.hidden {
-  display: none;
+.overlay.hidden,
+.hidden {
+  display: none !important;
 }
 
 .overlay-box {
@@ -284,6 +285,18 @@ kbd {
 
 .btn-primary:active {
   transform: translateY(0);
+}
+
+/* ── 모듈 뱃지 ── */
+#module-badge {
+  color: #fbbf24;
+  border-color: rgba(251,191,36,0.3);
+}
+
+.hud-key-hint {
+  font-size: 10px;
+  opacity: 0.55;
+  margin-left: 2px;
 }
 
 /* ── 게임오버 ── */

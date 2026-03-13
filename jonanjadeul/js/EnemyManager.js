@@ -16,6 +16,8 @@ const EnemyManager = (() => {
   const ENEMY_DAMAGE      = 10;  // 플레이어 접촉 데미지
   const CONTACT_COOLDOWN  = 1.2; // 같은 적에게 재피격 쿨다운 (s)
 
+  const MODULE_DROP_CHANCE = 0.15; // 적 처치 시 모듈 드랍 확률 15%
+
   const WAVE_INTERVAL    = 15;  // 웨이브 간격 (s)
   const SPAWN_PER_WAVE   = 12;  // 웨이브당 기본 스폰 수
   const SPAWN_MARGIN     = 60;  // 화면 밖 스폰 여유 (px)
@@ -57,8 +59,8 @@ const EnemyManager = (() => {
       active: false,
       x: 0, y: 0,
       value: 0,
-      collectRadius: 120, // 이 거리 안에 들어오면 자동 흡수
-      speed: 200,         // 흡수 이동속도 (px/s)
+      collectRadius: 200, // 이 거리 안에 들어오면 자동 흡수 (120 → 200)
+      speed: 320,         // 흡수 이동속도 (px/s) (200 → 320, 플레이어 최대속도 217보다 빠름)
     };
   }
 
@@ -238,6 +240,10 @@ const EnemyManager = (() => {
         gem.x      = enemy.x;
         gem.y      = enemy.y;
         gem.value  = enemy.xpValue;
+      }
+      // 모듈 드랍 (15% 확률)
+      if (Math.random() < MODULE_DROP_CHANCE) {
+        TetrisGrid.queueRandomModule();
       }
       return true;
     }

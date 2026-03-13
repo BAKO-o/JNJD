@@ -162,6 +162,28 @@ const Renderer = (() => {
   }
 
   /**
+   * 포탄 그리기 (크고 주황빛 나는 원)
+   * @param {number} sx - 화면 X
+   * @param {number} sy - 화면 Y
+   * @param {number} radius - 포탄 반지름
+   */
+  function drawCannonball(sx, sy, radius) {
+    // 핵심 원
+    ctx.beginPath();
+    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#fb923c';
+    ctx.fill();
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 글로우
+    ctx.beginPath();
+    ctx.arc(sx, sy, radius * 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(251,146,60,0.2)';
+    ctx.fill();
+  }
+
+  /**
    * 파티클(폭발) 그리기
    * @param {object} p - particle {sx, sy, radius, alpha, color}
    */
@@ -183,7 +205,7 @@ const Renderer = (() => {
   return {
     init, clear, drawStars,
     drawPlayer, drawEnemy,
-    drawProjectile, drawXpGem, drawParticle,
+    drawProjectile, drawCannonball, drawXpGem, drawParticle,
     getCtx, getCanvas, getWidth, getHeight,
   };
 })();

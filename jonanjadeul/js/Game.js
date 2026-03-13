@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.3.0'; // Phase 3: 테트리스 모듈 조립 시스템
+const VERSION = 'v0.4.0'; // Phase 3+: XP 젬 수집, 모듈 드랍, 포탄 추가
 
 // ── 맵 설정 (화면 크기와 무관한 고정 월드 크기)
 const WORLD_W = 3200;
@@ -61,6 +61,8 @@ const Game = (() => {
   const elOverlayStart    = document.getElementById('overlay-start');
   const elGameoverStats   = document.getElementById('gameover-stats');
   const elUpgradeChoices  = document.getElementById('upgrade-choices');
+  const elModuleBadge     = document.getElementById('module-badge');
+  const elModuleCount     = document.getElementById('module-count');
 
   // ── 업그레이드 선택지 정의 (Phase 4 확장 예정)
   const UPGRADE_POOL = [
@@ -296,17 +298,26 @@ const Game = (() => {
     // 일시정지 토글
     if (InputHandler.consumePause()) { togglePause(); return; }
 
-    const { cx, cy } = screenCenter();
+    // Q키: 보유 모듈 있을 때 조립 화면 열기
+    if (InputHandler.consumeOpenAssembly()) {
+      if (TetrisGrid.hasQueued()) {
+        TetrisGrid.nextModule();
+        setState(STATE.BUILDING);
+      }
+      return;
+    }
 
-    // 마우스 각도 갱신 (Game 레벨에서 계산)
-    // InputHandler.state.mouseX/Y 는 항상 최신값 유지됨
+    const { cx, cy } = screenCenter();
 
     // 플레이어 업데이트
     player.update(dt, InputHandler.state, cx, cy);
 
+    // 클릭 소비 — PLAYING 상태에서만 포탄 발사 트리거
+    const clicked = InputHandler.consumeClick();
+
     // 전투 업데이트
     const activeEnemies = EnemyManager.getActiveEnemies();
-    WeaponSystem.update(dt, player, activeEnemies);
+    WeaponSystem.update(dt, player, activeEnemies, clicked);
     const { levelUp } = EnemyManager.update(dt, player);
 
     // 파티클 & 별 스크롤
@@ -316,14 +327,9 @@ const Game = (() => {
     // 게임오버 체크
     if (player.isDead) { gameOver(); return; }
 
-    // 레벨업: 짝수 레벨 → 모듈 조립, 홀수 레벨 → 업그레이드 카드
+    // 레벨업: 항상 업그레이드 카드 (모듈은 적 처치로 확률 드랍)
     if (levelUp) {
-      if (player.level % 2 === 0) {
-        TetrisGrid.offerRandom();
-        setState(STATE.BUILDING);
-      } else {
-        showLevelUp();
-      }
+      showLevelUp();
     }
 
     // HUD 갱신
@@ -372,6 +378,11 @@ const Game = (() => {
     const stats = EnemyManager.getStats();
     elKillCount.textContent = stats.totalKills;
     elWaveNum.textContent   = stats.waveNumber;
+
+    // 모듈 뱃지
+    const qSize = TetrisGrid.getQueueSize();
+    elModuleCount.textContent = qSize;
+    elModuleBadge.classList.toggle('hidden', qSize === 0);
   }
 
   function render() {
