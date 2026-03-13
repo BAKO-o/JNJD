@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JONANJADEUL — 조난자들</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 메인 게임 캔버스 -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD 오버레이 -->
+  <div id="hud">
+    <div id="hud-top-left">
+      <div class="stat-bar-wrap">
+        <span class="stat-label">HP</span>
+        <div class="stat-bar-bg"><div id="hp-bar" class="stat-bar hp"></div></div>
+        <span id="hp-text" class="stat-text">100/100</span>
+      </div>
+      <div class="stat-bar-wrap">
+        <span class="stat-label">XP</span>
+        <div class="stat-bar-bg"><div id="xp-bar" class="stat-bar xp"></div></div>
+        <span id="xp-text" class="stat-text">Lv.1</span>
+      </div>
+    </div>
+    <div id="hud-top-right">
+      <div class="hud-stat">⏱ <span id="timer">00:00</span></div>
+      <div class="hud-stat">💀 <span id="kill-count">0</span></div>
+      <div class="hud-stat" id="wave-info">Wave <span id="wave-num">1</span></div>
+    </div>
+  </div>
+
+  <!-- 일시정지 오버레이 -->
+  <div id="overlay-pause" class="overlay hidden">
+    <div class="overlay-box">
+      <h2>일시정지</h2>
+      <p>ESC 또는 P 키로 재개</p>
+    </div>
+  </div>
+
+  <!-- 레벨업 / 모듈 선택 팝업 (Phase 3용 확장 예정) -->
+  <div id="overlay-levelup" class="overlay hidden">
+    <div class="overlay-box levelup-box">
+      <h2>🚀 레벨 업!</h2>
+      <p class="levelup-sub">업그레이드를 선택하세요</p>
+      <div id="upgrade-choices" class="upgrade-grid"></div>
+    </div>
+  </div>
+
+  <!-- 게임 오버 오버레이 -->
+  <div id="overlay-gameover" class="overlay hidden">
+    <div class="overlay-box">
+      <h2>💥 탈출 실패</h2>
+      <p id="gameover-stats"></p>
+      <button id="btn-restart" class="btn-primary">다시 시작</button>
+    </div>
+  </div>
+
+  <!-- 게임 시작 화면 -->
+  <div id="overlay-start" class="overlay">
+    <div class="overlay-box start-box">
+      <h1 class="game-title">조난자들</h1>
+      <p class="game-subtitle">JONANJADEUL</p>
+      <p class="story-text">
+        은하력 84년, 연구선 AP3호가 우주 해적에게 격파됐다.<br/>
+        살아남은 3명의 연구원 <strong>송, 건, 학</strong>은<br/>
+        탈출 포트를 몰아 본부로 귀환해야 한다.
+      </p>
+      <div class="controls-guide">
+        <span><kbd>W A S D</kbd> 이동</span>
+        <span><kbd>Mouse</kbd> 조준·회전</span>
+        <span><kbd>ESC / P</kbd> 일시정지</span>
+      </div>
+      <button id="btn-start" class="btn-primary">출발하기</button>
+    </div>
+  </div>
+
+  <!-- 스크립트 로드 순서: 의존성 없는 것부터 (window 전역 패턴) -->
+  <script src="js/InputHandler.js"></script>
+  <script src="js/Renderer.js"></script>
+  <script src="js/Collision.js"></script>
+  <script src="js/Player.js"></script>
+  <script src="js/EnemyManager.js"></script>
+  <script src="js/WeaponSystem.js"></script>
+  <script src="js/Game.js"></script>
+</body>
+</html>
