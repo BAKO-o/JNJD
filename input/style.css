@@ -1,0 +1,648 @@
+/* ── Reset ─────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0f14;
+  font-family: 'Courier New', Courier, monospace;
+  color: #ccc;
+}
+
+/* ── Top-level container ─────────────────────────────────────── */
+#game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Surface (full viewport) ─────────────────────────────────── */
+#surface-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;   /* 캔버스가 직접 이벤트를 받도록 — UI 요소(도움말 버튼 등) 클릭 보장 */
+}
+
+#gameCanvas {
+  display: block;
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;   /* 게임 캔버스는 직접 이벤트 수신 */
+}
+
+/* ── Nest Panel (absolute overlay, right edge) ───────────────── */
+#nest-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 400px;
+  height: 100vh;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent, transparent 38px,
+      rgba(80, 45, 10, 0.04) 38px, rgba(80, 45, 10, 0.04) 39px),
+    linear-gradient(to bottom,
+      #1a0d04 0%, #160b03 25%,
+      #120903 55%, #0e0702 80%, #0b0601 100%);
+  border-left: 2px solid rgba(100, 60, 15, 0.45);
+  /* Smooth slide-out transition */
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 60, 15, 0.4) transparent;
+}
+
+#nest-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+#nest-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#nest-panel::-webkit-scrollbar-thumb {
+  background: rgba(100, 60, 15, 0.4);
+  border-radius: 2px;
+}
+
+/* Collapsed state — slide off-screen to the right */
+#nest-panel.hidden {
+  transform: translateX(100%);
+}
+
+/* ── Toggle Button (rides the left edge of the panel) ────────── */
+#panel-toggle {
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 68px;
+  background: rgba(18, 9, 3, 0.94);
+  border: 1px solid rgba(100, 60, 15, 0.55);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  color: #c89040;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 101;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+#panel-toggle:hover {
+  background: rgba(45, 24, 8, 0.97);
+  color: #ffcc60;
+}
+
+/* ── Sticky header ───────────────────────────────────────────── */
+.nest-header {
+  padding: 10px 14px 9px;
+  border-bottom: 1px solid rgba(120, 70, 20, 0.35);
+  background: rgba(0, 0, 0, 0.45);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.nest-header h1 {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  color: #d4902a;
+  text-transform: uppercase;
+}
+
+/* ── Warning banners ─────────────────────────────────────────── */
+.warn-banner {
+  margin-top: 6px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  font-size: 11px;
+  text-align: center;
+  animation: pulse-warn 0.9s ease-in-out infinite alternate;
+}
+
+#starvation-warning {
+  background: rgba(180, 30, 0, 0.22);
+  border: 1px solid rgba(255, 60, 0, 0.5);
+  color: #ff6040;
+}
+
+#disease-warning {
+  background: rgba(90, 0, 150, 0.22);
+  border: 1px solid rgba(170, 0, 255, 0.4);
+  color: #cc60ff;
+}
+
+@keyframes pulse-warn {
+  from {
+    opacity: 0.65;
+  }
+
+  to {
+    opacity: 1.00;
+  }
+}
+
+/* ── Node Map SVG container ──────────────────────────────────── */
+#nest-map-wrap {
+  padding: 6px 8px 2px;
+  flex-shrink: 0;
+}
+
+#nest-map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* SVG tunnel classes (referenced via class="" in inline SVG) */
+.tunnel-outer {
+  stroke: #6b4422;
+  stroke-width: 10;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.tunnel-inner {
+  stroke: #1e0e05;
+  stroke-width: 5;
+  stroke-linecap: round;
+  fill: none;
+}
+
+/* ── Upgrade Controls (compact rows below SVG) ───────────────── */
+#nest-controls {
+  padding: 4px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(12, 7, 2, 0.75);
+  border: 1px solid rgba(100, 60, 15, 0.28);
+  border-radius: 7px;
+}
+
+.ctrl-label {
+  font-size: 11px;
+  color: #a07838;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+#ctrl-queen .ctrl-label {
+  color: #e0c055;
+}
+
+#ctrl-storage .ctrl-label {
+  color: #65cc65;
+}
+
+#ctrl-nursery .ctrl-label {
+  color: #d08538;
+}
+
+#ctrl-acid-facility .ctrl-label {
+  color: #70cc30;
+}
+
+#ctrl-corpse .ctrl-label {
+  color: #9090c0;
+}
+
+.level-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  background: rgba(70, 42, 8, 0.55);
+  border: 1px solid rgba(150, 100, 30, 0.5);
+  border-radius: 10px;
+  color: #c89040;
+  flex-shrink: 0;
+}
+
+/* ── Upgrade button (compact) ────────────────────────────────── */
+.upgrade-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 5px 9px;
+  background: rgba(28, 16, 4, 0.9);
+  border: 1px solid rgba(140, 90, 25, 0.45);
+  border-radius: 5px;
+  color: #c89040;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.2s;
+  text-align: left;
+}
+
+.upgrade-btn:hover:not(.cant-afford) {
+  background: rgba(58, 34, 9, 0.95);
+  border-color: rgba(200, 140, 40, 0.7);
+}
+
+.upgrade-btn:active:not(.cant-afford) {
+  transform: scale(0.98);
+}
+
+.upgrade-btn.cant-afford {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-cost {
+  font-size: 11px;
+  color: #80d060;
+  font-weight: bold;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ── Queen Energy Bar ────────────────────────────────────────── */
+#energy-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px 5px;
+  border-top: 1px solid rgba(100, 60, 15, 0.22);
+  flex-shrink: 0;
+}
+
+.energy-label {
+  font-size: 10px;
+  color: #a07838;
+  flex-shrink: 0;
+  min-width: 82px;
+}
+
+.energy-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+#energy-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #c8a028, #ffe060);
+  border-radius: 3px;
+  transition: width 0.12s linear, background 0.3s;
+}
+
+#energy-bar.low-energy {
+  background: linear-gradient(90deg, #c02010, #ff4020);
+}
+
+#energy-val {
+  font-size: 10px;
+  color: #bbb;
+  min-width: 26px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Colony Tuning Sliders ───────────────────────────────────── */
+#nest-tuning {
+  padding: 8px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(100, 60, 15, 0.18);
+}
+
+.tune-header {
+  font-size: 10px;
+  color: #8a6030;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 1px;
+}
+
+.tune-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.tune-label {
+  font-size: 10px;
+  color: #888;
+  min-width: 92px;
+  flex-shrink: 0;
+}
+
+.tune-row input[type="range"] {
+  flex: 1;
+  height: 3px;
+  cursor: pointer;
+  accent-color: #d4902a;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+.tune-val {
+  min-width: 26px;
+  text-align: right;
+  color: #c89040;
+  font-size: 10px;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+/* ── Phase 7: Caste Ratio ───────────────────────────────────── */
+#caste-ratio-section {
+  padding: 6px 8px 8px;
+  border: 1px solid rgba(100, 60, 15, 0.28);
+  border-radius: 7px;
+  background: rgba(8, 5, 1, 0.6);
+  margin: 3px 0 0;
+}
+
+.caste-header {
+  font-size: 10px;
+  color: #b07838;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.caste-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.caste-label {
+  font-size: 10px;
+  min-width: 66px;
+  flex-shrink: 0;
+  font-weight: bold;
+}
+
+.scout-col {
+  color: #60c0d0;
+}
+
+.worker-col {
+  color: #c0c0c0;
+}
+
+.soldier-col {
+  color: #c0801c;
+}
+
+.acid-col {
+  color: #70cc30;
+}
+
+.caste-row input[type="range"] {
+  flex: 1;
+  height: 3px;
+  cursor: pointer;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#caste-scout {
+  accent-color: #60c0d0;
+}
+
+#caste-worker {
+  accent-color: #aaaaaa;
+}
+
+#caste-soldier {
+  accent-color: #c07820;
+}
+
+#caste-acid {
+  accent-color: #60cc20;
+}
+
+.caste-val {
+  min-width: 30px;
+  text-align: right;
+  font-size: 10px;
+  font-family: inherit;
+  color: #c89040;
+  flex-shrink: 0;
+}
+
+.caste-cost {
+  font-size: 9px;
+  color: #556;
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ── Colony stats footer ─────────────────────────────────────── */
+#colony-stats-bar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 10px 10px;
+  border-top: 1px solid rgba(100, 60, 15, 0.22);
+  font-size: 10px;
+  color: #666;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+#colony-stats-bar b {
+  color: #bbb;
+}
+
+#stat-status {
+  color: #aaa;
+}
+
+/* ── Help Button ─────────────────────────────────────────────── */
+#help-btn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 200;
+  width: 36px;
+  height: 36px;
+  background: rgba(18, 9, 3, 0.88);
+  border: 1px solid rgba(100, 60, 15, 0.55);
+  border-radius: 50%;
+  color: #c89040;
+  font-size: 17px;
+  font-family: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+#help-btn:hover {
+  background: rgba(45, 24, 8, 0.97);
+  border-color: rgba(200, 140, 40, 0.7);
+  color: #ffcc60;
+}
+
+/* ── Help Overlay ────────────────────────────────────────────── */
+#help-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+#help-overlay[hidden] {
+  display: none;
+}
+
+#help-modal {
+  position: relative;
+  width: min(640px, 90vw);
+  max-height: 82vh;
+  overflow-y: auto;
+  background:
+    linear-gradient(to bottom, #1a0d04 0%, #120903 60%, #0e0702 100%);
+  border: 1px solid rgba(140, 90, 25, 0.55);
+  border-radius: 10px;
+  padding: 24px 28px 28px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 60, 15, 0.4) transparent;
+}
+
+#help-modal::-webkit-scrollbar { width: 4px; }
+#help-modal::-webkit-scrollbar-track { background: transparent; }
+#help-modal::-webkit-scrollbar-thumb {
+  background: rgba(100, 60, 15, 0.4);
+  border-radius: 2px;
+}
+
+#help-close {
+  position: sticky;
+  float: right;
+  top: 0;
+  background: transparent;
+  border: 1px solid rgba(140, 90, 25, 0.4);
+  border-radius: 5px;
+  color: #a07838;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 8px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+#help-close:hover {
+  color: #ffcc60;
+  border-color: rgba(200, 140, 40, 0.7);
+}
+
+#help-modal h2 {
+  font-size: 14px;
+  color: #d4902a;
+  letter-spacing: 0.08em;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(120, 70, 20, 0.35);
+}
+
+#help-modal h3 {
+  font-size: 11px;
+  color: #c89040;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+#help-modal section {
+  margin-bottom: 20px;
+}
+
+#help-modal p {
+  font-size: 11px;
+  color: #999;
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+#help-modal p.hint {
+  font-size: 10px;
+  color: #665533;
+  margin-top: 6px;
+}
+
+#help-modal table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+#help-modal table th {
+  text-align: left;
+  color: #7a5828;
+  font-weight: normal;
+  padding: 3px 8px 5px;
+  border-bottom: 1px solid rgba(100, 60, 15, 0.25);
+}
+
+#help-modal table td {
+  padding: 5px 8px;
+  color: #aaa;
+  border-bottom: 1px solid rgba(100, 60, 15, 0.12);
+  vertical-align: top;
+}
+
+#help-modal table td:first-child {
+  color: #c89040;
+  white-space: nowrap;
+}
+
+#help-modal table td.key {
+  color: #80c0d0;
+  font-weight: bold;
+  min-width: 130px;
+}
+
+#help-modal table td.cost {
+  color: #80d060;
+  font-weight: bold;
+  text-align: right;
+  white-space: nowrap;
+}

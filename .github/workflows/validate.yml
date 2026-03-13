@@ -1,0 +1,38 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          for f in settings.json mcp-servers.json .claude-plugin/plugin.json; do
+            if [ -f "$f" ]; then
+              python3 -m json.tool "$f" > /dev/null && echo "OK: $f" || (echo "FAIL: $f" && exit 1)
+            fi
+          done
+
+      - name: Check for secrets
+        run: |
+          PATTERNS='(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36,}|AKIA[A-Z0-9]{16}|sb_publishable_[a-zA-Z0-9]+)'
+          if grep -rE "$PATTERNS" --include='*.json' --include='*.sh' --include='*.md' .; then
+            echo "::error::Potential secrets found in repository!"
+            exit 1
+          else
+            echo "No secrets detected."
+          fi
+
+      - name: ShellCheck hooks
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: hooks
+          severity: warning
+        continue-on-error: true

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐜 개미 군락 시뮬레이터</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div id="game-container">
+
+    <!-- ══ Full-screen simulation canvas ══════════════════════════ -->
+    <div id="surface-wrap">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- ══ Help Button ═════════════════════════════════════════════ -->
+    <button id="help-btn" aria-label="도움말">?</button>
+
+    <!-- ══ Help Overlay ════════════════════════════════════════════ -->
+    <div id="help-overlay" hidden>
+      <div id="help-modal">
+        <button id="help-close" aria-label="닫기">✕</button>
+        <h2 id="help-title">🐜 개미 군락 시뮬레이터 — 플레이 방법</h2>
+
+        <section>
+          <h3>🎯 목표</h3>
+          <p>검은개미 군락을 키워 식량을 확보하고 업그레이드하면서, 침략해오는 붉은개미 군락으로부터 둥지를 지켜내세요.</p>
+        </section>
+
+        <section>
+          <h3>🖱 화면 조작</h3>
+          <table>
+            <tr><td class="key">← → / A D</td><td>맵 좌우 스크롤</td></tr>
+          </table>
+        </section>
+
+        <section>
+          <h3>♛ 장군 개미 조작 (RTS 방식)</h3>
+          <table>
+            <tr><td class="key">좌클릭 (장군 위)</td><td>장군 선택 — 선택 링 표시</td></tr>
+            <tr><td class="key">좌클릭 (같은 장군)</td><td>선택 해제</td></tr>
+            <tr><td class="key">우클릭</td><td>선택된 장군에게 이동 명령</td></tr>
+            <tr><td class="key">Q</td><td>🌿 <b>먹이 유도</b> 페로몬 — 일꾼을 장군 위치로 유인</td></tr>
+            <tr><td class="key">W</td><td>🚫 <b>위험 경보</b> 페로몬 — 위험 신호 방출</td></tr>
+            <tr><td class="key">E</td><td>♻ <b>청소 신호</b> 페로몬 — 위생개미를 장군 위치로 유인</td></tr>
+            <tr><td class="key">R</td><td>🛡 <b>집결 명령</b> 페로몬 — 병사를 장군 위치에 집결 (기본값)</td></tr>
+          </table>
+          <p class="hint">장군을 선택한 상태에서 QWER로 페로몬 종류를 바꿀 수 있습니다. 선택 링 색상이 현재 모드를 나타냅니다. 장군을 소환하려면 먼저 🏯 막사 건설 업그레이드를 구매하세요.</p>
+        </section>
+
+        <section>
+          <h3>🧬 개미 계급</h3>
+          <table>
+            <tr><th>계급</th><th>역할</th><th>생산 비용</th></tr>
+            <tr><td>👁 정찰병</td><td>빠른 탐색 및 경로 개척</td><td class="cost">3🌿</td></tr>
+            <tr><td>⚒ 일꾼</td><td>식량 채집, 시체 처리</td><td class="cost">2🌿</td></tr>
+            <tr><td>🗡 병사</td><td>높은 체력, 근접 전투</td><td class="cost">6🌿</td></tr>
+            <tr><td>☣ 산성개미</td><td>원거리 산성 투사체 공격</td><td class="cost">10🌿</td></tr>
+            <tr><td>♛ 사령관</td><td>주변 아군 강화 오라 (속도 +30%, 공격력 +1), 적 조기 감지</td><td class="cost">25🌿</td></tr>
+          </table>
+          <p class="hint">계급 생성 비율은 우측 패널의 슬라이더로 조절할 수 있습니다. 사령관은 막사 건설 후 별도 소환 버튼으로 배치합니다 (최대 3기).</p>
+        </section>
+
+        <section>
+          <h3>🏗 둥지 업그레이드</h3>
+          <table>
+            <tr><th>업그레이드</th><th>효과</th><th>초기 비용</th></tr>
+            <tr><td>🧪 페로몬 강화</td><td>페로몬 지속 시간 연장 → 길 찾기 효율 증가</td><td class="cost">50🌿</td></tr>
+            <tr><td>📦 저장고 확장</td><td>최대 식량 보관량 +50</td><td class="cost">30🌿</td></tr>
+            <tr><td>🐛 육아실 확장</td><td>최대 인구 +10, 부화 속도 증가</td><td class="cost">40🌿</td></tr>
+            <tr><td>🏗 산성 연구소</td><td>산성개미 생산 해금 (1회 건설)</td><td class="cost">100🌿</td></tr>
+            <tr><td>♻ 시체 재활용</td><td>시체를 자동으로 식량으로 변환</td><td class="cost">60🌿</td></tr>
+            <tr><td>🏯 사령관 막사</td><td>사령관 소환 해금 (1회 건설, 최대 3기 운용)</td><td class="cost">80🌿</td></tr>
+          </table>
+        </section>
+
+        <section>
+          <h3>⚙ 군락 조정</h3>
+          <p>우측 패널의 슬라이더로 군락의 행동 비중을 조절할 수 있습니다.</p>
+          <table>
+            <tr><td>🌿 채집 집중도</td><td>높을수록 식량 수집에 집중</td></tr>
+            <tr><td>♻ 위생 관리</td><td>높을수록 시체를 빠르게 처리</td></tr>
+            <tr><td>🛡 방어</td><td>높을수록 병사가 적극적으로 방어</td></tr>
+          </table>
+        </section>
+
+        <section>
+          <h3>⚠ 위험 요소</h3>
+          <table>
+            <tr><td>🔴 굶주림</td><td>식량 0 → 개미 수명이 3배 빠르게 감소</td></tr>
+            <tr><td>☠ 질병</td><td>시체실 40개 초과 → 수명 1.5배 감소</td></tr>
+            <tr><td>🕳 개미귀신</td><td>함정에 가까이 가면 빨려들어가 포식됨</td></tr>
+            <tr><td>🔴 붉은개미</td><td>적 군락이 지속적으로 침략해 옴</td></tr>
+          </table>
+        </section>
+      </div>
+    </div>
+
+    <!-- ══ Collapsible Nest Panel (absolute overlay, right) ═══════ -->
+    <aside id="nest-panel">
+
+      <!-- Toggle arrow — rides the left edge of the panel -->
+      <button id="panel-toggle" aria-label="Toggle nest panel">‹</button>
+
+      <!-- Header (sticky) -->
+      <header class="nest-header">
+        <h1>🐜 군락 둥지</h1>
+        <div id="starvation-warning" class="warn-banner" hidden>
+          ⚠ 굶주림 — 개미 수명이 3배 빠르게 줄어들고 있습니다!
+        </div>
+        <div id="disease-warning" class="warn-banner" hidden>
+          ☠ 질병 — 시체가 넘쳐납니다! 수명 ×1.5 가속 감소
+        </div>
+      </header>
+
+      <!-- ══ VISUAL NODE MAP ═══════════════════════════════════════ -->
+      <div id="nest-map-wrap">
+        <svg id="nest-map" viewBox="0 0 380 400" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2c1a08" />
+              <stop offset="100%" stop-color="#110902" />
+            </linearGradient>
+            <radialGradient id="rg-queen" cx="38%" cy="38%" r="62%">
+              <stop offset="0%" stop-color="#3e2400" />
+              <stop offset="100%" stop-color="#190d00" />
+            </radialGradient>
+            <radialGradient id="rg-food" cx="38%" cy="38%" r="62%">
+              <stop offset="0%" stop-color="#0c2c0e" />
+              <stop offset="100%" stop-color="#050f05" />
+            </radialGradient>
+            <radialGradient id="rg-nursery" cx="38%" cy="38%" r="62%">
+              <stop offset="0%" stop-color="#2c1600" />
+              <stop offset="100%" stop-color="#100800" />
+            </radialGradient>
+            <radialGradient id="rg-corpse" cx="38%" cy="38%" r="62%">
+              <stop offset="0%" stop-color="#1c1c2e" />
+              <stop offset="100%" stop-color="#0a0a14" />
+            </radialGradient>
+          </defs>
+
+          <!-- Background: layered soil -->
+          <rect width="380" height="400" fill="url(#bg-grad)" rx="6" />
+
+          <!-- Soil depth lines -->
+          <line x1="10" y1="52" x2="370" y2="52" stroke="rgba(100,60,20,0.18)" stroke-width="1"
+            stroke-dasharray="6,10" />
+          <line x1="10" y1="165" x2="370" y2="165" stroke="rgba(100,60,20,0.14)" stroke-width="1"
+            stroke-dasharray="6,10" />
+          <line x1="10" y1="318" x2="370" y2="318" stroke="rgba(100,60,20,0.10)" stroke-width="1"
+            stroke-dasharray="6,10" />
+          <text x="368" y="50" text-anchor="end" fill="rgba(100,60,20,0.38)" font-size="8"
+            font-family="monospace">0m</text>
+          <text x="368" y="163" text-anchor="end" fill="rgba(100,60,20,0.30)" font-size="8"
+            font-family="monospace">1m</text>
+          <text x="368" y="316" text-anchor="end" fill="rgba(100,60,20,0.24)" font-size="8"
+            font-family="monospace">2m</text>
+
+          <!-- ══ TUNNELS (drawn first, rooms sit on top) ══════════ -->
+
+          <!-- Entrance → Queen -->
+          <line x1="190" y1="46" x2="190" y2="90" class="tunnel-outer" />
+          <line x1="190" y1="46" x2="190" y2="90" class="tunnel-inner" />
+
+          <!-- Queen → Food Storage (curved left) -->
+          <path d="M166,175 Q118,224 104,274" class="tunnel-outer" />
+          <path d="M166,175 Q118,224 104,274" class="tunnel-inner" />
+
+          <!-- Queen → Nursery (straight down) -->
+          <line x1="190" y1="182" x2="190" y2="288" class="tunnel-outer" />
+          <line x1="190" y1="182" x2="190" y2="288" class="tunnel-inner" />
+
+          <!-- Queen → Corpse Room (curved right) -->
+          <path d="M214,175 Q262,224 276,274" class="tunnel-outer" />
+          <path d="M214,175 Q262,224 276,274" class="tunnel-inner" />
+
+          <!-- ══ ENTRANCE (surface level) ═════════════════════════ -->
+          <ellipse cx="190" cy="26" rx="54" ry="20" fill="#1c0e04" stroke="rgba(100,65,22,0.65)" stroke-width="1.5" />
+          <text x="190" y="22" text-anchor="middle" fill="#8a6640" font-size="9" font-family="monospace"
+            font-weight="bold">■ 지표면</text>
+          <text x="190" y="36" text-anchor="middle" fill="#5a3e22" font-size="8" font-family="monospace">둥지 입구
+            ▼</text>
+
+          <!-- ══ QUEEN'S CHAMBER ════════════════════════════════════ -->
+          <!-- Outer glow ring -->
+          <circle cx="190" cy="136" r="52" fill="none" stroke="rgba(210,165,30,0.10)" stroke-width="10" />
+          <!-- Room body -->
+          <circle cx="190" cy="136" r="46" fill="url(#rg-queen)" stroke="#d4a020" stroke-width="2.5" />
+          <!-- Label -->
+          <text x="190" y="120" text-anchor="middle" fill="#e0c055" font-size="14" font-family="serif">♛</text>
+          <text x="190" y="133" text-anchor="middle" fill="#c09040" font-size="9" font-family="monospace"
+            font-weight="bold">여왕</text>
+          <!-- Live data -->
+          <text x="190" y="147" text-anchor="middle" fill="#a87830" font-size="10" font-family="monospace"
+            id="node-eggs">🥚 0</text>
+          <text x="190" y="159" text-anchor="middle" fill="#777" font-size="9" font-family="monospace"
+            id="node-egg-timer">다음: 5.0s</text>
+          <text x="190" y="171" text-anchor="middle" fill="#555" font-size="8" font-family="monospace"
+            id="node-ph-level">페로몬 Lv.0</text>
+
+          <!-- ══ FOOD STORAGE ════════════════════════════════════════ -->
+          <circle cx="82" cy="312" r="44" fill="none" stroke="rgba(58,154,58,0.10)" stroke-width="10" />
+          <circle cx="82" cy="312" r="38" fill="url(#rg-food)" stroke="#3a9a3a" stroke-width="2" />
+          <text x="82" y="299" text-anchor="middle" fill="#65cc65" font-size="10" font-family="monospace">🌿</text>
+          <text x="82" y="311" text-anchor="middle" fill="#50aa50" font-size="9" font-family="monospace"
+            font-weight="bold">식량</text>
+          <text x="82" y="325" text-anchor="middle" fill="#48a848" font-size="11" font-family="monospace"
+            font-weight="bold" id="node-food">0/100</text>
+          <text x="82" y="337" text-anchor="middle" fill="#555" font-size="8" font-family="monospace"
+            id="node-storage-level">용량 Lv.0</text>
+
+          <!-- ══ NURSERY (알방) ══════════════════════════════════════ -->
+          <circle cx="190" cy="330" r="44" fill="none" stroke="rgba(208,133,56,0.10)" stroke-width="10" />
+          <circle cx="190" cy="330" r="38" fill="url(#rg-nursery)" stroke="#d08538" stroke-width="2" />
+          <text x="190" y="317" text-anchor="middle" fill="#d08538" font-size="10" font-family="monospace">🥚</text>
+          <text x="190" y="329" text-anchor="middle" fill="#b06828" font-size="9" font-family="monospace"
+            font-weight="bold">육아실</text>
+          <text x="190" y="343" text-anchor="middle" fill="#b06828" font-size="11" font-family="monospace"
+            font-weight="bold" id="node-pop">50/60</text>
+          <text x="190" y="355" text-anchor="middle" fill="#555" font-size="8" font-family="monospace"
+            id="node-nursery-level">부화 Lv.0</text>
+
+          <!-- ══ CORPSE ROOM (시체방) ══════════════════════════════ -->
+          <circle cx="298" cy="312" r="44" fill="none" stroke="rgba(106,106,148,0.10)" stroke-width="10" />
+          <circle cx="298" cy="312" r="38" fill="url(#rg-corpse)" stroke="#6a6a90" stroke-width="2" />
+          <text x="298" y="299" text-anchor="middle" fill="#9090c0" font-size="10" font-family="monospace">☠</text>
+          <text x="298" y="311" text-anchor="middle" fill="#7878b0" font-size="9" font-family="monospace"
+            font-weight="bold">시체실</text>
+          <text x="298" y="326" text-anchor="middle" fill="#7878b0" font-size="14" font-family="monospace"
+            font-weight="bold" id="node-corpse">0</text>
+          <text x="298" y="340" text-anchor="middle" fill="#888" font-size="8" font-family="monospace"
+            id="node-corpse-status">안전</text>
+
+        </svg>
+      </div>
+
+      <!-- ══ UPGRADE CONTROLS ══════════════════════════════════════ -->
+      <div id="nest-controls">
+
+        <div class="ctrl-row" id="ctrl-queen">
+          <span class="ctrl-label">♛ 여왕</span>
+          <span class="level-badge" id="badge-pheromone">Lv.0</span>
+          <button class="upgrade-btn" id="btn-pheromone">
+            🧪 페로몬 강화&nbsp;<span class="btn-cost" id="cost-pheromone">50🌿</span>
+          </button>
+        </div>
+
+        <div class="ctrl-row" id="ctrl-storage">
+          <span class="ctrl-label">🌿 저장고</span>
+          <span class="level-badge" id="badge-storage">Lv.0</span>
+          <button class="upgrade-btn" id="btn-storage">
+            📦 저장고 확장&nbsp;<span class="btn-cost" id="cost-storage">30🌿</span>
+          </button>
+        </div>
+
+        <div class="ctrl-row" id="ctrl-nursery">
+          <span class="ctrl-label">🥚 육아실</span>
+          <span class="level-badge" id="badge-nursery">Lv.0</span>
+          <button class="upgrade-btn" id="btn-nursery">
+            🐛 육아실 확장&nbsp;<span class="btn-cost" id="cost-nursery">40🌿</span>
+          </button>
+        </div>
+
+        <div class="ctrl-row" id="ctrl-acid-facility">
+          <span class="ctrl-label">☣ 산성 연구소</span>
+          <span class="level-badge" id="badge-acid-facility">Lv.0</span>
+          <button class="upgrade-btn" id="btn-acid-facility">
+            🏗 시설 건설&nbsp;<span class="btn-cost" id="cost-acid-facility">100🌿</span>
+          </button>
+        </div>
+
+        <!-- ── Phase 7: Caste Ratio ─────────────────────────────── -->
+        <div id="caste-ratio-section">
+          <p class="caste-header">🧬 계급 생성 비율</p>
+          <div class="caste-row">
+            <span class="caste-label scout-col">👁 정찰병</span>
+            <input type="range" id="caste-scout" min="0" max="100" step="5" value="10">
+            <span class="caste-val" id="cval-scout">10%</span>
+            <span class="caste-cost">(3🌿)</span>
+          </div>
+          <div class="caste-row">
+            <span class="caste-label worker-col">⚒ 일꾼</span>
+            <input type="range" id="caste-worker" min="0" max="100" step="5" value="70">
+            <span class="caste-val" id="cval-worker">70%</span>
+            <span class="caste-cost">(2🌿)</span>
+          </div>
+          <div class="caste-row">
+            <span class="caste-label soldier-col">🗡 병사</span>
+            <input type="range" id="caste-soldier" min="0" max="100" step="5" value="10">
+            <span class="caste-val" id="cval-soldier">10%</span>
+            <span class="caste-cost">(6🌿)</span>
+          </div>
+          <div class="caste-row">
+            <span class="caste-label acid-col">☣ 산성개미</span>
+            <input type="range" id="caste-acid" min="0" max="100" step="5" value="10">
+            <span class="caste-val" id="cval-acid">10%</span>
+            <span class="caste-cost">(10🌿)</span>
+          </div>
+        </div>
+
+        <div class="ctrl-row" id="ctrl-corpse">
+          <span class="ctrl-label">☠ 시체실</span>
+          <span class="level-badge" id="badge-corpse">Lv.0</span>
+          <button class="upgrade-btn" id="btn-corpse">
+            ♻ 시체 재활용&nbsp;<span class="btn-cost" id="cost-corpse">60🌿</span>
+          </button>
+        </div>
+
+        <div class="ctrl-row" id="ctrl-commander-hq">
+          <span class="ctrl-label">♛ 사령관 막사</span>
+          <span class="level-badge" id="badge-commander-hq">Lv.0</span>
+          <button class="upgrade-btn" id="btn-commander-hq">
+            🏯 막사 건설&nbsp;<span class="btn-cost" id="cost-commander-hq">80🌿</span>
+          </button>
+        </div>
+
+        <div class="ctrl-row" id="ctrl-commander-summon" hidden>
+          <span class="ctrl-label">♛ 사령관 召集</span>
+          <span class="level-badge" style="color:#ffe040">최대 3</span>
+          <button class="upgrade-btn" id="btn-commander-summon">
+            ⚔ 소환&nbsp;<span class="btn-cost" id="cost-commander-summon">25🌿</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Queen Energy Bar -->
+      <div id="energy-wrap">
+        <span class="energy-label">⚡ 여왕 에너지</span>
+        <div class="energy-track">
+          <div id="energy-bar"></div>
+        </div>
+        <span id="energy-val">100</span>
+      </div>
+
+      <!-- Colony Tuning Sliders -->
+      <div id="nest-tuning">
+        <p class="tune-header">⚙ 군락 조정</p>
+        <div class="tune-row">
+          <span class="tune-label">🌿 채집 집중도</span>
+          <input type="range" id="tune-forage" min="0.5" max="2" step="0.1" value="1">
+          <span class="tune-val" id="val-forage">1.0</span>
+        </div>
+        <div class="tune-row">
+          <span class="tune-label">♻ 위생 관리</span>
+          <input type="range" id="tune-sanit" min="0.5" max="2" step="0.1" value="1">
+          <span class="tune-val" id="val-sanit">1.0</span>
+        </div>
+        <div class="tune-row">
+          <span class="tune-label">🛡 방어</span>
+          <input type="range" id="tune-defense" min="0.5" max="2" step="0.1" value="1">
+          <span class="tune-val" id="val-defense">1.0</span>
+        </div>
+      </div>
+
+      <!-- Colony stats footer -->
+      <div id="colony-stats-bar">
+        <span>☠ 사망: <b id="stat-deaths">0</b></span>
+        <span>🌿 총 식량: <b id="stat-total-food">0</b></span>
+        <span id="stat-status">🟢 건강</span>
+      </div>
+
+    </aside>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="colony.js"></script>
+  <script src="main.js"></script>
+  <script>
+    (function () {
+      // VERSION 주입 — main.js가 로드되지 않아도 나머지 UI가 동작하도록 분리
+      try {
+        const titleEl = document.getElementById('help-title');
+        if (titleEl && typeof VERSION !== 'undefined') {
+          titleEl.textContent += '  ' + VERSION;
+        }
+      } catch (_) {}
+
+      // 도움말 버튼 이벤트 바인딩
+      const helpBtn     = document.getElementById('help-btn');
+      const helpOverlay = document.getElementById('help-overlay');
+      const helpClose   = document.getElementById('help-close');
+
+      if (helpBtn && helpOverlay && helpClose) {
+        helpBtn.addEventListener('click', () => { helpOverlay.hidden = false; });
+        helpClose.addEventListener('click', () => { helpOverlay.hidden = true; });
+        helpOverlay.addEventListener('click', e => {
+          if (e.target === helpOverlay) helpOverlay.hidden = true;
+        });
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') helpOverlay.hidden = true;
+        });
+      }
+    })();
+  </script>
+</body>
+
+</html>
