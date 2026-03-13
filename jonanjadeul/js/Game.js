@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.2.0'; // Phase 1+2 프로토타입
+const VERSION = 'v0.2.1'; // 별 시차 스크롤 + 속도 밸런스 패치
 
 // ── 맵 설정 (화면 크기와 무관한 고정 월드 크기)
 const WORLD_W = 3200;
@@ -101,18 +101,41 @@ const Game = (() => {
     },
   ];
 
-  /** 별 배경 초기화 */
+  // 시차 계수: layer 0(먼 별) = 0.12, layer 1(가까운 별) = 0.38
+  const PARALLAX = [0.12, 0.38];
+
+  /** 별 배경 초기화 — 화면 좌표로 랜덤 배치, layer 속성 부여 */
   function initStars() {
     stars = [];
     const W = Renderer.getWidth();
     const H = Renderer.getHeight();
     for (let i = 0; i < STAR_COUNT; i++) {
+      const layer = i < STAR_COUNT * 0.65 ? 0 : 1; // 65% 먼 별, 35% 가까운 별
       stars.push({
-        sx:   Math.random() * W,
-        sy:   Math.random() * H,
-        size: Math.random() < 0.15 ? 2 : 1,
-        alpha: 0.3 + Math.random() * 0.7,
+        sx:    Math.random() * W,
+        sy:    Math.random() * H,
+        size:  layer === 0 ? 1 : (Math.random() < 0.3 ? 2 : 1.5),
+        alpha: layer === 0 ? 0.3 + Math.random() * 0.4 : 0.6 + Math.random() * 0.4,
+        layer,
       });
+    }
+  }
+
+  /**
+   * 별 시차 스크롤 — 플레이어 속도 반대 방향으로 별 이동
+   * 화면 경계 이탈 시 반대편에 재등장
+   */
+  function updateStars(dt) {
+    if (!player) return;
+    const W = Renderer.getWidth();
+    const H = Renderer.getHeight();
+    for (const s of stars) {
+      const p = PARALLAX[s.layer];
+      s.sx -= player.vx * dt * p;
+      s.sy -= player.vy * dt * p;
+      // 화면 경계 wrap
+      s.sx = ((s.sx % W) + W) % W;
+      s.sy = ((s.sy % H) + H) % H;
     }
   }
 
@@ -281,8 +304,9 @@ const Game = (() => {
     WeaponSystem.update(dt, player, activeEnemies);
     const { levelUp } = EnemyManager.update(dt, player);
 
-    // 파티클
+    // 파티클 & 별 스크롤
     updateParticles(dt);
+    updateStars(dt);
 
     // 게임오버 체크
     if (player.isDead) { gameOver(); return; }

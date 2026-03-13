@@ -46,11 +46,11 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 | `Game.js` | `WORLD_W / WORLD_H` | 맵 크기 | 3200 × 1800 |
 | `Game.js` | `STAR_COUNT` | 별 배경 수 | 180 |
 | `Player.js` | `this.accel` | 가속도 (px/s²) | 520 |
-| `Player.js` | `this.drag` | 속도 감쇠 계수 | 0.88 |
-| `Player.js` | `this.maxSpeed` | 최대 속도 (px/s) | 340 |
+| `Player.js` | `this.drag` | 속도 감쇠 계수 (자연 최대속도 ≈ 217 px/s) | 0.96 |
+| `Player.js` | `this.maxSpeed` | 최대 속도 상한 (px/s) | 260 |
 | `Player.js` | `this.maxHp` | 최대 HP | 100 |
 | `EnemyManager.js` | `MAX_ENEMIES` | 적 풀 크기 | 300 |
-| `EnemyManager.js` | `ENEMY_SPEED_BASE` | 적 기본 속도 | 80 px/s |
+| `EnemyManager.js` | `ENEMY_SPEED_BASE` | 적 기본 속도 (Wave1: 52~70, Wave10: ~113 px/s) | 58 px/s |
 | `EnemyManager.js` | `WAVE_INTERVAL` | 웨이브 간격 | 15s |
 | `EnemyManager.js` | `SPAWN_PER_WAVE` | 웨이브당 스폰 수 | 12 |
 | `WeaponSystem.js` | `MAX_PROJECTILES` | 투사체 풀 크기 | 500 |
@@ -197,5 +197,6 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-13 | v0.2.1 | 버그 수정: 별 배경 시차 스크롤 추가 (layer 0/1 시차 계수 0.12/0.38), 플레이어 drag 0.88→0.96 (실효 최대속도 72→217 px/s), 적 기본속도 80→58 px/s |
 | 2026-03-13 | v0.2.0 | Phase 1+2 구현: 엔진 코어, WASD 이동, Wraparound, 자동 무기, 오브젝트 풀, 적 AI, XP 시스템, 레벨업 팝업 |
 | 2026-03-13 | -      | 기존 개미 식민지 시뮬레이터 → `archive/antcolony/` 이동 |

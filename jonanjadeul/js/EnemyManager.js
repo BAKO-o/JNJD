@@ -11,7 +11,7 @@ const EnemyManager = (() => {
   // ── 상수
   const MAX_ENEMIES  = 300;  // 풀 크기
   const ENEMY_RADIUS = 14;   // 적 충돌 반지름
-  const ENEMY_SPEED_BASE  = 80;  // 기본 이동속도 (px/s)
+  const ENEMY_SPEED_BASE  = 58;  // 기본 이동속도 (px/s) — Wave1: 52~70, Wave10: ~113
   const ENEMY_HP_BASE     = 3;   // 기본 HP
   const ENEMY_DAMAGE      = 10;  // 플레이어 접촉 데미지
   const CONTACT_COOLDOWN  = 1.2; // 같은 적에게 재피격 쿨다운 (s)

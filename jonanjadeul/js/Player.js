@@ -24,8 +24,8 @@ class Player {
 
     // ── 물리 상수
     this.accel = 520;    // 가속도 (px/s²)
-    this.drag  = 0.88;   // 프레임당 속도 감쇠 계수 (0~1, 낮을수록 빨리 멈춤)
-    this.maxSpeed = 340; // 최대 속도 (px/s)
+    this.drag  = 0.96;   // 프레임당 속도 감쇠 계수 (자연 최대속도 ≈ 217 px/s)
+    this.maxSpeed = 260; // 최대 속도 상한 (px/s)
 
     // ── 회전
     this.angle = 0;      // 현재 방향각 (라디안, 오른쪽=0)
