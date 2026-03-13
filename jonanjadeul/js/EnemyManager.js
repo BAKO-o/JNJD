@@ -18,7 +18,7 @@ const EnemyManager = (() => {
   const MODULE_DROP_CHANCE = 0.15;
 
   const WAVE_INTERVAL  = 15;
-  const SPAWN_PER_WAVE = 12;
+  const SPAWN_PER_WAVE = 6;   // 웨이브당 기본 스폰 수 (12→6)
   const SPAWN_MARGIN   = 60;
 
   // ── XP Gem 풀
@@ -184,6 +184,39 @@ const EnemyManager = (() => {
   }
 
   /**
+   * 적 간 분리 패스 — 활성 적 O(n²) 원 충돌 처리
+   * 겹친 두 적을 서로 반대 방향으로 밀어내 포개짐을 방지한다.
+   */
+  function _separateEnemies() {
+    // 활성 적 목록 수집 (풀 전체 순회 대신 활성만)
+    const active = [];
+    for (const e of enemies) { if (e.active) active.push(e); }
+
+    for (let i = 0; i < active.length; i++) {
+      const a = active[i];
+      for (let j = i + 1; j < active.length; j++) {
+        const b = active[j];
+        const { dx, dy } = Collision.wrappedDelta(a.x, a.y, b.x, b.y, worldW, worldH);
+        const dist = Math.hypot(dx, dy);
+        const minDist = a.radius + b.radius;
+        if (dist > 0 && dist < minDist) {
+          // 겹침량의 절반씩 반대 방향으로 이동
+          const push = (minDist - dist) * 0.5;
+          const nx = dx / dist, ny = dy / dist;
+          a.x -= nx * push;
+          a.y -= ny * push;
+          b.x += nx * push;
+          b.y += ny * push;
+          a.x = ((a.x % worldW) + worldW) % worldW;
+          a.y = ((a.y % worldH) + worldH) % worldH;
+          b.x = ((b.x % worldW) + worldW) % worldW;
+          b.y = ((b.y % worldH) + worldH) % worldH;
+        }
+      }
+    }
+  }
+
+  /**
    * 매 프레임 업데이트
    * @returns {{ levelUp: boolean }}
    */
@@ -196,7 +229,7 @@ const EnemyManager = (() => {
     if (waveTimer <= 0) {
       waveTimer = WAVE_INTERVAL;
       waveNumber++;
-      spawnPending += SPAWN_PER_WAVE + (waveNumber - 1) * 4;
+      spawnPending += SPAWN_PER_WAVE + (waveNumber - 1) * 2;
     }
 
     // ── 스폰 (0.15s 간격)
@@ -277,9 +310,22 @@ const EnemyManager = (() => {
           const dmg = Math.floor(ENEMY_DAMAGE * (ENEMY_TYPES[e.type]?.damageMult ?? 1));
           player.takeDamage(dmg);
           e.contactCooldown = CONTACT_COOLDOWN;
+          // 플레이어 중심에서 적 방향으로 밀어내기 (포개짐 방지)
+          const { dx: pdx, dy: pdy } = Collision.wrappedDelta(player.x, player.y, e.x, e.y, worldW, worldH);
+          const pd = Math.hypot(pdx, pdy);
+          if (pd > 0) {
+            const pushTo = player.radius + e.radius + 4;
+            e.x = player.x + (pdx / pd) * pushTo;
+            e.y = player.y + (pdy / pd) * pushTo;
+            e.x = ((e.x % worldW) + worldW) % worldW;
+            e.y = ((e.y % worldH) + worldH) % worldH;
+          }
         }
       }
     }
+
+    // ── 적 간 분리 (포개짐 방지) — 활성 적끼리 원 충돌 후 밀어내기
+    _separateEnemies();
 
     // ── XP Gem 흡수
     for (const g of gems) {
