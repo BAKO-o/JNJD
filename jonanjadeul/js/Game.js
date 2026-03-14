@@ -242,6 +242,13 @@ const Game = (() => {
     elOverlayPause.classList.toggle('hidden',    state !== STATE.PAUSED);
     elOverlayLevelup.classList.toggle('hidden',  state !== STATE.LEVELUP);
     elOverlayGameover.classList.toggle('hidden', state !== STATE.GAMEOVER);
+
+    // 휴식 오버레이: PLAYING이 아닌 상태(레벨업·조립·일시정지)로 전환 시 즉시 숨김
+    // → 레벨업 카드나 모듈 조립창이 앞에 보여야 함
+    // PLAYING으로 복귀 시 updateHUD()가 isResting 여부에 따라 다시 표시함
+    if (state !== STATE.PLAYING) {
+      elRestOverlay.classList.add('hidden');
+    }
   }
 
   function togglePause() {
