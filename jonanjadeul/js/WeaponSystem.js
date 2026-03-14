@@ -326,7 +326,7 @@ const WeaponSystem = (() => {
       if (def.fire === 'orbit') {
         // 궤도 탄: 투사체 풀 미사용, 직접 위치 계산 & 충돌
         sec.orbitAngle += dt * 2.2;
-        const orbitR = def.range;
+        const orbitR = Math.max(def.range, player.hitboxRadius + 15);
         for (let i = 0; i < 3; i++) {
           if (sec.orbitTimers[i] > 0) { sec.orbitTimers[i] -= dt; continue; }
           const a = sec.orbitAngle + (i * Math.PI * 2 / 3);
@@ -457,10 +457,11 @@ const WeaponSystem = (() => {
       if (sec.type !== 'WPN_ORBIT') continue;
       const def = SECONDARY_DEFS['WPN_ORBIT'];
       const { sx: pcx, sy: pcy } = player.worldToScreen(player.x, player.y, worldW, worldH);
+      const orbitR = Math.max(SECONDARY_DEFS['WPN_ORBIT'].range, player.hitboxRadius + 15);
       for (let i = 0; i < 3; i++) {
         const a = sec.orbitAngle + (i * Math.PI * 2 / 3);
-        const osx = pcx + Math.cos(a) * def.range;
-        const osy = pcy + Math.sin(a) * def.range;
+        const osx = pcx + Math.cos(a) * orbitR;
+        const osy = pcy + Math.sin(a) * orbitR;
         ctx.beginPath();
         ctx.arc(osx, osy, 8, 0, Math.PI * 2);
         ctx.fillStyle = def.color;

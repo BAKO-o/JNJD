@@ -310,6 +310,7 @@ const Game = (() => {
     if (player) {
       const targetZoom = Math.max(ZOOM_MIN, Math.min(1.0, ZOOM_BASE / player.hitboxRadius));
       zoom += (targetZoom - zoom) * Math.min(1, dt * 3);
+      EnemyManager.setZoom(zoom);
     }
 
     render();

@@ -65,6 +65,7 @@ const EnemyManager = (() => {
 
   // ── 게임 상태
   let worldW, worldH;
+  let _zoom          = 1.0;  // Game.js에서 setZoom()으로 갱신
   let waveNumber     = 1;
   let totalKills     = 0;
   let waveKills      = 0;
@@ -149,6 +150,9 @@ const EnemyManager = (() => {
     return null;
   }
 
+  /** 현재 줌 설정 (Game.js 루프에서 매 프레임 호출) */
+  function setZoom(z) { _zoom = z; }
+
   /** 화면 가장자리 + SPAWN_MARGIN 바깥 랜덤 위치 반환 */
   function getSpawnPos(player) {
     const W = Renderer.getWidth();
@@ -160,8 +164,9 @@ const EnemyManager = (() => {
     else if (side === 2) { sx = -SPAWN_MARGIN; sy = Math.random() * H; }
     else                  { sx = W + SPAWN_MARGIN; sy = Math.random() * H; }
 
-    let wx = player.x + (sx - player.screenX);
-    let wy = player.y + (sy - player.screenY);
+    // 줌을 역산해 월드 오프셋 계산 — 줌 아웃 시에도 시야 바깥에 스폰
+    let wx = player.x + (sx - player.screenX) / _zoom;
+    let wy = player.y + (sy - player.screenY) / _zoom;
     wx = ((wx % worldW) + worldW) % worldW;
     wy = ((wy % worldH) + worldH) % worldH;
     return { wx, wy };
@@ -400,7 +405,9 @@ const EnemyManager = (() => {
       d.lifetime -= dt;
       if (d.lifetime <= 0) { d.active = false; continue; }
       const { dx: ddx, dy: ddy } = Collision.wrappedDelta(d.x, d.y, player.x, player.y, worldW, worldH);
-      if (Math.hypot(ddx, ddy) < MODULE_DROP_COLLECT_RADIUS) {
+      // 수집 반지름 = 기체 hitboxRadius + 여유 10px (기체 크기에 맞게 자동 확장)
+      const collectR = Math.max(MODULE_DROP_COLLECT_RADIUS, player.hitboxRadius + 10);
+      if (Math.hypot(ddx, ddy) < collectR) {
         d.active = false;
         TetrisGrid.queueModule(d.moduleType);
       }
@@ -504,7 +511,7 @@ const EnemyManager = (() => {
     spawnTimer     = 0;
   }
 
-  return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset };
+  return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset, setZoom };
 })();
 
 window.EnemyManager = EnemyManager;

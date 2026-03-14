@@ -235,7 +235,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
-| 2026-03-14 | v0.6.1 | 조립 UI R키 모듈 90° 회전(rotatePending), 기체 크기 따라 자동 줌 아웃(ZOOM_BASE=55, ZOOM_MIN=0.32), ctx 스케일 transform으로 전체 엔티티 줌 적용 |
+| 2026-03-14 | v0.6.1 | 조립 UI R키 모듈 90° 회전(rotatePending), 기체 크기 따라 자동 줌 아웃(ZOOM_BASE=55, ZOOM_MIN=0.32), ctx 스케일 transform으로 전체 엔티티 줌 적용; 버그 수정 3건: 줌 후 적 스폰 위치 보정(EnemyManager.setZoom), 모듈 드랍 수집 반지름 기체 크기 연동(hitboxRadius+10), 궤도 무기 공전 반지름 기체 크기 연동(hitboxRadius+15) |
 | 2026-03-13 | v0.6.0 | 웨이브 킬 목표 시스템(KILL_BASE+KILL_PER_WAVE), 물리 모듈 드랍(ModuleDrop 풀), 10종 무기 모듈(WPN_GATLING·SPREAD·SNIPER·MISSILE·FLAK·ORBIT·LASER·MINE·CHAIN·NOVA), WeaponSystem 보조 무기 시스템(호밍·체인·궤도·기뢰 등), 웨이브 휴식 오버레이 |
 | 2026-03-13 | v0.5.0 | 선체 다각형 히트박스(삼각형 분할+모듈 셀 직사각형), 10종 적 타입(RAIDER·JUGGERNAUT·SWARM·LANCER·ANCHOR·ZIGZAGGER·DASHER·SHADE·BOMBER·SPLITTER), 타입별 AI(지그재그·돌진·분열), Collision.js에 polyCircle/polyCircleWrapped 추가 |
 | 2026-03-13 | v0.4.0 | 수정 5건: XP 젬 흡수거리·속도 증가(120→200, 200→320), 적 처치 15% 모듈 드랍, Q키 조립화면 수동 진입, 레벨업→항상 업그레이드 카드, 마우스 클릭 포탄(범위공격) 추가 |
