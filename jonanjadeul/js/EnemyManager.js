@@ -128,7 +128,7 @@ const EnemyManager = (() => {
     waveKillTarget = KILL_BASE;
     isResting      = false;
     restTimer      = 0;
-    spawnPending   = SPAWN_PER_WAVE;  // Wave 1 초기 스폰
+    spawnPending   = waveKillTarget;  // Wave 1: 킬 목표(8)만큼 스폰
   }
 
   /** 풀에서 비활성 enemy 꺼내기 */
@@ -258,7 +258,7 @@ const EnemyManager = (() => {
         waveNumber++;
         waveKills      = 0;
         waveKillTarget = KILL_BASE + (waveNumber - 1) * KILL_PER_WAVE;
-        spawnPending  += SPAWN_PER_WAVE + (waveNumber - 1) * 2;
+        spawnPending   = waveKillTarget;  // 다음 웨이브 킬 목표만큼 스폰
       }
     } else {
       if (waveKills >= waveKillTarget) {
@@ -266,6 +266,16 @@ const EnemyManager = (() => {
         restTimer = REST_DURATION;
         // 현재 활성 적 모두 제거
         for (const e of enemies) e.active = false;
+      } else {
+        // 안전망: 대기 스폰이 없는데 활성 적이 남은 킬보다 적으면 보충
+        if (spawnPending === 0) {
+          let activeCount = 0;
+          for (const e of enemies) { if (e.active) activeCount++; }
+          const remaining = waveKillTarget - waveKills;
+          if (activeCount < remaining) {
+            spawnPending = remaining - activeCount;
+          }
+        }
       }
     }
 
