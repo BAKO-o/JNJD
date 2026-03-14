@@ -102,6 +102,7 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `consumeClick()`: mousedown 클릭 플래그 소비 (PLAYING: 포탄 발사, BUILDING: 배치)
 - `consumeSkip()`: Space 건너뛰기 플래그 소비 (조립 화면 전용)
 - `consumeOpenAssembly()`: Q 키 플래그 소비 (모듈 조립화면 열기)
+- `consumeRotate()`: R 키 플래그 소비 (조립 화면 모듈 회전)
 
 ### `Renderer.js` (IIFE, `window.Renderer`)
 - `init(canvas)`: 캔버스 초기화, resize 이벤트 등록
@@ -234,6 +235,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-14 | v0.6.1 | 조립 UI R키 모듈 90° 회전(rotatePending), 기체 크기 따라 자동 줌 아웃(ZOOM_BASE=55, ZOOM_MIN=0.32), ctx 스케일 transform으로 전체 엔티티 줌 적용 |
 | 2026-03-13 | v0.6.0 | 웨이브 킬 목표 시스템(KILL_BASE+KILL_PER_WAVE), 물리 모듈 드랍(ModuleDrop 풀), 10종 무기 모듈(WPN_GATLING·SPREAD·SNIPER·MISSILE·FLAK·ORBIT·LASER·MINE·CHAIN·NOVA), WeaponSystem 보조 무기 시스템(호밍·체인·궤도·기뢰 등), 웨이브 휴식 오버레이 |
 | 2026-03-13 | v0.5.0 | 선체 다각형 히트박스(삼각형 분할+모듈 셀 직사각형), 10종 적 타입(RAIDER·JUGGERNAUT·SWARM·LANCER·ANCHOR·ZIGZAGGER·DASHER·SHADE·BOMBER·SPLITTER), 타입별 AI(지그재그·돌진·분열), Collision.js에 polyCircle/polyCircleWrapped 추가 |
 | 2026-03-13 | v0.4.0 | 수정 5건: XP 젬 흡수거리·속도 증가(120→200, 200→320), 적 처치 15% 모듈 드랍, Q키 조립화면 수동 진입, 레벨업→항상 업그레이드 카드, 마우스 클릭 포탄(범위공격) 추가 |

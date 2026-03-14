@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.6.0'; // 웨이브 킬 목표, 물리 모듈 드랍, 10종 무기 모듈
+const VERSION = 'v0.6.1'; // 모듈 회전(R키), 기체 크기 자동 줌
 
 // ── 맵 설정 (화면 크기와 무관한 고정 월드 크기)
 const WORLD_W = 3200;
@@ -36,6 +36,11 @@ const Game = (() => {
   let lastTimestamp = 0;
   let elapsedTime   = 0;    // 플레이 총 시간 (s)
   let animFrameId   = null;
+
+  // ── 줌 (기체 크기에 따라 자동 축소)
+  let zoom = 1.0;
+  const ZOOM_BASE = 55;   // hitboxRadius가 이 이하일 때 zoom = 1.0
+  const ZOOM_MIN  = 0.32; // 최소 줌 (매우 큰 기체)
 
   // ── 엔티티
   let player = null;
@@ -217,6 +222,7 @@ const Game = (() => {
     TetrisGrid.init();
     particles.length = 0;
     elapsedTime = 0;
+    zoom = 1.0;
 
     setState(STATE.PLAYING);
   }
@@ -290,7 +296,13 @@ const Game = (() => {
     if (state === STATE.PLAYING) {
       update(dt);
     } else if (state === STATE.BUILDING) {
-      updateBuilding();
+      updateBuilding(dt);
+    }
+
+    // 줌 부드럽게 갱신 (PLAYING/BUILDING 모두)
+    if (player) {
+      const targetZoom = Math.max(ZOOM_MIN, Math.min(1.0, ZOOM_BASE / player.hitboxRadius));
+      zoom += (targetZoom - zoom) * Math.min(1, dt * 3);
     }
 
     render();
@@ -344,7 +356,11 @@ const Game = (() => {
    * BUILDING 상태 업데이트 — 조립 화면 클릭 및 건너뛰기 처리
    * 적·투사체 업데이트는 일시정지됨
    */
-  function updateBuilding() {
+  function updateBuilding(dt) {
+    // R키: 모듈 회전 (90° 시계방향)
+    if (InputHandler.consumeRotate()) {
+      TetrisGrid.rotatePending();
+    }
     // 스킵: Space
     if (InputHandler.consumeSkip()) {
       setState(STATE.PLAYING);
@@ -409,19 +425,28 @@ const Game = (() => {
     if (!player) return;
 
     const { cx, cy } = screenCenter();
+    const ctx = Renderer.getCtx();
+
+    // ── 줌 transform 적용 (화면 중앙 기준)
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-cx, -cy);
 
     // ── 게임 엔티티 렌더 (플레이어 중심 기준)
     EnemyManager.draw(player);
     WeaponSystem.draw(player);
     drawParticles();
 
-    // 플레이어 (화면 중앙 고정)
+    // 플레이어 (화면 중앙 고정 — transform 후에도 (cx,cy)는 (cx,cy)에 렌더됨)
     player.draw(cx, cy);
 
-    // BUILDING: 조립 UI를 게임 화면 위에 오버레이로 그린다
+    ctx.restore();
+
+    // BUILDING: 조립 UI — 줌 미적용 (순수 UI 오버레이)
     if (state === STATE.BUILDING) {
       TetrisGrid.drawOnCanvas(
-        Renderer.getCtx(), cx, cy,
+        ctx, cx, cy,
         InputHandler.state.mouseX,
         InputHandler.state.mouseY
       );

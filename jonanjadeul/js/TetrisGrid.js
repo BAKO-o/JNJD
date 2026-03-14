@@ -220,6 +220,16 @@ const TetrisGrid = (() => {
   }
 
   /**
+   * pending 모듈을 90° 시계방향으로 회전 (스크린 좌표계: (gx,gy)→(-gy,gx))
+   * R키를 누를 때 Game.js에서 호출
+   */
+  function rotatePending() {
+    if (!pending) return;
+    pending.cells = pending.cells.map(c => ({ gx: -c.gy, gy: c.gx }));
+    validSlots = _calcValidSlots();
+  }
+
+  /**
    * 랜덤 모듈 타입 키 반환 (EnemyManager 드랍 시 호출)
    */
   function randomModuleKey() {
@@ -452,7 +462,7 @@ const TetrisGrid = (() => {
     // ── 8. 하단 힌트
     ctx.font      = '12px "Segoe UI", sans-serif';
     ctx.fillStyle = '#334466';
-    ctx.fillText('[Space] 건너뛰기', cx, H - 28);
+    ctx.fillText('[R] 회전   [Space] 건너뛰기', cx, H - 28);
   }
 
   /** 코어 아이콘 (작은 파란 삼각형) */
@@ -567,6 +577,7 @@ const TetrisGrid = (() => {
     canPlace,
     place,
     recalcHitbox,
+    rotatePending,
     handleClick,
     drawShipModules,
     drawOnCanvas,
