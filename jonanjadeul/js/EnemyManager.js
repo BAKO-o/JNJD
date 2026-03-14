@@ -461,12 +461,15 @@ const EnemyManager = (() => {
   /** 전체 렌더링 */
   function draw(player) {
     const W = Renderer.getWidth(), H = Renderer.getHeight();
+    // 줌 아웃 시 시야가 넓어지므로 컬링 마진을 역줌 배율에 맞게 확장
+    const cullX = Math.ceil(W / _zoom / 2);
+    const cullY = Math.ceil(H / _zoom / 2);
 
     // 적
     for (const e of enemies) {
       if (!e.active) continue;
       const { sx, sy } = player.worldToScreen(e.x, e.y, worldW, worldH);
-      if (sx < -80 || sx > W + 80 || sy < -80 || sy > H + 80) continue;
+      if (sx < -cullX || sx > W + cullX || sy < -cullY || sy > H + cullY) continue;
       Renderer.drawEnemy(sx, sy, e.angle, e.radius, e.hp / e.maxHp, e.type, e.shadeAlpha);
     }
 
@@ -474,7 +477,7 @@ const EnemyManager = (() => {
     for (const g of gems) {
       if (!g.active) continue;
       const { sx, sy } = player.worldToScreen(g.x, g.y, worldW, worldH);
-      if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+      if (sx < -cullX || sx > W + cullX || sy < -cullY || sy > H + cullY) continue;
       Renderer.drawXpGem(sx, sy);
     }
 
@@ -482,7 +485,7 @@ const EnemyManager = (() => {
     for (const d of moduleDrops) {
       if (!d.active) continue;
       const { sx, sy } = player.worldToScreen(d.x, d.y, worldW, worldH);
-      if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
+      if (sx < -cullX || sx > W + cullX || sy < -cullY || sy > H + cullY) continue;
       Renderer.drawModuleDrop(sx, sy, d.moduleType);
     }
   }

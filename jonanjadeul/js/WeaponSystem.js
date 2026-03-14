@@ -53,6 +53,7 @@ const WeaponSystem = (() => {
 
   // ── 상태
   let worldW, worldH;
+  let _zoom       = 1.0;
   let fireTimer   = 0; // 자동무기 다음 발사까지 남은 시간
   let cannonTimer = 0; // 포탄 재사용 대기 시간
 
@@ -77,6 +78,9 @@ const WeaponSystem = (() => {
       chainCount:   0,        // 남은 체인 횟수
     };
   }
+
+  /** 줌 설정 (Game.js 루프에서 매 프레임 호출) */
+  function setZoom(z) { _zoom = z; }
 
   /** 초기화 */
   function init(ww, wh) {
@@ -438,12 +442,14 @@ const WeaponSystem = (() => {
   /** 전체 렌더링 */
   function draw(player) {
     const W = Renderer.getWidth(), H = Renderer.getHeight();
+    const cullX = Math.ceil(W / _zoom / 2);
+    const cullY = Math.ceil(H / _zoom / 2);
 
     // 투사체
     for (const p of projectiles) {
       if (!p.active) continue;
       const { sx, sy } = player.worldToScreen(p.x, p.y, worldW, worldH);
-      if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
+      if (sx < -cullX || sx > W + cullX || sy < -cullY || sy > H + cullY) continue;
       if (p.type === 'cannon') {
         Renderer.drawCannonball(sx, sy, p.radius);
       } else {
@@ -482,6 +488,7 @@ const WeaponSystem = (() => {
   /** 리셋 */
   function reset(ww, wh) {
     worldW = ww; worldH = wh;
+    _zoom = 1.0;
     for (const p of projectiles) p.active = false;
     fireTimer        = 0;
     cannonTimer      = 0;
@@ -492,7 +499,7 @@ const WeaponSystem = (() => {
   /** 현재 무기 스탯 읽기 (Game.js 업그레이드 계산용) */
   function getWeaponStat(key) { return weapon[key]; }
 
-  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, reset };
+  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, reset, setZoom };
 })();
 
 window.WeaponSystem = WeaponSystem;
