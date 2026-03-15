@@ -16,6 +16,15 @@ const TetrisGrid = (() => {
   // ── 그리드 상태: Map<"gx,gy", moduleType string>
   const grid = new Map();
 
+  // ── 함체 슬롯 관리
+  let maxHullSlots = 12;   // 초기 최대 함체 슬롯 (스크랩으로 증설 가능)
+  const HULL_SLOT_EXPAND_COST  = 15;  // 슬롯 증설 스크랩 비용
+  const HULL_SLOT_EXPAND_AMOUNT = 3;  // 1회 증설 슬롯 수
+
+  // ── 배치된 모듈 추적 (교체 기능용)
+  // [{type, anchorGx, anchorGy, cells:[{gx,gy}]}]
+  const placedModules = [];
+
   // ── 현재 배치 대기 중인 모듈
   let pending     = null;  // { type, name, cells, color, desc, bonus }
   let validSlots  = [];    // 배치 가능한 앵커 위치 [{gx,gy}]
@@ -158,6 +167,8 @@ const TetrisGrid = (() => {
     pending     = null;
     validSlots  = [];
     moduleQueue = [];
+    maxHullSlots = 12;
+    placedModules.length = 0;
   }
 
   // ────────────────── 슬롯 계산 ──────────────────
@@ -201,6 +212,9 @@ const TetrisGrid = (() => {
       if (grid.has(`${nx},${ny}`)) return false;
       if (Math.abs(nx) > MAX_R || Math.abs(ny) > MAX_R) return false;
     }
+    // 함체 슬롯 여유 확인 (CORE 제외)
+    const usedSlots = grid.size - 1;
+    if (usedSlots + pending.cells.length > maxHullSlots) return false;
     return true;
   }
 
@@ -283,9 +297,15 @@ const TetrisGrid = (() => {
   function place(agx, agy, player) {
     if (!canPlace(agx, agy)) return false;
 
+    const placedCells = [];
     for (const c of pending.cells) {
-      grid.set(`${agx + c.gx},${agy + c.gy}`, pending.type);
+      const cellGx = agx + c.gx, cellGy = agy + c.gy;
+      grid.set(`${cellGx},${cellGy}`, pending.type);
+      placedCells.push({ gx: cellGx, gy: cellGy });
     }
+
+    // 배치 이력 저장 (교체 기능용)
+    placedModules.push({ type: pending.type, anchorGx: agx, anchorGy: agy, cells: placedCells });
 
     _applyBonus(pending.bonus, player);
     recalcHitbox(player);
@@ -294,6 +314,41 @@ const TetrisGrid = (() => {
     validSlots = [];
     return true;
   }
+
+  /**
+   * 그리드 상의 (gx, gy) 셀을 포함하는 모듈을 제거한다 (교체 모드용)
+   * 보너스는 되돌리지 않음 (설계상 유지)
+   * @returns {boolean} 제거 성공 여부
+   */
+  function removeModuleAt(gx, gy) {
+    const key = `${gx},${gy}`;
+    if (!grid.has(key) || grid.get(key) === 'CORE') return false;
+    const idx = placedModules.findIndex(m => m.cells.some(c => c.gx === gx && c.gy === gy));
+    if (idx < 0) return false;
+    const mod = placedModules[idx];
+    for (const c of mod.cells) grid.delete(`${c.gx},${c.gy}`);
+    placedModules.splice(idx, 1);
+    return true;
+  }
+
+  /**
+   * 함체 슬롯 증설 (스크랩 소모 후 Game.js에서 호출)
+   */
+  function expandHullSlots(amount) {
+    maxHullSlots += amount;
+  }
+
+  /** 현재 사용 중인 슬롯 수 (CORE 제외) */
+  function getUsedSlots() { return grid.size - 1; }
+
+  /** 최대 슬롯 수 */
+  function getMaxSlots() { return maxHullSlots; }
+
+  /** 슬롯 증설 비용 */
+  function getExpandCost() { return HULL_SLOT_EXPAND_COST; }
+
+  /** 슬롯 증설 시 증가량 */
+  function getExpandAmount() { return HULL_SLOT_EXPAND_AMOUNT; }
 
   /** 보너스 적용 */
   function _applyBonus(bonus, player) {
@@ -348,7 +403,20 @@ const TetrisGrid = (() => {
   function handleClick(sx, sy, cx, cy, player) {
     const gx = Math.round((sx - cx) / CELL);
     const gy = Math.round((sy - cy) / CELL);
-    return place(gx, gy, player);
+
+    // 정상 배치 시도
+    if (canPlace(gx, gy)) return place(gx, gy, player);
+
+    // 슬롯이 꽉 찼을 때: 기존 모듈 클릭 시 제거 (교체 1단계)
+    const usedSlots = grid.size - 1;
+    if (usedSlots >= maxHullSlots) {
+      const removed = removeModuleAt(gx, gy);
+      if (removed) {
+        validSlots = _calcValidSlots(); // 슬롯 재계산
+        recalcHitbox(player);
+      }
+    }
+    return false; // 조립창 유지
   }
 
   // ────────────────── 렌더링 ──────────────────
@@ -388,12 +456,12 @@ const TetrisGrid = (() => {
    * @param {number} mouseX - 마우스 화면 X
    * @param {number} mouseY - 마우스 화면 Y
    */
-  function drawOnCanvas(ctx, cx, cy, mouseX, mouseY) {
+  function drawOnCanvas(ctx, cx, cy, mouseX, mouseY, player) {
     const W = ctx.canvas.width;
     const H = ctx.canvas.height;
 
     // ── 1. 어두운 반투명 오버레이
-    ctx.fillStyle = 'rgba(0, 2, 18, 0.80)';
+    ctx.fillStyle = 'rgba(0, 2, 18, 0.85)';
     ctx.fillRect(0, 0, W, H);
 
     // ── 2. 헤더
@@ -401,10 +469,18 @@ const TetrisGrid = (() => {
     ctx.textBaseline = 'middle';
     ctx.font         = 'bold 20px "Segoe UI", sans-serif';
     ctx.fillStyle    = '#93c5fd';
-    ctx.fillText('🔧 모듈 조립', cx, cy - CELL * 8 - 10);
-    ctx.font      = '13px "Segoe UI", sans-serif';
-    ctx.fillStyle = '#5577aa';
-    ctx.fillText('유효한 슬롯(파란 테두리)을 클릭하여 부착하세요', cx, cy - CELL * 8 + 22);
+    ctx.fillText('🔧 함선 모듈 조립', cx, 36);
+    ctx.font      = '12px "Segoe UI", sans-serif';
+
+    const usedSlots = grid.size - 1;
+    const isFull    = usedSlots >= maxHullSlots;
+    if (isFull) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText(`⚠ 함체 슬롯 포화 — 기존 모듈을 클릭하면 제거됩니다 (교체 후 재배치)`, cx, 62);
+    } else {
+      ctx.fillStyle = '#5577aa';
+      ctx.fillText('유효한 슬롯(파란 테두리)을 클릭하여 부착 · 가득 찼을 때 기존 모듈 클릭으로 교체', cx, 62);
+    }
 
     // ── 3. 마우스→그리드 좌표
     const hgx = Math.round((mouseX - cx) / CELL);
@@ -420,31 +496,37 @@ const TetrisGrid = (() => {
       if (type === 'CORE') {
         _drawCoreIcon(ctx, sx, sy);
       } else {
-        const def    = MODULE_DEFS[type];
-        const color  = def ? def.color : '#334455';
+        const def   = MODULE_DEFS[type];
+        const color = def ? def.color : '#334455';
         ctx.fillStyle   = color;
         ctx.fillRect(sx - HALF, sy - HALF, CELL, CELL);
-        ctx.strokeStyle = 'rgba(200,220,255,0.5)';
-        ctx.lineWidth   = 1;
+        // 슬롯 포화 시 기존 모듈에 오렌지 테두리 (교체 가능 표시)
+        if (isFull) {
+          const pulse2 = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+          ctx.strokeStyle = `rgba(251,191,36,${0.5 + pulse2 * 0.5})`;
+          ctx.lineWidth   = 1.5;
+        } else {
+          ctx.strokeStyle = 'rgba(200,220,255,0.5)';
+          ctx.lineWidth   = 1;
+        }
         ctx.strokeRect(sx - HALF, sy - HALF, CELL, CELL);
       }
     }
 
     // ── 5. 유효 슬롯 표시
-    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.004); // 펄스 효과
+    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.004);
     for (const s of validSlots) {
       const sx = cx + s.gx * CELL;
       const sy = cy + s.gy * CELL;
       const isHover = (s.gx === hgx && s.gy === hgy);
-
       ctx.strokeStyle = isHover
-        ? `rgba(100,220,255,${0.9})`
+        ? `rgba(100,220,255,0.9)`
         : `rgba(56,189,248,${0.3 + pulse * 0.4})`;
       ctx.lineWidth = isHover ? 2 : 1.5;
       ctx.strokeRect(sx - HALF + 1, sy - HALF + 1, CELL - 2, CELL - 2);
     }
 
-    // ── 6. 호버 프리뷰 (배치 가능할 때 pending 모듈 반투명 표시)
+    // ── 6. 호버 프리뷰
     if (pending && isValidHover) {
       ctx.globalAlpha = 0.45;
       for (const c of pending.cells) {
@@ -456,13 +538,140 @@ const TetrisGrid = (() => {
       ctx.globalAlpha = 1;
     }
 
-    // ── 7. 우측 패널: 제공 모듈 카드
+    // ── 7. 좌측 패널: 현재 장착 모듈 목록
+    _drawInstalledPanel(ctx, W, H, player);
+
+    // ── 8. 우측 패널: 제공 모듈 카드
     if (pending) _drawModulePanel(ctx, W, H);
 
-    // ── 8. 하단 힌트
+    // ── 9. 하단 힌트
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.font      = '12px "Segoe UI", sans-serif';
     ctx.fillStyle = '#334466';
-    ctx.fillText('[R] 회전   [Space] 건너뛰기', cx, H - 28);
+    const scrap = player ? player.scrap : 0;
+    ctx.fillText(
+      `[R] 회전   [Space] 건너뛰기   [E] 슬롯 증설 (+${HULL_SLOT_EXPAND_AMOUNT}슬롯, 비용: ${HULL_SLOT_EXPAND_COST} Scrap)  ─  보유 Scrap: ${scrap}`,
+      cx, H - 28
+    );
+  }
+
+  /** 좌측 패널: 현재 장착된 모듈 목록 */
+  function _drawInstalledPanel(ctx, W, H, player) {
+    const PAD  = 14;
+    const PW   = 190;
+    const PH   = Math.min(H - 120, 420);
+    const px   = 16;
+    const py   = (H - PH) / 2;
+    const rad  = 10;
+    const usedSlots = grid.size - 1;
+
+    // 카드 배경
+    ctx.fillStyle = 'rgba(8, 15, 40, 0.92)';
+    _roundRect(ctx, px, py, PW, PH, rad);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(99,179,237,0.3)';
+    ctx.lineWidth   = 1;
+    _roundRect(ctx, px, py, PW, PH, rad);
+    ctx.stroke();
+
+    // 헤더
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font         = 'bold 13px "Segoe UI", sans-serif';
+    ctx.fillStyle    = '#7dd3fc';
+    ctx.fillText('장착 모듈', px + PAD, py + PAD + 4);
+
+    // 슬롯 사용량
+    const slotText = `${usedSlots} / ${maxHullSlots} 슬롯`;
+    const slotColor = usedSlots >= maxHullSlots ? '#fbbf24' : '#86efac';
+    ctx.font      = '11px "Segoe UI", sans-serif';
+    ctx.fillStyle = slotColor;
+    ctx.textAlign = 'right';
+    ctx.fillText(slotText, px + PW - PAD, py + PAD + 4);
+
+    // 슬롯 바
+    const barY  = py + PAD + 18;
+    const barW  = PW - PAD * 2;
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(px + PAD, barY, barW, 6);
+    ctx.fillStyle = slotColor;
+    ctx.fillRect(px + PAD, barY, barW * Math.min(1, usedSlots / maxHullSlots), 6);
+
+    // 구분선
+    ctx.strokeStyle = 'rgba(100,140,200,0.2)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(px + PAD, barY + 12);
+    ctx.lineTo(px + PW - PAD, barY + 12);
+    ctx.stroke();
+
+    // 모듈 목록
+    const listStartY = barY + 24;
+    const itemH      = 36;
+    const maxItems   = Math.floor((PH - (listStartY - py) - PAD * 2) / itemH);
+
+    if (placedModules.length === 0) {
+      ctx.font      = '12px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.textAlign = 'center';
+      ctx.fillText('장착된 모듈 없음', px + PW / 2, listStartY + 20);
+    } else {
+      const visModules = placedModules.slice(0, maxItems);
+      for (let i = 0; i < visModules.length; i++) {
+        const m   = visModules[i];
+        const def = MODULE_DEFS[m.type];
+        if (!def) continue;
+        const iy  = listStartY + i * itemH;
+
+        // 색상 스워치
+        ctx.fillStyle = def.color;
+        ctx.fillRect(px + PAD, iy + 6, 12, 12);
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth   = 0.5;
+        ctx.strokeRect(px + PAD, iy + 6, 12, 12);
+
+        // 모듈 이름
+        ctx.font      = 'bold 11px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.textAlign = 'left';
+        ctx.fillText(def.name, px + PAD + 18, iy + 10);
+
+        // 설명 (능력치)
+        ctx.font      = '10px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#86efac';
+        ctx.fillText(def.desc, px + PAD + 18, iy + 24);
+
+        // 셀 수 뱃지
+        ctx.font      = '9px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${m.cells.length}셀`, px + PW - PAD, iy + 10);
+      }
+      if (placedModules.length > maxItems) {
+        ctx.font      = '10px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'center';
+        ctx.fillText(`+${placedModules.length - maxItems}개 더...`, px + PW / 2, listStartY + maxItems * itemH + 8);
+      }
+    }
+
+    // 스크랩 & 증설 정보
+    const scrap = player ? player.scrap : 0;
+    const footY = py + PH - PAD - 4;
+    ctx.strokeStyle = 'rgba(100,140,200,0.2)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(px + PAD, footY - 24);
+    ctx.lineTo(px + PW - PAD, footY - 24);
+    ctx.stroke();
+    ctx.font      = '11px "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText(`🔩 Scrap: ${scrap}`, px + PAD, footY - 10);
+    const canExpand = scrap >= HULL_SLOT_EXPAND_COST;
+    ctx.fillStyle = canExpand ? '#86efac' : '#475569';
+    ctx.fillText(`[E] +${HULL_SLOT_EXPAND_AMOUNT}슬롯 (${HULL_SLOT_EXPAND_COST} Scrap)`, px + PAD, footY + 4);
   }
 
   /** 코어 아이콘 (작은 파란 삼각형) */
@@ -581,6 +790,12 @@ const TetrisGrid = (() => {
     handleClick,
     drawShipModules,
     drawOnCanvas,
+    // 함체 슬롯 시스템
+    expandHullSlots,
+    getUsedSlots,
+    getMaxSlots,
+    getExpandCost,
+    getExpandAmount,
   };
 
 })();

@@ -585,7 +585,7 @@ const EnemyManager = (() => {
       if (gem) { gem.active=true; gem.x=enemy.x; gem.y=enemy.y; gem.value=enemy.xpValue; }
 
       if (enemy.isBoss) {
-        // 보스 처치: 모듈 3개 보장 드랍
+        // 보스 처치: 모듈 3개 보장 드랍 + 스크랩 다량
         bossEnemy = null;
         for (let i = 0; i < 3; i++) {
           const drop = acquireModuleDrop();
@@ -595,8 +595,9 @@ const EnemyManager = (() => {
             drop.moduleType=TetrisGrid.randomModuleKey(); drop.lifetime=MODULE_DROP_LIFETIME;
           }
         }
+        if (_player) _player.scrap += 20 + Math.floor(Math.random() * 11); // 20~30 스크랩
       } else {
-        // 일반 적: 15% 확률 모듈 드랍
+        // 일반 적: 15% 확률 모듈 드랍 + 소량 스크랩
         if (Math.random() < MODULE_DROP_CHANCE) {
           const drop = acquireModuleDrop();
           if (drop) {
@@ -604,6 +605,7 @@ const EnemyManager = (() => {
             drop.moduleType=TetrisGrid.randomModuleKey(); drop.lifetime=MODULE_DROP_LIFETIME;
           }
         }
+        if (_player) _player.scrap += 1 + Math.floor(Math.random() * 3); // 1~3 스크랩
         // 분열 처리
         if (enemy.type === 'SPLITTER' && !enemy.isSplit) { for (let i=0;i<3;i++) _spawnAt(enemy.x, enemy.y, 'SWARM'); }
         if (enemy.type === 'SENTINEL' && !enemy.isSplit) { for (let i=0;i<2;i++) _spawnAt(enemy.x, enemy.y, 'GRUNT'); }

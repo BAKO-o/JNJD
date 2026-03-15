@@ -1,5 +1,5 @@
-# GUIDE.md — JONANJADEUL (조난자들) 개발자 가이드
-> 버전: v0.8.0
+# GUIDE.md — AP3: 잔해의 귀환 개발자 가이드
+> 버전: v0.9.0
 > 최종 갱신: 2026-03-15
 
 ---
@@ -95,10 +95,12 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `getQueueSize()`: HUD 뱃지용 총 대기 모듈 수
 - `handleClick(sx,sy,cx,cy,player)`: 클릭→그리드 좌표 변환→배치 시도
 - `recalcHitbox(player)`: 부착 모듈 기반 `player.hitboxRadius` 재계산
-- `drawOnCanvas(ctx,cx,cy,mouseX,mouseY)`: BUILDING 상태 조립 UI 렌더
+- `drawOnCanvas(ctx,cx,cy,mouseX,mouseY,player)`: BUILDING 상태 조립 UI 렌더 (3패널)
 - `drawShipModules(ctx,cx,cy,angle)`: 게임플레이 중 모듈 렌더 (회전 적용)
 - `randomModuleKey()`: 랜덤 모듈 키 반환 (EnemyManager ModuleDrop 생성 시 호출)
 - `queueModule(typeKey)`: 특정 모듈을 대기 큐에 추가 (ModuleDrop 수집 시 호출)
+- `expandHullSlots(n)`: 함체 슬롯 증설 (+n)
+- `getUsedSlots()` / `getMaxSlots()` / `getExpandCost()` / `getExpandAmount()`: 슬롯 정보
 - **모듈 17종**: HULL_1/2, GUN_1/2, THRUSTER, WING_L/R + WPN_GATLING/SPREAD/SNIPER/MISSILE/FLAK/ORBIT/LASER/MINE/CHAIN/NOVA
 
 ### `InputHandler.js` (IIFE, `window.InputHandler`)
@@ -109,6 +111,7 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `consumeSkip()`: Space 건너뛰기 플래그 소비 (조립 화면 전용)
 - `consumeOpenAssembly()`: Q 키 플래그 소비 (모듈 조립화면 열기)
 - `consumeRotate()`: R 키 플래그 소비 (조립 화면 모듈 회전)
+- `consumeExpand()`: E 키 플래그 소비 (조립 화면 함체 슬롯 증설)
 
 ### `Renderer.js` (IIFE, `window.Renderer`)
 - `init(canvas)`: 캔버스 초기화, resize 이벤트 등록
@@ -226,16 +229,35 @@ Game.render()
 
 ## 9. 업그레이드 시스템 (UPGRADE_POOL)
 
-`Game.js` 내 `UPGRADE_POOL` 배열에서 관리. Phase 4에서 확장 예정.
+`Game.js` 내 `UPGRADE_POOL` 배열에서 관리. 연구원 4명 컨셉 반영.
 
-| id | 이름 | 효과 |
-|---|---|---|
-| `song_firepower` | 화력 증가 | `player.damageMult += 0.25` |
-| `song_hull` | 선체 강화 | `player.maxHp += 40` |
-| `gun_engine` | 엔진 부스트 | `player.speedMult += 0.20` |
-| `gun_rapid` | 연사 강화 | `weapon.cooldown *= 0.8` |
-| `hak_range` | 사거리 확장 | `weapon.range += 80` |
-| `hak_heal` | 긴급 수리 | `player.hp += 30` |
+| id | 연구원 | 이름 | 효과 |
+|---|---|---|---|
+| `song_firepower` | 송(전술) | 화력 증가 | `player.damageMult += 0.25` |
+| `song_tactics` | 송(전술) | 전술 사격 | 사거리 +60, 쿨다운 ×0.9 |
+| `gun_engine` | 건(공학) | 엔진 부스트 | `player.speedMult += 0.20` |
+| `gun_rapid` | 건(공학) | 연사 강화 | `weapon.cooldown *= 0.8` |
+| `hak_range` | 학(과학) | 사거리 확장 | `weapon.range += 80` |
+| `hak_heal` | 학(과학) | 긴급 수리 | `player.hp += 30` |
+| `jong_armor` | 종(군사) | 장갑 보강 | `maxHp += 50`, `armorReduction += 0.10` |
+| `jong_bulkhead` | 종(군사) | 함체 증설 | `TetrisGrid.expandHullSlots(3)` |
+
+### 함체 슬롯 시스템 (TetrisGrid.js v0.9.0)
+- `maxHullSlots`: 초기 12슬롯, `expandHullSlots(n)` 으로 증설
+- 슬롯 사용량 = 배치된 모듈 셀 수 합계 (CORE 제외)
+- 슬롯 포화 시 빈 공간 배치 불가; 기존 모듈 클릭 → 제거(교체 1단계) → 재배치
+- `[E]` 키 (조립 화면): 스크랩 15개 소모 → +3슬롯
+- 조립 화면 3패널: **좌**=장착 모듈 목록(능력치) / **중**=그리드 / **우**=제공 모듈 카드
+
+### 스크랩(Scrap) 자원 (v0.9.0)
+- 일반 적 처치 시 1~3 scrap 획득, 보스 처치 시 20~30 scrap
+- `player.scrap` 필드에 누적; HUD 우측에 🔩 표시
+- 조립 화면 [E]키: 15 scrap → +3 함체 슬롯
+
+### 장갑 감소 (armorReduction, v0.9.0)
+- `player.armorReduction`: 0.0~0.75 (최대 75% 피해 감소)
+- `takeDamage(dmg)`: `actualDmg = max(1, dmg × (1 - armor))`
+- 종 업그레이드(`jong_armor`)로 +0.10씩 증가
 
 ---
 
@@ -253,6 +275,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-15 | v0.9.0 | 시스템 개편: 스크랩(Scrap) 자원(일반 적 1~3·보스 20~30), 함체 슬롯 시스템(초기 12슬롯, 포화 시 교체 모드, [E]키 15scrap→+3슬롯), 장갑 감소(armorReduction 0~75%), 연구원 4명 체계(송-전술/건-공학/학-과학/종-군사), 종 업그레이드 2종(장갑보강·함체증설), 송 방어 업그레이드→전술 사격으로 교체, 조립 UI 3패널(좌=장착모듈·중=그리드·우=제공모듈), 게임 이름 "조난자들"→"AP3: 잔해의 귀환" |
 | 2026-03-15 | v0.8.0 | 보스 시스템: 5의 배수 웨이브마다 5종 보스(OVERLORD·HIVEMOTHER·DREADNOUGHT·SPECTER_LORD·COLOSSUS) 순환 등장, 보스 전용 투사체 풀(MAX_BOSS_PROJS=150), 5종 공격 패턴(8/16방향 노바·부채꼴·회전포격·고속 스프레드·12방향 느린 포격), HP 50% 시 페이즈 2 전환, 보스 사망 시 모듈 3개 보장 드랍, Renderer에 5종 보스 draw 함수 + drawBossProjectile + drawBossHpBar 추가, 휴식 오버레이에 보스 웨이브 경고(⚠ 보스 웨이브 ⚠) 표시 |
 | 2026-03-15 | v0.7.0 | 플레이 영역 16배(12800×7200), 20종 적 타입(Tier 1~10, minWave 기반 순차 등장), 방향별 순차 그룹 스폰(상→하→좌→우, 4마리씩 2초 대기), 배경 잔해물 1500개(잔해물 풀 draw), Renderer에 11개 신규 적 draw 함수 추가 |
 | 2026-03-14 | v0.6.1 | 조립 UI R키 모듈 90° 회전(rotatePending), 기체 크기 따라 자동 줌 아웃(ZOOM_BASE=55, ZOOM_MIN=0.32), ctx 스케일 transform으로 전체 엔티티 줌 적용; 버그 수정 4건: 줌 후 적 스폰 위치 보정(EnemyManager.setZoom), 모듈 드랍 수집 반지름 기체 크기 연동(hitboxRadius+10), 궤도 무기 공전 반지름 기체 크기 연동(hitboxRadius+15), 줌 아웃 시 화면 가장자리 빈 공간 버그(draw 컬링 마진 cullX/cullY = W·H÷zoom÷2 로 역줌 배율 연동) |

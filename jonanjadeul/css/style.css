@@ -293,6 +293,13 @@ kbd {
   border-color: rgba(251,191,36,0.3);
 }
 
+/* ── 스크랩 뱃지 ── */
+#scrap-badge {
+  color: #a8b3c8;
+  border-color: rgba(168,179,200,0.25);
+  font-size: 12px;
+}
+
 .hud-key-hint {
   font-size: 10px;
   opacity: 0.55;

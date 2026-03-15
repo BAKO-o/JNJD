@@ -47,8 +47,12 @@ class Player {
     this.xpToNext = 100; // 다음 레벨까지 필요 XP
 
     // ── 스탯 배율 (업그레이드로 변경됨)
-    this.speedMult  = 1.0;
-    this.damageMult = 1.0;
+    this.speedMult     = 1.0;
+    this.damageMult    = 1.0;
+    this.armorReduction = 0.0; // 받는 피해 감소율 (0.0 ~ 0.75 상한)
+
+    // ── 자원
+    this.scrap = 0; // 함선 스크랩 (함체 슬롯 증설에 사용)
 
     // ── 화면상 위치 (Renderer에서 매 프레임 계산)
     this.screenX = 0;
@@ -122,7 +126,10 @@ class Player {
    */
   takeDamage(dmg) {
     if (this.invincibleTime > 0) return; // 무적 시간 중 무시
-    this.hp = Math.max(0, this.hp - dmg);
+    // 장갑 감소: armorReduction 비율만큼 피해 감소 (최대 75%)
+    const armor = Math.min(0.75, this.armorReduction);
+    const actualDmg = Math.max(1, dmg * (1 - armor));
+    this.hp = Math.max(0, this.hp - actualDmg);
     this.invincibleTime = 0.6; // 0.6초 무적
   }
 

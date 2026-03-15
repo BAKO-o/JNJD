@@ -19,6 +19,7 @@ const InputHandler = (() => {
     skip: false,         // Space 건너뛰기 (조립 UI 전용, consumeSkip()으로 소비)
     openAssembly: false, // Q 키 — 모듈 조립화면 열기 (consumeOpenAssembly()으로 소비)
     rotate: false,       // R 키 — 조립 UI에서 모듈 회전 (consumeRotate()으로 소비)
+    expand: false,       // E 키 — 조립 UI에서 함체 슬롯 증설 (consumeExpand()으로 소비)
   };
 
   // 키 코드 → state 필드 매핑
@@ -40,6 +41,7 @@ const InputHandler = (() => {
     if (e.code === 'Space') { e.preventDefault(); state.skip = true; }
     if (e.code === 'KeyQ') state.openAssembly = true;
     if (e.code === 'KeyR') state.rotate = true;
+    if (e.code === 'KeyE') state.expand = true;
   }
 
   function onMouseDown() {
@@ -98,7 +100,14 @@ const InputHandler = (() => {
     return v;
   }
 
-  return { init, state, consumePause, consumeClick, consumeSkip, consumeOpenAssembly, consumeRotate };
+  /** E키 함체 슬롯 증설 플래그를 소비하고 반환 (조립 UI 전용) */
+  function consumeExpand() {
+    const v = state.expand;
+    state.expand = false;
+    return v;
+  }
+
+  return { init, state, consumePause, consumeClick, consumeSkip, consumeOpenAssembly, consumeRotate, consumeExpand };
 })();
 
 // ES Module 방식으로 전역 접근 허용

@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.8.0'; // 보스 시스템: 5의 배수 웨이브마다 5종 보스 등장, 보스 투사체 공격 패턴
+const VERSION = 'v0.9.0'; // 시스템 개편: 스크랩 자원, 함체 슬롯 시스템, 종 연구원, 게임 이름 변경
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -73,8 +73,10 @@ const Game = (() => {
   const elUpgradeChoices  = document.getElementById('upgrade-choices');
   const elModuleBadge     = document.getElementById('module-badge');
   const elModuleCount     = document.getElementById('module-count');
+  const elScrapCount      = document.getElementById('scrap-count');
 
-  // ── 업그레이드 선택지 정의 (Phase 4 확장 예정)
+  // ── 업그레이드 선택지 정의
+  // 연구원: 송(전술), 건(공학), 학(과학), 종(군사·함선)
   const UPGRADE_POOL = [
     {
       id: 'song_firepower', icon: '🔫', name: '송: 화력 증가',
@@ -82,9 +84,14 @@ const Game = (() => {
       apply: (p) => { p.damageMult += 0.25; }
     },
     {
-      id: 'song_hull', icon: '🛡️', name: '송: 선체 강화',
-      desc: '최대 HP +40',
-      apply: (p) => { p.maxHp += 40; p.hp = Math.min(p.hp + 40, p.maxHp); }
+      id: 'song_tactics', icon: '⚔️', name: '송: 전술 사격',
+      desc: '사거리 +60px · 쿨다운 -10%',
+      apply: () => {
+        const curRange = WeaponSystem.getWeaponStat('range') ?? 350;
+        const curCd    = WeaponSystem.getWeaponStat('cooldown') ?? 0.72;
+        WeaponSystem.upgradeWeapon('range', curRange + 60);
+        WeaponSystem.upgradeWeapon('cooldown', Math.max(0.15, curCd * 0.9));
+      }
     },
     {
       id: 'gun_engine', icon: '⚡', name: '건: 엔진 부스트',
@@ -111,6 +118,20 @@ const Game = (() => {
       id: 'hak_heal', icon: '💉', name: '학: 긴급 수리',
       desc: 'HP +30 즉시 회복',
       apply: (p) => { p.hp = Math.min(p.maxHp, p.hp + 30); }
+    },
+    {
+      id: 'jong_armor', icon: '🛡️', name: '종: 장갑 보강',
+      desc: '최대 HP +50 · 피해감소 +10%',
+      apply: (p) => {
+        p.maxHp += 50;
+        p.hp = Math.min(p.maxHp, p.hp + 50);
+        p.armorReduction = Math.min(0.75, (p.armorReduction || 0) + 0.10);
+      }
+    },
+    {
+      id: 'jong_bulkhead', icon: '⚙️', name: '종: 함체 증설',
+      desc: `함체 슬롯 +${TetrisGrid.getExpandAmount ? TetrisGrid.getExpandAmount() : 3}`,
+      apply: () => { TetrisGrid.expandHullSlots(3); }
     },
   ];
 
@@ -371,12 +392,20 @@ const Game = (() => {
     if (InputHandler.consumeRotate()) {
       TetrisGrid.rotatePending();
     }
+    // E키: 함체 슬롯 증설 (스크랩 소모)
+    if (InputHandler.consumeExpand()) {
+      const cost = TetrisGrid.getExpandCost();
+      if (player && player.scrap >= cost) {
+        player.scrap -= cost;
+        TetrisGrid.expandHullSlots(TetrisGrid.getExpandAmount());
+      }
+    }
     // 스킵: Space
     if (InputHandler.consumeSkip()) {
       setState(STATE.PLAYING);
       return;
     }
-    // 클릭: 유효 슬롯에 배치 시도
+    // 클릭: 유효 슬롯에 배치 시도 (슬롯 포화 시 교체 모드)
     if (InputHandler.consumeClick()) {
       const { cx, cy } = screenCenter();
       const placed = TetrisGrid.handleClick(
@@ -433,6 +462,9 @@ const Game = (() => {
     const qSize = TetrisGrid.getQueueSize();
     elModuleCount.textContent = qSize;
     elModuleBadge.classList.toggle('hidden', qSize === 0);
+
+    // 스크랩 표시
+    if (elScrapCount) elScrapCount.textContent = player ? player.scrap : 0;
   }
 
   function render() {
@@ -475,7 +507,8 @@ const Game = (() => {
       TetrisGrid.drawOnCanvas(
         ctx, cx, cy,
         InputHandler.state.mouseX,
-        InputHandler.state.mouseY
+        InputHandler.state.mouseY,
+        player
       );
     }
   }
