@@ -1238,6 +1238,24 @@ const TetrisGrid = (() => {
     _drawInvSection(ctx, divX + PAD, bodyY, colW, bodyH, '장착 완료', placedTypes, true);
   }
 
+  /** 장갑판 전체 내구도를 최대로 회복 (업그레이드: 긴급 수리) */
+  function repairAllHull() {
+    for (const mod of placedModules) {
+      if (mod.maxHp > 0) mod.hp = mod.maxHp;
+    }
+  }
+
+  /** 현재 장착된 장갑판 최대 내구도를 비율(mult)만큼 증폭 (업그레이드: 장갑 강화) */
+  function boostHullMaxHp(mult) {
+    for (const mod of placedModules) {
+      if (mod.maxHp > 0) {
+        const added = Math.ceil(mod.maxHp * (mult - 1));
+        mod.maxHp += added;
+        mod.hp = Math.min(mod.hp + added, mod.maxHp);
+      }
+    }
+  }
+
   /** 그리드 Map 읽기 전용 반환 (Player.getHitPolygons() 에서 모듈 셀 좌표 참조용) */
   function getGrid() { return grid; }
 
@@ -1262,6 +1280,8 @@ const TetrisGrid = (() => {
     drawShipModules,
     drawOnCanvas,
     drawInventory,
+    repairAllHull,
+    boostHullMaxHp,
     // 함체 슬롯 시스템
     expandHullSlots,
     getUsedSlots,

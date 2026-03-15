@@ -118,18 +118,14 @@ const Game = (() => {
       }
     },
     {
-      id: 'hak_heal', icon: '💉', name: '학: 긴급 수리',
-      desc: 'HP +30 즉시 회복',
-      apply: (p) => { p.hp = Math.min(p.maxHp, p.hp + 30); }
+      id: 'hak_repair', icon: '🔧', name: '학: 긴급 수리',
+      desc: '장착 장갑판 내구도 전량 회복 · 스크랩 +25',
+      apply: (p) => { TetrisGrid.repairAllHull(); p.scrap += 25; }
     },
     {
-      id: 'jong_armor', icon: '🛡️', name: '종: 장갑 보강',
-      desc: '최대 HP +50 · 피해감소 +10%',
-      apply: (p) => {
-        p.maxHp += 50;
-        p.hp = Math.min(p.maxHp, p.hp + 50);
-        p.armorReduction = Math.min(0.75, (p.armorReduction || 0) + 0.10);
-      }
+      id: 'jong_armor', icon: '🛡️', name: '종: 장갑 강화',
+      desc: '현재 장착 장갑판 최대 내구도 +50%',
+      apply: () => { TetrisGrid.boostHullMaxHp(1.5); }
     },
     {
       id: 'jong_bulkhead', icon: '⚙️', name: '종: 함체 증설',
