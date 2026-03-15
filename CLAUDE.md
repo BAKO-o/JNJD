@@ -2,6 +2,17 @@
 
 ## 필수 규칙
 
+### 테스트 빌드 자동 복사
+
+`jonanjadeul/` 파일을 수정하고 커밋·푸시한 뒤 **반드시** 아래 명령어를 실행한다.
+
+```bash
+cp -r jonanjadeul/* output/jonanjadeul/TEST/
+```
+
+`output/jonanjadeul/TEST/`는 즉시 열어볼 수 있는 테스트 빌드 폴더다.
+커밋 후 이 복사 단계를 절대 빠뜨리지 않는다.
+
 ### 코드 수정 시 GUIDE.md 반드시 업데이트
 
 모든 코드 변경(버그 수정, 기능 추가, 수치 조정 등)을 완료한 후

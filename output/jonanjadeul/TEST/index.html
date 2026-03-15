@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AP3: 잔해의 귀환</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 메인 게임 캔버스 -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- 버전 표시 (항상 표시) -->
+  <div id="version-display"></div>
+
+  <!-- HUD 오버레이 -->
+  <div id="hud">
+    <div id="hud-top-left">
+      <div class="stat-bar-wrap">
+        <span class="stat-label">HP</span>
+        <div class="stat-bar-bg"><div id="hp-bar" class="stat-bar hp"></div></div>
+        <span id="hp-text" class="stat-text">100/100</span>
+      </div>
+      <div class="stat-bar-wrap">
+        <span class="stat-label">XP</span>
+        <div class="stat-bar-bg"><div id="xp-bar" class="stat-bar xp"></div></div>
+        <span id="xp-text" class="stat-text">Lv.1</span>
+      </div>
+    </div>
+    <div id="hud-top-right">
+      <div class="hud-stat">⏱ <span id="timer">00:00</span></div>
+      <div class="hud-stat">💀 <span id="kill-count">0</span></div>
+      <div class="hud-stat" id="wave-info">Wave <span id="wave-num">1</span></div>
+      <div class="hud-stat" id="wave-kill-info">🎯 <span id="wave-kill">0/8</span></div>
+      <div class="hud-stat hidden" id="module-badge">📦 <span id="module-count">0</span> <span class="hud-key-hint">[Q]</span></div>
+      <div class="hud-stat" id="scrap-badge">🔩 <span id="scrap-count">0</span></div>
+    </div>
+  </div>
+
+  <!-- 일시정지 오버레이 -->
+  <div id="overlay-pause" class="overlay hidden">
+    <div class="overlay-box">
+      <h2>일시정지</h2>
+      <p>ESC 또는 P 키로 재개</p>
+    </div>
+  </div>
+
+  <!-- 레벨업 / 모듈 선택 팝업 (Phase 3용 확장 예정) -->
+  <div id="overlay-levelup" class="overlay hidden">
+    <div class="overlay-box levelup-box">
+      <h2>🚀 레벨 업!</h2>
+      <p class="levelup-sub">업그레이드를 선택하세요</p>
+      <div id="upgrade-choices" class="upgrade-grid"></div>
+    </div>
+  </div>
+
+  <!-- 웨이브 휴식 카운트다운 HUD (화면 상단 소형) -->
+  <div id="overlay-rest" class="rest-hud hidden">
+    <span id="rest-title">다음 웨이브 준비</span>
+    <span id="rest-timer" class="rest-hud-timer">6</span>
+    <span>초</span>
+  </div>
+
+  <!-- 게임 오버 오버레이 -->
+  <div id="overlay-gameover" class="overlay hidden">
+    <div class="overlay-box">
+      <h2>💥 탈출 실패</h2>
+      <p id="gameover-stats"></p>
+      <button id="btn-restart" class="btn-primary">다시 시작</button>
+    </div>
+  </div>
+
+  <!-- 게임 시작 화면 -->
+  <div id="overlay-start" class="overlay">
+    <div class="overlay-box start-box">
+      <h1 class="game-title">AP3: 잔해의 귀환</h1>
+      <p class="game-subtitle">RETURN FROM THE WRECKAGE</p>
+      <p class="story-text">
+        머나먼 우주, 연구선 AP3호가 우주 해적에게 격파됐다.<br/>
+        살아남은 4명의 연구원 <strong>송, 건, 학, 종</strong>은<br/>
+        탈출 포트를 몰아 본부로 귀환해야 한다.<br/>
+        <span style="color:#fbbf24;font-size:0.88em">적의 잔해(Scrap)를 수거하여 함체를 증설하라.</span>
+      </p>
+      <div class="controls-guide">
+        <span><kbd>W A S D</kbd> 이동</span>
+        <span><kbd>Mouse</kbd> 조준·회전</span>
+        <span><kbd>Click</kbd> 포탄 발사</span>
+        <span><kbd>Q</kbd> 모듈 조립</span>
+        <span><kbd>E</kbd> 슬롯 증설 (조립 중)</span>
+        <span><kbd>ESC / P</kbd> 일시정지</span>
+        <span><kbd>I</kbd> 인벤토리</span>
+      </div>
+      <div class="start-btn-row">
+        <button id="btn-start" class="btn-primary">출발하기</button>
+        <button id="btn-howto" class="btn-secondary" onclick="document.getElementById('overlay-howto').classList.remove('hidden')">게임 방법</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 게임 방법 튜토리얼 오버레이 (2패널 레이아웃) -->
+  <div id="overlay-howto" class="overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="howto-dialog">
+
+      <!-- 헤더 -->
+      <div class="howto-header">
+        <span class="howto-title-text">게임 방법</span>
+        <button class="howto-close" onclick="document.getElementById('overlay-howto').classList.add('hidden')">✕</button>
+      </div>
+
+      <!-- 바디: 좌측 네비 + 우측 콘텐츠 -->
+      <div class="howto-body">
+
+        <!-- ── 왼쪽 목록 -->
+        <nav class="howto-nav" id="howto-nav">
+          <button class="howto-nav-item active" onclick="howtoShow('ht-goal',this)">
+            <span class="hnav-icon">🎯</span><span>목표</span>
+          </button>
+          <button class="howto-nav-item" onclick="howtoShow('ht-controls',this)">
+            <span class="hnav-icon">🕹</span><span>조작법</span>
+          </button>
+          <button class="howto-nav-item" onclick="howtoShow('ht-assembly',this)">
+            <span class="hnav-icon">🔧</span><span>모듈 조립</span>
+          </button>
+          <button class="howto-nav-item" onclick="howtoShow('ht-hp',this)">
+            <span class="hnav-icon">🛡</span><span>HP 체계</span>
+          </button>
+          <button class="howto-nav-item" onclick="howtoShow('ht-tiers',this)">
+            <span class="hnav-icon">★</span><span>모듈 등급</span>
+          </button>
+          <button class="howto-nav-item" onclick="howtoShow('ht-upgrade',this)">
+            <span class="hnav-icon">🔬</span><span>레벨업</span>
+          </button>
+          <button class="howto-nav-item" onclick="howtoShow('ht-wave',this)">
+            <span class="hnav-icon">🌊</span><span>웨이브 &amp; 보스</span>
+          </button>
+        </nav>
+
+        <!-- ── 오른쪽 콘텐츠 -->
+        <div class="howto-content">
+
+          <!-- 목표 -->
+          <div class="howto-tab active" id="ht-goal">
+            <h3 class="htab-title">목표</h3>
+            <p class="htab-lead">웨이브를 클리어하며 최대한 오래 생존하라.<br>탈출 포트 코어 HP가 0이 되면 임무 실패다.</p>
+            <div class="htab-card">
+              <div class="htab-row"><span class="htab-icon">🚀</span><div>함선을 조종해 몰려오는 적을 처치한다. 웨이브당 목표 킬 수를 채우면 다음 웨이브로 넘어간다.</div></div>
+              <div class="htab-row"><span class="htab-icon">⚙️</span><div>적이 드랍하는 <strong>모듈</strong>을 수집해 함선을 강화하고, 레벨업으로 추가 업그레이드를 획득한다.</div></div>
+              <div class="htab-row"><span class="htab-icon">💀</span><div>코어가 파괴되면 즉시 게임 오버. 모듈로 방어를 강화하고 도전을 이어가자.</div></div>
+            </div>
+          </div>
+
+          <!-- 조작법 -->
+          <div class="howto-tab" id="ht-controls">
+            <h3 class="htab-title">조작법</h3>
+            <div class="htab-keys">
+              <div class="htab-key-row"><kbd>W A S D</kbd><span>함선 이동</span></div>
+              <div class="htab-key-row"><kbd>Mouse</kbd><span>조준 / 방향 전환</span></div>
+              <div class="htab-key-row"><kbd>클릭</kbd><span>포탄 발사</span></div>
+              <div class="htab-key-sep">조립 화면</div>
+              <div class="htab-key-row"><kbd>Q</kbd><span>모듈 조립 화면 열기 / 닫기</span></div>
+              <div class="htab-key-row"><kbd>W / S</kbd><span>대기 모듈 선택 (이전 / 다음)</span></div>
+              <div class="htab-key-row"><kbd>R</kbd><span>선택 모듈 90° 회전</span></div>
+              <div class="htab-key-row"><kbd>E</kbd><span>함체 슬롯 증설 (Scrap 150)</span></div>
+              <div class="htab-key-row"><kbd>Space</kbd><span>조립 화면 닫기</span></div>
+              <div class="htab-key-sep">기타</div>
+              <div class="htab-key-row"><kbd>I</kbd><span>모듈 인벤토리 보기</span></div>
+              <div class="htab-key-row"><kbd>ESC / P</kbd><span>일시정지</span></div>
+            </div>
+          </div>
+
+          <!-- 모듈 조립 -->
+          <div class="howto-tab" id="ht-assembly">
+            <h3 class="htab-title">모듈 조립</h3>
+            <div class="htab-card">
+              <div class="htab-row"><span class="htab-icon">📦</span><div>적을 처치하면 일정 확률로 <strong>구조 모듈</strong> 또는 <strong>무기 모듈</strong>이 드랍된다. 함선에 가까이 다가가면 자동으로 수집된다.</div></div>
+              <div class="htab-row"><span class="htab-icon">🔧</span><div><kbd>Q</kbd> 키로 조립 화면을 열면 우측 패널에 대기 모듈 목록이 표시된다. <kbd>W</kbd> / <kbd>S</kbd> 로 배치할 모듈을 선택하고 파란 테두리 슬롯을 클릭해 부착한다.</div></div>
+              <div class="htab-row"><span class="htab-icon">🖱</span><div>이미 배치된 모듈을 <strong>클릭 드래그</strong>해 다른 슬롯으로 이동하거나 재배치할 수 있다.</div></div>
+              <div class="htab-row"><span class="htab-icon">🔄</span><div><kbd>R</kbd> 키로 배치 전 모듈을 회전시켜 원하는 방향으로 맞출 수 있다.</div></div>
+              <div class="htab-row"><span class="htab-icon">🔩</span><div><kbd>E</kbd> 키 (조립 화면 중) — Scrap 150개를 소모해 함체 슬롯 +3 증설. 함선이 클수록 더 많은 모듈을 탑재할 수 있다.</div></div>
+              <div class="htab-row"><span class="htab-icon">💡</span><div>모듈 형태는 테트로미노처럼 다양하다. 우측 카드의 5×5 미니 그리드로 모양을 미리 확인하자.</div></div>
+            </div>
+          </div>
+
+          <!-- HP 체계 -->
+          <div class="howto-tab" id="ht-hp">
+            <h3 class="htab-title">HP 체계</h3>
+            <div class="htab-card">
+              <div class="htab-row"><span class="htab-icon">❤️</span><div><strong>코어 HP 10 (고정)</strong> — 탈출 포트 자체의 체력. 업그레이드로 늘릴 수 없다. 0이 되면 즉시 게임 오버.</div></div>
+              <div class="htab-row"><span class="htab-icon">🔵</span><div><strong>장갑판 모듈</strong>이 장착된 방향의 공격은 장갑판이 먼저 흡수한다. 장갑판 내구도가 소진되면 모듈이 파괴된다.</div></div>
+              <div class="htab-row"><span class="htab-icon">💥</span><div>장갑판 없이 <strong>비장갑 모듈</strong>이 공격을 직접 맞으면 <strong>즉시 파괴</strong>된다. 코어는 데미지를 받지 않는다.</div></div>
+              <div class="htab-row"><span class="htab-icon">🛡</span><div>모든 모듈이 없는 방향으로 공격을 받으면 코어 HP가 직접 감소한다. 사방을 모듈로 덮어 코어를 보호하자.</div></div>
+            </div>
+            <div class="htab-note">💡 구조 모듈 중 <strong>장갑판</strong> 계열만 HP를 가지며, 나머지는 피격 시 즉시 파괴된다.</div>
+          </div>
+
+          <!-- 모듈 등급 -->
+          <div class="howto-tab" id="ht-tiers">
+            <h3 class="htab-title">모듈 등급</h3>
+            <p class="htab-lead">등급이 높을수록 강력하지만 드랍 확률이 낮다.</p>
+            <div class="htab-tier-list">
+              <div class="htab-tier" style="border-color:#94a3b8;background:rgba(148,163,184,0.05)">
+                <span class="htab-tier-dot" style="background:#94a3b8"></span>
+                <div class="htab-tier-info">
+                  <strong style="color:#94a3b8">일반 (Common)</strong>
+                  <span>기본적인 방어 / 화력 모듈. 가장 자주 드랍된다.</span>
+                </div>
+                <span class="htab-tier-pct">72%</span>
+              </div>
+              <div class="htab-tier" style="border-color:#60a5fa;background:rgba(96,165,250,0.05)">
+                <span class="htab-tier-dot" style="background:#60a5fa"></span>
+                <div class="htab-tier-info">
+                  <strong style="color:#60a5fa">희귀 (Rare)</strong>
+                  <span>향상된 성능의 모듈. 함선 강화에 중요한 역할을 한다.</span>
+                </div>
+                <span class="htab-tier-pct">20%</span>
+              </div>
+              <div class="htab-tier" style="border-color:#c084fc;background:rgba(192,132,252,0.05)">
+                <span class="htab-tier-dot" style="background:#c084fc"></span>
+                <div class="htab-tier-info">
+                  <strong style="color:#c084fc">영웅 (Epic)</strong>
+                  <span>강력한 보너스를 가진 고급 모듈. 드랍 확률이 낮다.</span>
+                </div>
+                <span class="htab-tier-pct">6%</span>
+              </div>
+              <div class="htab-tier" style="border-color:#fbbf24;background:rgba(251,191,36,0.05)">
+                <span class="htab-tier-dot" style="background:#fbbf24"></span>
+                <div class="htab-tier-info">
+                  <strong style="color:#fbbf24">전설 (Legendary)</strong>
+                  <span>최강의 효과를 가진 최희귀 모듈. 보스 처치 시 기회가 있다.</span>
+                </div>
+                <span class="htab-tier-pct">2%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 레벨업 -->
+          <div class="howto-tab" id="ht-upgrade">
+            <h3 class="htab-title">레벨업 업그레이드</h3>
+            <p class="htab-lead">적을 처치해 XP를 모으면 레벨업한다. 레벨업 시 4명의 연구원이 업그레이드 카드를 1장씩 제시하며, 하나를 골라 함선을 강화할 수 있다.</p>
+            <div class="htab-researcher-list">
+              <div class="htab-researcher" style="border-color:#60a5fa">
+                <span class="hres-badge" style="background:#1d4ed8">🔬</span>
+                <div>
+                  <strong style="color:#60a5fa">송 — 전술·화력</strong>
+                  <p>공격력, 발사 속도, 관통 등 전투 능력 향상 카드를 제공한다.</p>
+                </div>
+              </div>
+              <div class="htab-researcher" style="border-color:#4ade80">
+                <span class="hres-badge" style="background:#15803d">⚙️</span>
+                <div>
+                  <strong style="color:#4ade80">건 — 공학·기동</strong>
+                  <p>이동 속도, 회피, 함체 효율 등 기동성 관련 카드를 제공한다.</p>
+                </div>
+              </div>
+              <div class="htab-researcher" style="border-color:#c084fc">
+                <span class="hres-badge" style="background:#6b21a8">🧪</span>
+                <div>
+                  <strong style="color:#c084fc">학 — 과학·지원</strong>
+                  <p>회복, 모듈 강화, 특수 효과 등 지원 계열 카드를 제공한다.</p>
+                </div>
+              </div>
+              <div class="htab-researcher" style="border-color:#f87171">
+                <span class="hres-badge" style="background:#991b1b">⚔️</span>
+                <div>
+                  <strong style="color:#f87171">종 — 군사·방어</strong>
+                  <p>방어력, 장갑판 내구도, 피해 경감 등 방어 카드를 제공한다.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 웨이브 & 보스 -->
+          <div class="howto-tab" id="ht-wave">
+            <h3 class="htab-title">웨이브 &amp; 보스</h3>
+            <div class="htab-card">
+              <div class="htab-row"><span class="htab-icon">🌊</span><div>웨이브마다 목표 킬 수가 증가한다. 모두 처치하면 다음 웨이브 전까지 <strong>휴식 시간</strong>이 주어진다.</div></div>
+              <div class="htab-row"><span class="htab-icon">📈</span><div>웨이브가 높아질수록 적의 속도, HP, 수가 늘어나고 다양한 종류의 적이 등장한다.</div></div>
+              <div class="htab-row"><span class="htab-icon">💀</span><div><strong>5의 배수 웨이브</strong>(5, 10, 15…)에 강력한 <strong>보스</strong>가 등장한다. 처치 시 모듈 3개를 보장 드랍한다.</div></div>
+              <div class="htab-row"><span class="htab-icon">⚡</span><div>보스는 일반 적보다 훨씬 빠르고 강하다. 레벨업 업그레이드와 모듈 조합으로 충분히 대비하자.</div></div>
+            </div>
+          </div>
+
+        </div><!-- /.howto-content -->
+      </div><!-- /.howto-body -->
+
+    </div><!-- /.howto-dialog -->
+  </div>
+
+  <script>
+  function howtoShow(tabId, btn) {
+    document.querySelectorAll('.howto-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.howto-nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    if (btn) btn.classList.add('active');
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.code === 'Escape') {
+      document.getElementById('overlay-howto').classList.add('hidden');
+    }
+  });
+  </script>
+
+  <!-- 스크립트 로드 순서: 의존성 없는 것부터 (window 전역 패턴) -->
+  <script src="js/InputHandler.js"></script>
+  <script src="js/Renderer.js"></script>
+  <script src="js/Collision.js"></script>
+  <script src="js/Player.js"></script>
+  <script src="js/EnemyManager.js"></script>
+  <script src="js/WeaponSystem.js"></script>
+  <script src="js/TetrisGrid.js"></script>
+  <script src="js/Game.js"></script>
+</body>
+</html>
