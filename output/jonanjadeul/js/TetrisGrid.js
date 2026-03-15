@@ -31,7 +31,7 @@ const TetrisGrid = (() => {
   let moduleQueue = [];    // 드랍된 모듈 대기 큐 (타입 문자열 배열)
 
   // ── 티어 시스템
-  const TIER_WEIGHTS = { COMMON: 50, RARE: 30, EPIC: 15, LEGENDARY: 5 };
+  const TIER_WEIGHTS = { COMMON: 72, RARE: 20, EPIC: 6, LEGENDARY: 2 };
   const TIER_LABELS  = { COMMON: '일반', RARE: '희귀', EPIC: '에픽', LEGENDARY: '전설' };
   const TIER_COLORS  = { COMMON: '#94a3b8', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#f59e0b' };
 
@@ -248,8 +248,14 @@ const TetrisGrid = (() => {
       placedCells.push({ gx: cellGx, gy: cellGy });
     }
 
-    // 배치 이력 저장 (교체 기능용)
-    placedModules.push({ type: pending.type, anchorGx: agx, anchorGy: agy, cells: placedCells });
+    // 배치 이력 저장 (모듈 HP 포함)
+    const def = MODULE_DEFS[pending.type];
+    const hullHp = def?.bonus?.hp ?? 0; // 장갑판 계열만 내구도 보유
+    placedModules.push({
+      type: pending.type, anchorGx: agx, anchorGy: agy, cells: placedCells,
+      hp: hullHp,       // 현재 내구도 (0 = 비장갑 모듈)
+      maxHp: hullHp,    // 최대 내구도
+    });
 
     _applyBonus(pending.bonus, player);
     recalcHitbox(player);
@@ -294,21 +300,16 @@ const TetrisGrid = (() => {
   /** 슬롯 증설 시 증가량 */
   function getExpandAmount() { return HULL_SLOT_EXPAND_AMOUNT; }
 
-  /** 보너스 적용 */
+  /** 보너스 적용 (hp는 코어HP에 영향 없음 — 모듈 자체 내구도로 처리) */
   function _applyBonus(bonus, player) {
-    if (bonus.hp) {
-      player.maxHp += bonus.hp;
-      player.hp     = Math.min(player.maxHp, player.hp + bonus.hp);
-    }
-    if (bonus.speed)  player.speedMult  += bonus.speed;
-    if (bonus.damage) player.damageMult += bonus.damage;
+    // bonus.hp: 장갑판 내구도로 사용; 플레이어 HP에는 가산하지 않음
+    if (bonus.speed)        player.speedMult  += bonus.speed;
+    if (bonus.damage)       player.damageMult += bonus.damage;
     if (bonus.cooldownMult) {
       const cur = WeaponSystem.getWeaponStat('cooldown') ?? 0.72;
       WeaponSystem.upgradeWeapon('cooldown', Math.max(0.15, cur * bonus.cooldownMult));
     }
-    if (bonus.weapon) {
-      WeaponSystem.addSecondary(bonus.weapon);
-    }
+    if (bonus.weapon) WeaponSystem.addSecondary(bonus.weapon);
   }
 
   /**
@@ -332,6 +333,78 @@ const TetrisGrid = (() => {
     }
     player.hitboxRadius = maxDist;
   }
+
+  // ────────────────── 피격·모듈 파괴 시스템 ──────────────────
+
+  /**
+   * 인덱스로 모듈을 즉시 파괴한다 (그리드 제거 + hitbox 재계산)
+   * @param {number} idx - placedModules 배열 인덱스
+   * @param {object} player
+   */
+  function _destroyModule(idx, player) {
+    const mod = placedModules[idx];
+    if (!mod) return;
+    for (const c of mod.cells) grid.delete(`${c.gx},${c.gy}`);
+    placedModules.splice(idx, 1);
+    recalcHitbox(player);
+    // 파괴 시각 효과: 마지막 파괴 정보 기록 (drawShipModules에서 플래시)
+    lastDestroyedCell = mod.cells[0] ?? null;
+    lastDestroyFlash  = 0.35; // 0.35초 플래시
+  }
+
+  /**
+   * 공격 위치로부터 피격 모듈을 결정하고 처리한다.
+   *  - 장갑판 계열(hp > 0): 내구도 감소 → 0 이하면 파괴
+   *  - 비장갑 모듈(hp === 0): 즉시 파괴
+   *  - 모듈 없음: 코어 직격 → player.takeDamage()
+   * @param {number} impactX - 공격자 월드 X
+   * @param {number} impactY - 공격자 월드 Y
+   * @param {number} dmg     - 피해량
+   * @param {object} player
+   */
+  function hitShip(impactX, impactY, dmg, player) {
+    if (!player || player.invincibleTime > 0) return;
+    if (placedModules.length === 0) { player.takeDamage(dmg); return; }
+
+    // 공격 방향 → 플레이어 로컬 좌표계로 변환
+    const dex = impactX - player.x, dey = impactY - player.y;
+    const d   = Math.hypot(dex, dey) || 1;
+    const nx  = dex / d, ny = dey / d;
+
+    // 플레이어 회전각의 역방향 변환 (그리드는 로컬 좌표)
+    const cos = Math.cos(-player.angle), sin = Math.sin(-player.angle);
+    const ldx = cos * nx - sin * ny;
+    const ldy = sin * nx + cos * ny;
+
+    // 공격 방향으로 가장 노출된 모듈 탐색
+    let bestScore = -Infinity, bestIdx = -1;
+    for (let i = 0; i < placedModules.length; i++) {
+      for (const c of placedModules[i].cells) {
+        const score = c.gx * ldx + c.gy * ldy;
+        if (score > bestScore) { bestScore = score; bestIdx = i; }
+      }
+    }
+
+    if (bestIdx < 0) { player.takeDamage(dmg); return; }
+
+    const mod = placedModules[bestIdx];
+    if (mod.hp > 0) {
+      // 장갑판: 내구도 소모
+      mod.hp -= dmg;
+      if (mod.hp <= 0) _destroyModule(bestIdx, player);
+      else { lastDestroyedCell = mod.cells[0]; lastDestroyFlash = 0.18; } // 피격 플래시
+    } else {
+      // 비장갑 모듈: 즉시 파괴
+      _destroyModule(bestIdx, player);
+    }
+  }
+
+  // ── 파괴 플래시 상태 (drawShipModules에서 소비)
+  let lastDestroyedCell = null;
+  let lastDestroyFlash  = 0; // 남은 플래시 시간(s)
+
+  /** 파괴 플래시 타이머 업데이트 (Game.js update()에서 dt 전달) */
+  function updateFlash(dt) { if (lastDestroyFlash > 0) lastDestroyFlash -= dt; }
 
   // ────────────────── 조립 UI 클릭 처리 ──────────────────
 
@@ -376,17 +449,34 @@ const TetrisGrid = (() => {
     ctx.translate(cx, cy);
     ctx.rotate(angle);
 
+    // 피격 플래시 셀 캐싱
+    const flashCell = lastDestroyFlash > 0 && lastDestroyedCell
+      ? `${lastDestroyedCell.gx},${lastDestroyedCell.gy}` : null;
+
     for (const [key, type] of grid) {
       if (type === 'CORE') continue;
       const [gx, gy] = key.split(',').map(Number);
       const def = MODULE_DEFS[type];
       const color = def ? def.color : '#334455';
 
-      ctx.fillStyle   = color;
+      // 피격 플래시
+      const isFlash = flashCell && (key === flashCell || placedModules.some(m => m.cells.some(c=>`${c.gx},${c.gy}`===flashCell && m.cells.some(c2=>`${c2.gx},${c2.gy}`===key))));
+      ctx.fillStyle = isFlash ? `rgba(255,80,80,${Math.min(1, lastDestroyFlash * 4)})` : color;
       ctx.fillRect(gx * CELL - HALF, gy * CELL - HALF, CELL, CELL);
       ctx.strokeStyle = 'rgba(150,200,255,0.35)';
       ctx.lineWidth   = 1;
       ctx.strokeRect(gx * CELL - HALF, gy * CELL - HALF, CELL, CELL);
+
+      // 장갑판 HP 바 (게임플레이 중 각 셀 하단에 표시)
+      const mod = placedModules.find(m => m.cells.some(c => c.gx === gx && c.gy === gy));
+      if (mod && mod.maxHp > 0) {
+        const ratio = Math.max(0, mod.hp / mod.maxHp);
+        const bx = gx * CELL - HALF + 1, by = gy * CELL + HALF - 4;
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(bx, by, CELL - 2, 3);
+        ctx.fillStyle = ratio > 0.5 ? '#4ade80' : ratio > 0.25 ? '#fbbf24' : '#ef4444';
+        ctx.fillRect(bx, by, (CELL - 2) * ratio, 3);
+      }
     }
 
     ctx.restore();
@@ -582,10 +672,24 @@ const TetrisGrid = (() => {
         ctx.textAlign = 'left';
         ctx.fillText(def.name, px + PAD + 18, iy + 10);
 
-        // 설명 (능력치)
-        ctx.font      = '10px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#86efac';
-        ctx.fillText(def.desc, px + PAD + 18, iy + 24);
+        // 설명 or HP 바 (장갑판은 HP 바로 대체)
+        if (m.maxHp > 0) {
+          const ratio = Math.max(0, m.hp / m.maxHp);
+          const hbx = px + PAD + 18, hby = iy + 18;
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(hbx, hby, PW - PAD * 2 - 18, 5);
+          ctx.fillStyle = ratio > 0.5 ? '#4ade80' : ratio > 0.25 ? '#fbbf24' : '#ef4444';
+          ctx.fillRect(hbx, hby, (PW - PAD * 2 - 18) * ratio, 5);
+          ctx.font = '9px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#94a3b8';
+          ctx.textAlign = 'left';
+          ctx.fillText(`내구도 ${Math.ceil(m.hp)}/${m.maxHp}`, hbx, iy + 32);
+        } else {
+          ctx.font      = '10px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#86efac';
+          ctx.textAlign = 'left';
+          ctx.fillText(def.desc, px + PAD + 18, iy + 24);
+        }
 
         // 티어 뱃지
         ctx.font      = '9px "Segoe UI", sans-serif';
@@ -980,7 +1084,7 @@ const TetrisGrid = (() => {
   }
 
   // ── 인벤토리 섹션 드로우 헬퍼
-  function _drawInvSection(ctx, sx, sy, sw, sh, title, items) {
+  function _drawInvSection(ctx, sx, sy, sw, sh, title, items, isPlaced = false) {
     const CARD_W = 78, CARD_H = 92, GAP = 5;
     const cols = Math.max(1, Math.floor((sw) / (CARD_W + GAP)));
 
@@ -1027,23 +1131,37 @@ const TetrisGrid = (() => {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = 'bold 8px "Segoe UI", sans-serif';
       ctx.fillStyle = tc;
-      ctx.fillText(TIER_LABELS[tier], cardX + CARD_W / 2, cardY + CARD_H - 28);
+      ctx.fillText(TIER_LABELS[tier], cardX + CARD_W / 2, cardY + CARD_H - 30);
 
       // 모듈 이름
       ctx.font = 'bold 9px "Segoe UI", sans-serif';
       ctx.fillStyle = '#e2e8f0';
       const name = def.name;
-      ctx.fillText(name.length > 6 ? name.slice(0,5)+'…' : name, cardX + CARD_W / 2, cardY + CARD_H - 16);
+      ctx.fillText(name.length > 6 ? name.slice(0,5)+'…' : name, cardX + CARD_W / 2, cardY + CARD_H - 19);
 
-      // 무기 구분 점
-      if (typeKey.startsWith('WPN_')) {
-        ctx.font = '7px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#f87171';
-        ctx.fillText('무기', cardX + CARD_W / 2, cardY + CARD_H - 5);
+      // 장갑판 HP 바 (장착 완료 섹션의 hull 모듈에만)
+      if (isPlaced) {
+        const placedMod = placedModules.find(m => m.type === typeKey);
+        if (placedMod && placedMod.maxHp > 0) {
+          const ratio = Math.max(0, placedMod.hp / placedMod.maxHp);
+          const bx = cardX + 6, by = cardY + CARD_H - 11;
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(bx, by, CARD_W - 12, 4);
+          ctx.fillStyle = ratio > 0.5 ? '#4ade80' : ratio > 0.25 ? '#fbbf24' : '#ef4444';
+          ctx.fillRect(bx, by, (CARD_W - 12) * ratio, 4);
+          ctx.font = '7px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(`${Math.ceil(placedMod.hp)}/${placedMod.maxHp}`, cardX + CARD_W / 2, cardY + CARD_H - 4);
+        } else if (placedMod && placedMod.maxHp === 0) {
+          ctx.font = '7px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#f87171';
+          ctx.fillText('노출됨', cardX + CARD_W / 2, cardY + CARD_H - 6);
+        }
       } else {
+        // 대기 중 모듈: 구조/무기 구분 표시
         ctx.font = '7px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#86efac';
-        ctx.fillText('구조', cardX + CARD_W / 2, cardY + CARD_H - 5);
+        ctx.fillStyle = typeKey.startsWith('WPN_') ? '#f87171' : '#86efac';
+        ctx.fillText(typeKey.startsWith('WPN_') ? '무기' : '구조', cardX + CARD_W / 2, cardY + CARD_H - 6);
       }
       rendered++;
     }
@@ -1117,7 +1235,7 @@ const TetrisGrid = (() => {
 
     // 장착 완료
     const placedTypes = placedModules.map(m => m.type);
-    _drawInvSection(ctx, divX + PAD, bodyY, colW, bodyH, '장착 완료', placedTypes);
+    _drawInvSection(ctx, divX + PAD, bodyY, colW, bodyH, '장착 완료', placedTypes, true);
   }
 
   /** 그리드 Map 읽기 전용 반환 (Player.getHitPolygons() 에서 모듈 셀 좌표 참조용) */
@@ -1139,6 +1257,8 @@ const TetrisGrid = (() => {
     recalcHitbox,
     rotatePending,
     handleClick,
+    hitShip,
+    updateFlash,
     drawShipModules,
     drawOnCanvas,
     drawInventory,

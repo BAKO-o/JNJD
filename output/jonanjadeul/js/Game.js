@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.9.3'; // 모듈 인벤토리 UI, 슬롯 증설 비용 150, I키 토글
+const VERSION = 'v0.9.4'; // 장갑판 HP 체계, 스크랩 반감, 티어 확률 조정, 인벤토리 HP바
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -351,6 +351,7 @@ const Game = (() => {
 
   function update(dt) {
     elapsedTime += dt;
+    TetrisGrid.updateFlash(dt);
 
     // 일시정지 토글
     if (InputHandler.consumePause()) { togglePause(); return; }
