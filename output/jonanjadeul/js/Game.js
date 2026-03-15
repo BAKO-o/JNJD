@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.9.2'; // 모듈 등급 시스템, 15종 무기, 상단 카운트다운 HUD
+const VERSION = 'v0.9.3'; // 모듈 인벤토리 UI, 슬롯 증설 비용 150, I키 토글
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -44,6 +44,9 @@ const Game = (() => {
 
   // ── 엔티티
   let player = null;
+
+  // ── 인벤토리 패널 표시 여부
+  let inventoryOpen = false;
 
   // ── 별 배경 데이터 (화면 좌표 기반, 시차 스크롤 없음)
   let stars = [];
@@ -265,6 +268,9 @@ const Game = (() => {
     elOverlayLevelup.classList.toggle('hidden',  state !== STATE.LEVELUP);
     elOverlayGameover.classList.toggle('hidden', state !== STATE.GAMEOVER);
 
+    // 조립/레벨업 진입 시 인벤토리 닫기
+    if (newState === STATE.BUILDING || newState === STATE.LEVELUP) inventoryOpen = false;
+
     // 휴식 오버레이: PLAYING이 아닌 상태(레벨업·조립·일시정지)로 전환 시 즉시 숨김
     // → 레벨업 카드나 모듈 조립창이 앞에 보여야 함
     // PLAYING으로 복귀 시 updateHUD()가 isResting 여부에 따라 다시 표시함
@@ -326,7 +332,8 @@ const Game = (() => {
       update(dt);
     } else if (state === STATE.PAUSED) {
       // 일시정지 중에도 P/ESC 입력을 소비해 재개 가능하게 처리
-      if (InputHandler.consumePause()) togglePause();
+      if (InputHandler.consumePause()) { inventoryOpen = false; togglePause(); }
+      if (InputHandler.consumeInventory()) inventoryOpen = !inventoryOpen;
     } else if (state === STATE.BUILDING) {
       updateBuilding(dt);
     }
@@ -347,6 +354,9 @@ const Game = (() => {
 
     // 일시정지 토글
     if (InputHandler.consumePause()) { togglePause(); return; }
+
+    // 인벤토리 토글 (I 키)
+    if (InputHandler.consumeInventory()) { inventoryOpen = !inventoryOpen; }
 
     // Q키: 보유 모듈 있을 때 조립 화면 열기
     if (InputHandler.consumeOpenAssembly()) {
@@ -513,6 +523,11 @@ const Game = (() => {
         InputHandler.state.mouseY,
         player
       );
+    }
+
+    // 인벤토리 패널 (PLAYING/PAUSED 상태에서 I키로 토글)
+    if (inventoryOpen && (state === STATE.PLAYING || state === STATE.PAUSED)) {
+      TetrisGrid.drawInventory(ctx, Renderer.getWidth(), Renderer.getHeight());
     }
   }
 
