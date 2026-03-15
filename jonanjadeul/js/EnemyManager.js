@@ -35,35 +35,39 @@ const EnemyManager = (() => {
   const MAX_BOSS_PROJS  = 150;  // 보스 투사체 풀
   const BOSS_PROJ_SPEED = 160;  // 보스 투사체 기본 속도 (px/s)
 
-  // ── 20종 일반 적 타입 (isBoss 없으면 기본 false)
-  const ENEMY_TYPES = {
-    DRONE:      { radiusMult:0.55, hpMult:0.40, speedMult:0.75, damageMult:0.5, xpMult:0.4,  weight:8, behavior:'chase',    minWave:1  },
-    RUSHER:     { radiusMult:0.50, hpMult:0.35, speedMult:2.20, damageMult:0.6, xpMult:0.5,  weight:7, behavior:'chase',    minWave:1  },
-    SWARM:      { radiusMult:0.42, hpMult:0.30, speedMult:2.40, damageMult:0.4, xpMult:0.3,  weight:9, behavior:'chase',    minWave:4  },
-    ZIGZAGGER:  { radiusMult:0.90, hpMult:1.00, speedMult:1.30, damageMult:0.9, xpMult:1.2,  weight:5, behavior:'zigzag',   minWave:4  },
-    GRUNT:      { radiusMult:1.00, hpMult:1.00, speedMult:1.00, damageMult:1.0, xpMult:1.0,  weight:6, behavior:'chase',    minWave:7  },
-    DASHER:     { radiusMult:0.85, hpMult:1.20, speedMult:0.70, damageMult:1.5, xpMult:1.5,  weight:4, behavior:'dash',     minWave:7  },
-    LANCER:     { radiusMult:0.80, hpMult:0.90, speedMult:1.70, damageMult:1.3, xpMult:1.5,  weight:5, behavior:'chase',    minWave:10 },
-    SHADE:      { radiusMult:1.00, hpMult:1.50, speedMult:1.00, damageMult:1.2, xpMult:2.0,  weight:3, behavior:'chase',    minWave:10 },
-    BRUTE:      { radiusMult:1.80, hpMult:5.00, speedMult:0.60, damageMult:2.0, xpMult:3.0,  weight:3, behavior:'chase',    minWave:13 },
-    BOMBER:     { radiusMult:1.40, hpMult:2.00, speedMult:0.70, damageMult:3.5, xpMult:2.5,  weight:3, behavior:'chase',    minWave:13 },
-    SPLITTER:   { radiusMult:1.60, hpMult:3.00, speedMult:0.60, damageMult:1.3, xpMult:3.0,  weight:2, behavior:'splitter', minWave:16 },
-    SENTINEL:   { radiusMult:2.00, hpMult:7.00, speedMult:0.45, damageMult:2.0, xpMult:4.0,  weight:2, behavior:'chase',    minWave:16 },
-    PHANTOM:    { radiusMult:1.00, hpMult:2.00, speedMult:1.70, damageMult:1.8, xpMult:3.5,  weight:2, behavior:'zigzag',   minWave:19 },
-    RAVAGER:    { radiusMult:1.20, hpMult:2.50, speedMult:1.90, damageMult:2.5, xpMult:4.0,  weight:2, behavior:'dash',     minWave:19 },
-    JUGGERNAUT: { radiusMult:2.50, hpMult:12.0, speedMult:0.35, damageMult:3.0, xpMult:7.0,  weight:1, behavior:'chase',    minWave:22 },
-    WRAITH:     { radiusMult:0.90, hpMult:3.00, speedMult:2.10, damageMult:2.0, xpMult:4.5,  weight:2, behavior:'dash',     minWave:22 },
-    ANCHOR:     { radiusMult:3.00, hpMult:20.0, speedMult:0.18, damageMult:6.0, xpMult:10.0, weight:1, behavior:'chase',    minWave:26 },
-    ELITE:      { radiusMult:1.20, hpMult:4.00, speedMult:1.50, damageMult:2.2, xpMult:5.0,  weight:2, behavior:'chase',    minWave:26 },
-    TITAN:      { radiusMult:3.50, hpMult:35.0, speedMult:0.28, damageMult:5.0, xpMult:15.0, weight:1, behavior:'chase',    minWave:30 },
-    APEX:       { radiusMult:2.00, hpMult:15.0, speedMult:1.20, damageMult:4.0, xpMult:12.0, weight:1, behavior:'dash',     minWave:30 },
+  // ── 티어별 크기 배율: 1.2^(tier-1) — 매 티어 20% 누적 증가
+  // tier 1=1.0, 2=1.2, 3=1.44, 4=1.728, 5=2.074, 6=2.488, 7=2.986, 8=3.583, 9=4.300, 10=5.160
+  function _tierRadiusMult(tier) { return Math.pow(1.2, tier - 1); }
 
-    // ── 5종 보스 (weight:0 → _randomType에서 제외, isBoss:true)
-    OVERLORD:     { radiusMult:3.8, hpMult:60,  speedMult:0.50, damageMult:3.0, xpMult:30,  weight:0, behavior:'boss', minWave:99, isBoss:true },
-    HIVEMOTHER:   { radiusMult:4.2, hpMult:80,  speedMult:0.30, damageMult:2.5, xpMult:40,  weight:0, behavior:'boss', minWave:99, isBoss:true },
-    DREADNOUGHT:  { radiusMult:4.0, hpMult:100, speedMult:0.40, damageMult:2.8, xpMult:50,  weight:0, behavior:'boss', minWave:99, isBoss:true },
-    SPECTER_LORD: { radiusMult:3.2, hpMult:70,  speedMult:1.20, damageMult:2.2, xpMult:45,  weight:0, behavior:'boss', minWave:99, isBoss:true },
-    COLOSSUS:     { radiusMult:5.0, hpMult:150, speedMult:0.20, damageMult:4.0, xpMult:60,  weight:0, behavior:'boss', minWave:99, isBoss:true },
+  // ── 20종 일반 적 타입 (tier: minWave 그룹 → 1~10)
+  const ENEMY_TYPES = {
+    DRONE:      { tier:1,  radiusMult:0.55, hpMult:0.40, speedMult:0.75, damageMult:0.5, xpMult:0.4,  weight:8, behavior:'chase',    minWave:1  },
+    RUSHER:     { tier:1,  radiusMult:0.50, hpMult:0.35, speedMult:2.20, damageMult:0.6, xpMult:0.5,  weight:7, behavior:'chase',    minWave:1  },
+    SWARM:      { tier:2,  radiusMult:0.42, hpMult:0.30, speedMult:2.40, damageMult:0.4, xpMult:0.3,  weight:9, behavior:'chase',    minWave:4  },
+    ZIGZAGGER:  { tier:2,  radiusMult:0.90, hpMult:1.00, speedMult:1.30, damageMult:0.9, xpMult:1.2,  weight:5, behavior:'zigzag',   minWave:4  },
+    GRUNT:      { tier:3,  radiusMult:1.00, hpMult:1.00, speedMult:1.00, damageMult:1.0, xpMult:1.0,  weight:6, behavior:'chase',    minWave:7  },
+    DASHER:     { tier:3,  radiusMult:0.85, hpMult:1.20, speedMult:0.70, damageMult:1.5, xpMult:1.5,  weight:4, behavior:'dash',     minWave:7  },
+    LANCER:     { tier:4,  radiusMult:0.80, hpMult:0.90, speedMult:1.70, damageMult:1.3, xpMult:1.5,  weight:5, behavior:'chase',    minWave:10 },
+    SHADE:      { tier:4,  radiusMult:1.00, hpMult:1.50, speedMult:1.00, damageMult:1.2, xpMult:2.0,  weight:3, behavior:'chase',    minWave:10 },
+    BRUTE:      { tier:5,  radiusMult:1.80, hpMult:5.00, speedMult:0.60, damageMult:2.0, xpMult:3.0,  weight:3, behavior:'chase',    minWave:13 },
+    BOMBER:     { tier:5,  radiusMult:1.40, hpMult:2.00, speedMult:0.70, damageMult:3.5, xpMult:2.5,  weight:3, behavior:'chase',    minWave:13 },
+    SPLITTER:   { tier:6,  radiusMult:1.60, hpMult:3.00, speedMult:0.60, damageMult:1.3, xpMult:3.0,  weight:2, behavior:'splitter', minWave:16 },
+    SENTINEL:   { tier:6,  radiusMult:2.00, hpMult:7.00, speedMult:0.45, damageMult:2.0, xpMult:4.0,  weight:2, behavior:'chase',    minWave:16 },
+    PHANTOM:    { tier:7,  radiusMult:1.00, hpMult:2.00, speedMult:1.70, damageMult:1.8, xpMult:3.5,  weight:2, behavior:'zigzag',   minWave:19 },
+    RAVAGER:    { tier:7,  radiusMult:1.20, hpMult:2.50, speedMult:1.90, damageMult:2.5, xpMult:4.0,  weight:2, behavior:'dash',     minWave:19 },
+    JUGGERNAUT: { tier:8,  radiusMult:2.50, hpMult:12.0, speedMult:0.35, damageMult:3.0, xpMult:7.0,  weight:1, behavior:'chase',    minWave:22 },
+    WRAITH:     { tier:8,  radiusMult:0.90, hpMult:3.00, speedMult:2.10, damageMult:2.0, xpMult:4.5,  weight:2, behavior:'dash',     minWave:22 },
+    ANCHOR:     { tier:9,  radiusMult:3.00, hpMult:20.0, speedMult:0.18, damageMult:6.0, xpMult:10.0, weight:1, behavior:'chase',    minWave:26 },
+    ELITE:      { tier:9,  radiusMult:1.20, hpMult:4.00, speedMult:1.50, damageMult:2.2, xpMult:5.0,  weight:2, behavior:'chase',    minWave:26 },
+    TITAN:      { tier:10, radiusMult:3.50, hpMult:35.0, speedMult:0.28, damageMult:5.0, xpMult:15.0, weight:1, behavior:'chase',    minWave:30 },
+    APEX:       { tier:10, radiusMult:2.00, hpMult:15.0, speedMult:1.20, damageMult:4.0, xpMult:12.0, weight:1, behavior:'dash',     minWave:30 },
+
+    // ── 5종 보스 (tier:11, weight:0 → _randomType에서 제외, isBoss:true)
+    OVERLORD:     { tier:11, radiusMult:3.8, hpMult:60,  speedMult:0.50, damageMult:3.0, xpMult:30,  weight:0, behavior:'boss', minWave:99, isBoss:true },
+    HIVEMOTHER:   { tier:11, radiusMult:4.2, hpMult:80,  speedMult:0.30, damageMult:2.5, xpMult:40,  weight:0, behavior:'boss', minWave:99, isBoss:true },
+    DREADNOUGHT:  { tier:11, radiusMult:4.0, hpMult:100, speedMult:0.40, damageMult:2.8, xpMult:50,  weight:0, behavior:'boss', minWave:99, isBoss:true },
+    SPECTER_LORD: { tier:11, radiusMult:3.2, hpMult:70,  speedMult:1.20, damageMult:2.2, xpMult:45,  weight:0, behavior:'boss', minWave:99, isBoss:true },
+    COLOSSUS:     { tier:11, radiusMult:5.0, hpMult:150, speedMult:0.20, damageMult:4.0, xpMult:60,  weight:0, behavior:'boss', minWave:99, isBoss:true },
   };
 
   const TYPE_KEYS  = Object.keys(ENEMY_TYPES);
@@ -118,6 +122,7 @@ const EnemyManager = (() => {
       angle:0, hp:0, maxHp:0, speed:0, radius:0,
       contactCooldown:0, xpValue:0, type:'DRONE', isSplit:false,
       zigzagPhase:0, dashTimer:0, dashCooldown:0, shadeAlpha:1.0,
+      tier:1, // 티어 (반경 배율·피해 면역 판정에 사용)
       // 보스 전용 필드
       isBoss:false, attackTimer:0, attackPhase:0, bossRotOffset:0, summonTimer:0,
     };
@@ -197,7 +202,10 @@ const EnemyManager = (() => {
     e.hp       = Math.ceil(ENEMY_HP_BASE * def.hpMult * scale);
     e.maxHp    = e.hp;
     e.speed    = ENEMY_SPEED_BASE * def.speedMult * (0.9 + Math.random() * 0.2) * Math.sqrt(scale);
-    e.radius   = Math.ceil(ENEMY_RADIUS * def.radiusMult);
+    // 반경: 기본 × 타입 배율 × 티어 누적 배율(20%/티어, 보스 제외)
+    const tierMult = def.isBoss ? 1.0 : _tierRadiusMult(def.tier);
+    e.radius   = Math.ceil(ENEMY_RADIUS * def.radiusMult * tierMult);
+    e.tier     = def.tier ?? 1;
     e.contactCooldown = 0;
     e.xpValue  = Math.floor(20 * def.xpMult * scale);
     e.zigzagPhase = 0; e.dashTimer = 0; e.dashCooldown = 1.0 + Math.random() * 0.8;
@@ -476,6 +484,12 @@ const EnemyManager = (() => {
       }
     }
 
+    // ── 현재 활성 적 중 최고 티어 계산 (피해 면역 판정용)
+    let maxActiveTier = 0;
+    for (const e of enemies) {
+      if (e.active && !e.isBoss) maxActiveTier = Math.max(maxActiveTier, e.tier);
+    }
+
     // ── 적 AI 이동 · 충돌
     const now = Date.now();
     for (const e of enemies) {
@@ -521,8 +535,13 @@ const EnemyManager = (() => {
           if (Collision.polyCircleWrapped(poly, e.x, e.y, e.radius, worldW, worldH)) { hit=true; break; }
         }
         if (hit) {
-          const dmg = Math.floor(ENEMY_DAMAGE * (ENEMY_TYPES[e.type]?.damageMult ?? 1));
-          player.takeDamage(dmg); e.contactCooldown = CONTACT_COOLDOWN;
+          // 최고 티어보다 2 이상 낮은 티어 적은 데미지 무시 (보스는 항상 데미지)
+          const isLowTier = !e.isBoss && (maxActiveTier - e.tier >= 2);
+          if (!isLowTier) {
+            const dmg = Math.floor(ENEMY_DAMAGE * (ENEMY_TYPES[e.type]?.damageMult ?? 1));
+            player.takeDamage(dmg);
+          }
+          e.contactCooldown = CONTACT_COOLDOWN;
           const { dx:pdx, dy:pdy } = Collision.wrappedDelta(player.x, player.y, e.x, e.y, worldW, worldH);
           const pd = Math.hypot(pdx, pdy);
           if (pd > 0) {

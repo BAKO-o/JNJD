@@ -64,7 +64,8 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 | `EnemyManager.js` | `MODULE_DROP_LIFETIME` | 모듈 드랍 유효 시간 | 30s |
 | `EnemyManager.js` | XP Gem `collectRadius` | 젬 흡수 시작 거리 | 200 px |
 | `EnemyManager.js` | XP Gem `speed` | 젬 흡수 이동속도 | 320 px/s |
-| `EnemyManager.js` | `ENEMY_TYPES` | 25종 적 타입 | 20종 일반 + 5종 보스 |
+| `EnemyManager.js` | `ENEMY_TYPES` | 25종 적 타입 | 20종 일반(tier 1~10) + 5종 보스(tier 11) |
+| `EnemyManager.js` | `_tierRadiusMult(tier)` | 티어 누적 반경 배율 | `1.2^(tier-1)` (tier 1=×1.0, tier 10=×5.16) |
 | `EnemyManager.js` | `MAX_BOSS_PROJS` | 보스 투사체 풀 크기 | 150 |
 | `EnemyManager.js` | `BOSS_PROJ_SPEED` | 보스 투사체 기본 속도 | 160 px/s |
 | `EnemyManager.js` | `BOSS_CYCLE` | 보스 등장 순서 | OVERLORD→HIVEMOTHER→DREADNOUGHT→SPECTER_LORD→COLOSSUS→반복 |
@@ -275,6 +276,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-15 | v0.9.1 | 티어 크기 스케일링·피해 면역: 적 tier 필드 추가(1~10, 보스=11), 반경 = ENEMY_RADIUS × radiusMult × 1.2^(tier-1), 최고 활성 티어 기준 2 이상 낮은 티어 적 접촉 피해 면역 |
 | 2026-03-15 | v0.9.0 | 시스템 개편: 스크랩(Scrap) 자원(일반 적 1~3·보스 20~30), 함체 슬롯 시스템(초기 12슬롯, 포화 시 교체 모드, [E]키 15scrap→+3슬롯), 장갑 감소(armorReduction 0~75%), 연구원 4명 체계(송-전술/건-공학/학-과학/종-군사), 종 업그레이드 2종(장갑보강·함체증설), 송 방어 업그레이드→전술 사격으로 교체, 조립 UI 3패널(좌=장착모듈·중=그리드·우=제공모듈), 게임 이름 "조난자들"→"AP3: 잔해의 귀환" |
 | 2026-03-15 | v0.8.0 | 보스 시스템: 5의 배수 웨이브마다 5종 보스(OVERLORD·HIVEMOTHER·DREADNOUGHT·SPECTER_LORD·COLOSSUS) 순환 등장, 보스 전용 투사체 풀(MAX_BOSS_PROJS=150), 5종 공격 패턴(8/16방향 노바·부채꼴·회전포격·고속 스프레드·12방향 느린 포격), HP 50% 시 페이즈 2 전환, 보스 사망 시 모듈 3개 보장 드랍, Renderer에 5종 보스 draw 함수 + drawBossProjectile + drawBossHpBar 추가, 휴식 오버레이에 보스 웨이브 경고(⚠ 보스 웨이브 ⚠) 표시 |
 | 2026-03-15 | v0.7.0 | 플레이 영역 16배(12800×7200), 20종 적 타입(Tier 1~10, minWave 기반 순차 등장), 방향별 순차 그룹 스폰(상→하→좌→우, 4마리씩 2초 대기), 배경 잔해물 1500개(잔해물 풀 draw), Renderer에 11개 신규 적 draw 함수 추가 |
