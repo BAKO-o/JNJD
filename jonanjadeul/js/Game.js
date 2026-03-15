@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.9.6'; // Q키 항상 조립 화면 열기 + 우측 모듈 인벤토리 패널
+const VERSION = 'v0.9.7'; // 시작 화면 게임 방법 튜토리얼 추가
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
