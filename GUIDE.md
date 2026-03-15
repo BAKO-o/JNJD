@@ -1,6 +1,6 @@
 # GUIDE.md — JONANJADEUL (조난자들) 개발자 가이드
-> 버전: v0.5.0
-> 최종 갱신: 2026-03-13
+> 버전: v0.7.0
+> 최종 갱신: 2026-03-15
 
 ---
 
@@ -44,20 +44,23 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 
 | 파일 | 상수 | 설명 | 기본값 |
 |---|---|---|---|
-| `Game.js` | `WORLD_W / WORLD_H` | 맵 크기 | 3200 × 1800 |
+| `Game.js` | `WORLD_W / WORLD_H` | 맵 크기 | 12800 × 7200 (16배) |
 | `Game.js` | `STAR_COUNT` | 별 배경 수 | 180 |
 | `Player.js` | `this.accel` | 가속도 (px/s²) | 520 |
 | `Player.js` | `this.drag` | 속도 감쇠 계수 (자연 최대속도 ≈ 217 px/s) | 0.96 |
 | `Player.js` | `this.maxSpeed` | 최대 속도 상한 (px/s) | 260 |
 | `Player.js` | `this.maxHp` | 최대 HP | 100 |
-| `EnemyManager.js` | `MAX_ENEMIES` | 적 풀 크기 | 300 |
+| `EnemyManager.js` | `MAX_ENEMIES` | 적 풀 크기 | 500 |
 | `EnemyManager.js` | `ENEMY_SPEED_BASE` | 적 기본 속도 (웨이브 배율 적용 전) | 58 px/s |
 | `EnemyManager.js` | `MODULE_DROP_CHANCE` | 적 처치 시 모듈 드랍 확률 | 0.15 (15%) |
-| `EnemyManager.js` | `KILL_BASE` | Wave 1 킬 목표 | 8 |
-| `EnemyManager.js` | `KILL_PER_WAVE` | 웨이브당 킬 목표 증가 | 4 |
+| `EnemyManager.js` | `KILL_BASE` | Wave 1 킬 목표 | 12 |
+| `EnemyManager.js` | `KILL_PER_WAVE` | 웨이브당 킬 목표 증가 | 6 |
 | `EnemyManager.js` | `REST_DURATION` | 웨이브 사이 휴식 시간 | 6s |
-| `EnemyManager.js` | `SPAWN_PER_WAVE` | 웨이브당 기본 스폰 수 | 6 |
+| `EnemyManager.js` | `SPAWN_GROUP_SIZE` | 한 방향당 스폰 수 | 4 |
+| `EnemyManager.js` | `SPAWN_INTERVAL` | 그룹 내 스폰 간격 | 0.4s |
+| `EnemyManager.js` | `SPAWN_GROUP_GAP` | 방향 전환 대기 시간 | 2.0s |
 | `EnemyManager.js` | `MODULE_DROP_COLLECT_RADIUS` | 모듈 드랍 수집 반지름 | 40 px |
+| `EnemyManager.js` | `DEBRIS_COUNT` | 배경 잔해물 수 | 1500 |
 | `EnemyManager.js` | `MODULE_DROP_LIFETIME` | 모듈 드랍 유효 시간 | 30s |
 | `EnemyManager.js` | XP Gem `collectRadius` | 젬 흡수 시작 거리 | 200 px |
 | `EnemyManager.js` | XP Gem `speed` | 젬 흡수 이동속도 | 320 px/s |
@@ -123,9 +126,11 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 ### `EnemyManager.js` (IIFE, `window.EnemyManager`)
 - `init(ww, wh)`: 풀 초기화
 - `update(dt, player)`: 웨이브 스폰, AI 이동, XP 젬 흡수 → `{levelUp}`
-- `damageEnemy(enemy, dmg)`: 데미지 적용 + 파괴 시 젬 & ModuleDrop 드랍
+- `damageEnemy(enemy, dmg)`: 데미지 적용 + 파괴 시 젬·ModuleDrop 드랍, 분열(SPLITTER→SWARM×3, SENTINEL→GRUNT×2, TITAN→BRUTE×2)
 - `getActiveEnemies()`: 활성 적 배열 반환
 - `getStats()`: `{waveNumber, totalKills, waveKills, waveKillTarget, restTimer, isResting}`
+- **20종 적 타입**: DRONE·RUSHER(Tier1) / SWARM·ZIGZAGGER(Tier2) / GRUNT·DASHER(Tier3) / LANCER·SHADE(Tier4) / BRUTE·BOMBER(Tier5) / SPLITTER·SENTINEL(Tier6) / PHANTOM·RAVAGER(Tier7) / JUGGERNAUT·WRAITH(Tier8) / ANCHOR·ELITE(Tier9) / TITAN·APEX(Tier10)
+- **순차 스폰**: 상→하→좌→우 순서로 SPAWN_GROUP_SIZE마리씩, 방향 전환 시 SPAWN_GROUP_GAP 대기
 
 ### `WeaponSystem.js` (IIFE, `window.WeaponSystem`)
 - `init(ww, wh)`: 풀 초기화
@@ -235,6 +240,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-15 | v0.7.0 | 플레이 영역 16배(12800×7200), 20종 적 타입(Tier 1~10, minWave 기반 순차 등장), 방향별 순차 그룹 스폰(상→하→좌→우, 4마리씩 2초 대기), 배경 잔해물 1500개(잔해물 풀 draw), Renderer에 11개 신규 적 draw 함수 추가 |
 | 2026-03-14 | v0.6.1 | 조립 UI R키 모듈 90° 회전(rotatePending), 기체 크기 따라 자동 줌 아웃(ZOOM_BASE=55, ZOOM_MIN=0.32), ctx 스케일 transform으로 전체 엔티티 줌 적용; 버그 수정 4건: 줌 후 적 스폰 위치 보정(EnemyManager.setZoom), 모듈 드랍 수집 반지름 기체 크기 연동(hitboxRadius+10), 궤도 무기 공전 반지름 기체 크기 연동(hitboxRadius+15), 줌 아웃 시 화면 가장자리 빈 공간 버그(draw 컬링 마진 cullX/cullY = W·H÷zoom÷2 로 역줌 배율 연동) |
 | 2026-03-13 | v0.6.0 | 웨이브 킬 목표 시스템(KILL_BASE+KILL_PER_WAVE), 물리 모듈 드랍(ModuleDrop 풀), 10종 무기 모듈(WPN_GATLING·SPREAD·SNIPER·MISSILE·FLAK·ORBIT·LASER·MINE·CHAIN·NOVA), WeaponSystem 보조 무기 시스템(호밍·체인·궤도·기뢰 등), 웨이브 휴식 오버레이 |
 | 2026-03-13 | v0.5.0 | 선체 다각형 히트박스(삼각형 분할+모듈 셀 직사각형), 10종 적 타입(RAIDER·JUGGERNAUT·SWARM·LANCER·ANCHOR·ZIGZAGGER·DASHER·SHADE·BOMBER·SPLITTER), 타입별 AI(지그재그·돌진·분열), Collision.js에 polyCircle/polyCircleWrapped 추가 |

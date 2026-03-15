@@ -9,11 +9,11 @@
 
 'use strict';
 
-const VERSION = 'v0.6.1'; // 모듈 회전(R키), 기체 크기 자동 줌
+const VERSION = 'v0.7.0'; // 플레이 영역 16배, 20종 적, 방향별 순차 스폰, 배경 잔해물
 
-// ── 맵 설정 (화면 크기와 무관한 고정 월드 크기)
-const WORLD_W = 3200;
-const WORLD_H = 1800;
+// ── 맵 설정 (16배 넓어진 월드)
+const WORLD_W = 12800;
+const WORLD_H = 7200;
 
 // ── 상태 열거
 const STATE = {

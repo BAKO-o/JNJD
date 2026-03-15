@@ -99,23 +99,45 @@ const Renderer = (() => {
    * @param {string} type - 적 타입 키
    * @param {number} shadeAlpha - SHADE 타입 투명도 (0~1)
    */
-  function drawEnemy(sx, sy, angle, radius, hpRatio = 1, type = 'RAIDER', shadeAlpha = 1) {
+  function drawEnemy(sx, sy, angle, radius, hpRatio = 1, type = 'DRONE', shadeAlpha = 1) {
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(angle);
 
     switch (type) {
-      case 'RAIDER':     _drawRaider(radius, hpRatio);          break;
-      case 'JUGGERNAUT': _drawJuggernaut(radius, hpRatio);      break;
-      case 'SWARM':      _drawSwarm(radius, hpRatio);            break;
-      case 'LANCER':     _drawLancer(radius, hpRatio);           break;
-      case 'ANCHOR':     _drawAnchor(radius, hpRatio);           break;
-      case 'ZIGZAGGER':  _drawZigzagger(radius, hpRatio);        break;
-      case 'DASHER':     _drawDasher(radius, hpRatio);           break;
-      case 'SHADE':      _drawShade(radius, hpRatio, shadeAlpha);break;
-      case 'BOMBER':     _drawBomber(radius, hpRatio);           break;
-      case 'SPLITTER':   _drawSplitter(radius, hpRatio);         break;
-      default:           _drawRaider(radius, hpRatio);           break;
+      // ── 구형 타입 (하위 호환)
+      case 'RAIDER':     _drawRaider(radius, hpRatio);                    break;
+      // ── Tier 1
+      case 'DRONE':      _drawDrone(radius, hpRatio);                     break;
+      case 'RUSHER':     _drawRusher(radius, hpRatio);                    break;
+      // ── Tier 2
+      case 'SWARM':      _drawSwarm(radius, hpRatio);                     break;
+      case 'ZIGZAGGER':  _drawZigzagger(radius, hpRatio);                 break;
+      // ── Tier 3
+      case 'GRUNT':      _drawGrunt(radius, hpRatio);                     break;
+      case 'DASHER':     _drawDasher(radius, hpRatio);                    break;
+      // ── Tier 4
+      case 'LANCER':     _drawLancer(radius, hpRatio);                    break;
+      case 'SHADE':      _drawShade(radius, hpRatio, shadeAlpha);         break;
+      // ── Tier 5
+      case 'BRUTE':      _drawBrute(radius, hpRatio);                     break;
+      case 'BOMBER':     _drawBomber(radius, hpRatio);                    break;
+      // ── Tier 6
+      case 'SPLITTER':   _drawSplitter(radius, hpRatio);                  break;
+      case 'SENTINEL':   _drawSentinel(radius, hpRatio);                  break;
+      // ── Tier 7
+      case 'PHANTOM':    _drawPhantom(radius, hpRatio, shadeAlpha);       break;
+      case 'RAVAGER':    _drawRavager(radius, hpRatio);                   break;
+      // ── Tier 8
+      case 'JUGGERNAUT': _drawJuggernaut(radius, hpRatio);                break;
+      case 'WRAITH':     _drawWraith(radius, hpRatio, shadeAlpha);        break;
+      // ── Tier 9
+      case 'ANCHOR':     _drawAnchor(radius, hpRatio);                    break;
+      case 'ELITE':      _drawElite(radius, hpRatio);                     break;
+      // ── Tier 10
+      case 'TITAN':      _drawTitan(radius, hpRatio);                     break;
+      case 'APEX':       _drawApex(radius, hpRatio);                      break;
+      default:           _drawDrone(radius, hpRatio);                     break;
     }
 
     ctx.restore();
@@ -345,6 +367,251 @@ const Renderer = (() => {
     ctx.closePath();
     ctx.fillStyle = 'rgba(134,239,172,0.5)';
     ctx.fill();
+  }
+
+  // ── 11. DRONE (정찰형) — 작고 어두운 붉은 마름모 ─────────
+  function _drawDrone(r, hp) {
+    const rg = Math.floor(80 + (1 - hp) * 60);
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.lineTo(0, -r * 0.5);
+    ctx.lineTo(-r * 0.7, 0);
+    ctx.lineTo(0, r * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = `rgb(${rg + 80},${rg - 20},20)`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(200,80,80,0.55)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+
+  // ── 12. RUSHER (돌격형) — 밝은 청록 총알 모양 ────────────
+  function _drawRusher(r, hp) {
+    ctx.beginPath();
+    ctx.moveTo(r * 1.5, 0);
+    ctx.lineTo(r * 0.2, -r * 0.38);
+    ctx.lineTo(-r * 0.8, -r * 0.18);
+    ctx.lineTo(-r * 0.8, r * 0.18);
+    ctx.lineTo(r * 0.2, r * 0.38);
+    ctx.closePath();
+    ctx.fillStyle = hp > 0.5 ? '#00d4ff' : '#7df9ff';
+    ctx.fill();
+    ctx.strokeStyle = '#a5f3fc';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+
+  // ── 13. GRUNT (표준 전투원) — 회색 오각형 ────────────────
+  function _drawGrunt(r, hp) {
+    const b = Math.floor(95 + (1 - hp) * 55);
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+      else         ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgb(${b},${b},${b + 18})`;
+    ctx.fill();
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // ── 14. BRUTE (중장갑 돌격대) — 짙은 갈색 오각형 ────────
+  function _drawBrute(r, hp) {
+    const d = Math.floor(55 + (1 - hp) * 35);
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+      else         ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgb(${d + 55},${d + 10},18)`;
+    ctx.fill();
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // 장갑 균열선
+    ctx.strokeStyle = 'rgba(200,100,20,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.35, 0); ctx.lineTo(r * 0.35, 0);
+    ctx.stroke();
+  }
+
+  // ── 15. SENTINEL (요새형) — 대형 보라-회색 이중 육각형 ────
+  function _drawSentinel(r, hp) {
+    const pulse = 0.55 + 0.45 * Math.sin(Date.now() * 0.003);
+    // 외부 육각형
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+      else         ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(72,52,115,${0.78 + hp * 0.2})`;
+    ctx.fill();
+    ctx.strokeStyle = '#a78bfa';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // 내부 소형 육각형 (박동)
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      if (i === 0) ctx.moveTo(r * 0.55 * Math.cos(a), r * 0.55 * Math.sin(a));
+      else         ctx.lineTo(r * 0.55 * Math.cos(a), r * 0.55 * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(167,139,250,${pulse})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // ── 16. PHANTOM (환영체) — 반투명 빠른 육각 다각형 ───────
+  function _drawPhantom(r, hp, alpha) {
+    ctx.globalAlpha = alpha * 0.88;
+    ctx.beginPath();
+    ctx.moveTo(r * 1.15, 0);
+    ctx.lineTo(r * 0.3, -r * 0.82);
+    ctx.lineTo(-r * 0.65, -r * 0.62);
+    ctx.lineTo(-r * 0.9, 0);
+    ctx.lineTo(-r * 0.65, r * 0.62);
+    ctx.lineTo(r * 0.3, r * 0.82);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(25,55,185,0.88)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(147,197,253,0.75)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(147,197,253,0.35)';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // ── 17. RAVAGER (약탈자) — 레드-바이올렛 공격적 다트 ─────
+  function _drawRavager(r, hp) {
+    const pulse = 0.68 + 0.32 * Math.sin(Date.now() * 0.006);
+    ctx.beginPath();
+    ctx.moveTo(r * 1.4, 0);
+    ctx.lineTo(r * 0.1, -r * 0.58);
+    ctx.lineTo(-r * 0.42, -r * 0.78);
+    ctx.lineTo(-r, 0);
+    ctx.lineTo(-r * 0.42, r * 0.78);
+    ctx.lineTo(r * 0.1, r * 0.58);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(175,18,118,${pulse})`;
+    ctx.fill();
+    ctx.strokeStyle = '#f0abfc';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // ── 18. WRAITH (유령형) — 은백색 반투명 유선형 ───────────
+  function _drawWraith(r, hp, alpha) {
+    ctx.globalAlpha = alpha * 0.88;
+    ctx.beginPath();
+    ctx.moveTo(0, -r);
+    ctx.bezierCurveTo(r * 0.82, -r * 0.48, r * 0.88, r * 0.3, r * 0.28, r * 0.8);
+    ctx.lineTo(0, r * 0.52);
+    ctx.lineTo(-r * 0.28, r * 0.8);
+    ctx.bezierCurveTo(-r * 0.88, r * 0.3, -r * 0.82, -r * 0.48, 0, -r);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(195,215,255,0.82)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(220,235,255,0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // ── 19. ELITE (정예 전투원) — 금/앰버 육각형 + 글로우 ────
+  function _drawElite(r, hp) {
+    const glow = 0.25 + 0.75 * hp;
+    // 외부 글로우 링
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      if (i === 0) ctx.moveTo(r * 1.28 * Math.cos(a), r * 1.28 * Math.sin(a));
+      else         ctx.lineTo(r * 1.28 * Math.cos(a), r * 1.28 * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(251,191,36,${glow * 0.45})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // 본체
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+      else         ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(165,110,8,0.92)';
+    ctx.fill();
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // 중앙 코어
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+    ctx.fillStyle = '#fef08a';
+    ctx.fill();
+  }
+
+  // ── 20. TITAN (타이탄) — 거대 진홍 오각형 + 이중 헤일로 ──
+  function _drawTitan(r, hp) {
+    const pulse = 0.45 + 0.55 * Math.sin(Date.now() * 0.0016);
+    // 헤일로 2중 링
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.42, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(220,30,30,${pulse * 0.42})`; ctx.lineWidth = 4; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.18, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,100,50,${pulse * 0.3})`; ctx.lineWidth = 2; ctx.stroke();
+    // 본체 오각형
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+      else         ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+    }
+    ctx.closePath();
+    const d = Math.floor(48 + (1 - hp) * 28);
+    ctx.fillStyle = `rgb(${d + 82},${d},${d})`;
+    ctx.fill();
+    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.stroke();
+  }
+
+  // ── 21. APEX (정점 포식자) — 청보라 팔각형 + 이중 링 + 코어
+  function _drawApex(r, hp) {
+    const p1 = 0.5 + 0.5 * Math.sin(Date.now() * 0.002);
+    const p2 = 0.5 + 0.5 * Math.sin(Date.now() * 0.002 + 1.5);
+    // 외부 박동 링들
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.52, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(139,92,246,${p1 * 0.5})`; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.22, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(167,139,250,${p2 * 0.38})`; ctx.lineWidth = 2; ctx.stroke();
+    // 팔각형 본체
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+      else         ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(50,15,95,0.95)';
+    ctx.fill();
+    ctx.strokeStyle = '#c4b5fd'; ctx.lineWidth = 2; ctx.stroke();
+    // 코어 글로우
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.33, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(196,181,253,${0.55 + p1 * 0.45})`; ctx.fill();
   }
 
   /**
