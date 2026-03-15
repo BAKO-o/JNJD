@@ -1,5 +1,5 @@
 # GUIDE.md — JONANJADEUL (조난자들) 개발자 가이드
-> 버전: v0.7.0
+> 버전: v0.8.0
 > 최종 갱신: 2026-03-15
 
 ---
@@ -64,7 +64,10 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 | `EnemyManager.js` | `MODULE_DROP_LIFETIME` | 모듈 드랍 유효 시간 | 30s |
 | `EnemyManager.js` | XP Gem `collectRadius` | 젬 흡수 시작 거리 | 200 px |
 | `EnemyManager.js` | XP Gem `speed` | 젬 흡수 이동속도 | 320 px/s |
-| `EnemyManager.js` | `ENEMY_TYPES` | 10종 적 타입 | RAIDER·JUGGERNAUT·SWARM·LANCER·ANCHOR·ZIGZAGGER·DASHER·SHADE·BOMBER·SPLITTER |
+| `EnemyManager.js` | `ENEMY_TYPES` | 25종 적 타입 | 20종 일반 + 5종 보스 |
+| `EnemyManager.js` | `MAX_BOSS_PROJS` | 보스 투사체 풀 크기 | 150 |
+| `EnemyManager.js` | `BOSS_PROJ_SPEED` | 보스 투사체 기본 속도 | 160 px/s |
+| `EnemyManager.js` | `BOSS_CYCLE` | 보스 등장 순서 | OVERLORD→HIVEMOTHER→DREADNOUGHT→SPECTER_LORD→COLOSSUS→반복 |
 | `WeaponSystem.js` | `MAX_PROJECTILES` | 투사체 풀 크기 (자동+포탄 공유) | 500 |
 | `WeaponSystem.js` | `PROJ_SPEED` | 자동무기 투사체 속도 | 420 px/s |
 | `WeaponSystem.js` | `DEFAULT_WEAPON.cooldown` | 자동무기 발사 쿨다운 | 0.72s |
@@ -116,6 +119,9 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `drawXpGem(sx, sy)`: XP 다이아몬드
 - `drawParticle(sx, sy, radius, alpha, color)`: 폭발 파티클
 - `drawModuleDrop(sx, sy, moduleType)`: 모듈 드랍 아이템 (무기=빨강, 일반=파랑)
+- `drawBossProjectile(sx, sy, radius, color)`: 보스 투사체 글로우 + 코어
+- `drawBossHpBar(type, hp, maxHp)`: 보스 체력바 (화면 하단 중앙, zoom 미적용 UI)
+- **5종 보스 draw 함수**: `_drawBossOverlord` (뾰족 붉은 소행성) / `_drawBossHivemother` (촉수 녹색 군체) / `_drawBossDreadnought` (중장갑 전함) / `_drawBossSpecterLord` (왕관형 반투명 유령) / `_drawBossColossus` (거대 보라 요새)
 
 ### `Player.js` (Class, `window.Player`)
 - `update(dt, input, screenCx, screenCy)`: 이동, 회전, wraparound
@@ -129,8 +135,11 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `damageEnemy(enemy, dmg)`: 데미지 적용 + 파괴 시 젬·ModuleDrop 드랍, 분열(SPLITTER→SWARM×3, SENTINEL→GRUNT×2, TITAN→BRUTE×2)
 - `getActiveEnemies()`: 활성 적 배열 반환
 - `getStats()`: `{waveNumber, totalKills, waveKills, waveKillTarget, restTimer, isResting}`
-- **20종 적 타입**: DRONE·RUSHER(Tier1) / SWARM·ZIGZAGGER(Tier2) / GRUNT·DASHER(Tier3) / LANCER·SHADE(Tier4) / BRUTE·BOMBER(Tier5) / SPLITTER·SENTINEL(Tier6) / PHANTOM·RAVAGER(Tier7) / JUGGERNAUT·WRAITH(Tier8) / ANCHOR·ELITE(Tier9) / TITAN·APEX(Tier10)
+- `getBoss()`: 현재 활성 보스 참조 반환 (없으면 null)
+- **20종 일반 적**: DRONE·RUSHER(Tier1) / SWARM·ZIGZAGGER(Tier2) / GRUNT·DASHER(Tier3) / LANCER·SHADE(Tier4) / BRUTE·BOMBER(Tier5) / SPLITTER·SENTINEL(Tier6) / PHANTOM·RAVAGER(Tier7) / JUGGERNAUT·WRAITH(Tier8) / ANCHOR·ELITE(Tier9) / TITAN·APEX(Tier10)
+- **5종 보스** (`isBoss:true`, `weight:0`): OVERLORD(w5) / HIVEMOTHER(w10) / DREADNOUGHT(w15) / SPECTER_LORD(w20) / COLOSSUS(w25) → 이후 반복·강화
 - **순차 스폰**: 상→하→좌→우 순서로 SPAWN_GROUP_SIZE마리씩, 방향 전환 시 SPAWN_GROUP_GAP 대기
+- **보스 풀**: `bossProjs[150]` — 보스 전용 투사체 풀, 보스 사망 시 전부 비활성화
 
 ### `WeaponSystem.js` (IIFE, `window.WeaponSystem`)
 - `init(ww, wh)`: 풀 초기화
@@ -198,12 +207,16 @@ function acquire(pool) {
 
 ```
 Game.render()
-  ├─ Renderer.clear()          // 검은 우주 배경
-  ├─ Renderer.drawStars()      // 별 (화면 좌표, 고정)
-  ├─ EnemyManager.draw()       // 적 + XP 젬
-  ├─ WeaponSystem.draw()       // 투사체
-  ├─ Game.drawParticles()      // 폭발 파티클
-  └─ player.draw(cx, cy)       // 플레이어 (항상 화면 중앙)
+  ├─ Renderer.clear()              // 검은 우주 배경
+  ├─ Renderer.drawStars()          // 별 (화면 좌표, 고정)
+  ├─ [ctx.save + scale(zoom)]      // 줌 transform 시작
+  ├─ EnemyManager.draw()           // 잔해물·보스투사체·적·XP젬·모듈드랍
+  ├─ WeaponSystem.draw()           // 투사체 + 궤도무기
+  ├─ Game.drawParticles()          // 폭발 파티클
+  ├─ player.draw(cx, cy)           // 플레이어 (항상 화면 중앙)
+  ├─ [ctx.restore]                 // 줌 transform 종료
+  ├─ Renderer.drawBossHpBar()      // 보스 체력바 (UI 공간, 보스 존재 시)
+  └─ TetrisGrid.drawOnCanvas()     // BUILDING 상태 조립 UI (UI 공간)
 ```
 
 모든 월드 엔티티는 `player.worldToScreen(wx, wy, WORLD_W, WORLD_H)`로
@@ -240,6 +253,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-15 | v0.8.0 | 보스 시스템: 5의 배수 웨이브마다 5종 보스(OVERLORD·HIVEMOTHER·DREADNOUGHT·SPECTER_LORD·COLOSSUS) 순환 등장, 보스 전용 투사체 풀(MAX_BOSS_PROJS=150), 5종 공격 패턴(8/16방향 노바·부채꼴·회전포격·고속 스프레드·12방향 느린 포격), HP 50% 시 페이즈 2 전환, 보스 사망 시 모듈 3개 보장 드랍, Renderer에 5종 보스 draw 함수 + drawBossProjectile + drawBossHpBar 추가, 휴식 오버레이에 보스 웨이브 경고(⚠ 보스 웨이브 ⚠) 표시 |
 | 2026-03-15 | v0.7.0 | 플레이 영역 16배(12800×7200), 20종 적 타입(Tier 1~10, minWave 기반 순차 등장), 방향별 순차 그룹 스폰(상→하→좌→우, 4마리씩 2초 대기), 배경 잔해물 1500개(잔해물 풀 draw), Renderer에 11개 신규 적 draw 함수 추가 |
 | 2026-03-14 | v0.6.1 | 조립 UI R키 모듈 90° 회전(rotatePending), 기체 크기 따라 자동 줌 아웃(ZOOM_BASE=55, ZOOM_MIN=0.32), ctx 스케일 transform으로 전체 엔티티 줌 적용; 버그 수정 4건: 줌 후 적 스폰 위치 보정(EnemyManager.setZoom), 모듈 드랍 수집 반지름 기체 크기 연동(hitboxRadius+10), 궤도 무기 공전 반지름 기체 크기 연동(hitboxRadius+15), 줌 아웃 시 화면 가장자리 빈 공간 버그(draw 컬링 마진 cullX/cullY = W·H÷zoom÷2 로 역줌 배율 연동) |
 | 2026-03-13 | v0.6.0 | 웨이브 킬 목표 시스템(KILL_BASE+KILL_PER_WAVE), 물리 모듈 드랍(ModuleDrop 풀), 10종 무기 모듈(WPN_GATLING·SPREAD·SNIPER·MISSILE·FLAK·ORBIT·LASER·MINE·CHAIN·NOVA), WeaponSystem 보조 무기 시스템(호밍·체인·궤도·기뢰 등), 웨이브 휴식 오버레이 |

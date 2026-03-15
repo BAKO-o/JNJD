@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.7.0'; // 플레이 영역 16배, 20종 적, 방향별 순차 스폰, 배경 잔해물
+const VERSION = 'v0.8.0'; // 보스 시스템: 5의 배수 웨이브마다 5종 보스 등장, 보스 투사체 공격 패턴
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -63,6 +63,7 @@ const Game = (() => {
   const elWaveKill    = document.getElementById('wave-kill');
   const elRestOverlay = document.getElementById('overlay-rest');
   const elRestTimer   = document.getElementById('rest-timer');
+  const elRestTitle   = document.getElementById('rest-title');
 
   const elOverlayPause    = document.getElementById('overlay-pause');
   const elOverlayLevelup  = document.getElementById('overlay-levelup');
@@ -413,6 +414,17 @@ const Game = (() => {
     if (stats.isResting) {
       elRestOverlay.classList.remove('hidden');
       elRestTimer.textContent = Math.ceil(stats.restTimer);
+      // 다음 웨이브가 보스 웨이브인지 확인
+      const nextWave = stats.waveNumber + 1;
+      if (elRestTitle) {
+        if (nextWave % 5 === 0) {
+          elRestTitle.textContent  = '⚠ 보스 웨이브 ⚠';
+          elRestTitle.style.color  = '#ef4444';
+        } else {
+          elRestTitle.textContent  = '다음 웨이브 준비';
+          elRestTitle.style.color  = '#93c5fd';
+        }
+      }
     } else {
       elRestOverlay.classList.add('hidden');
     }
@@ -451,6 +463,12 @@ const Game = (() => {
     player.draw(cx, cy);
 
     ctx.restore();
+
+    // 보스 HP 바 (화면 하단 UI — zoom 미적용 공간)
+    const boss = EnemyManager.getBoss();
+    if (boss) {
+      Renderer.drawBossHpBar(boss.type, boss.hp, boss.maxHp);
+    }
 
     // BUILDING: 조립 UI — 줌 미적용 (순수 UI 오버레이)
     if (state === STATE.BUILDING) {

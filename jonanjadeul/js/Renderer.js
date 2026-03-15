@@ -137,6 +137,12 @@ const Renderer = (() => {
       // ── Tier 10
       case 'TITAN':      _drawTitan(radius, hpRatio);                     break;
       case 'APEX':       _drawApex(radius, hpRatio);                      break;
+      // ── Boss types
+      case 'OVERLORD':      _drawBossOverlord(radius, hpRatio);                break;
+      case 'HIVEMOTHER':    _drawBossHivemother(radius, hpRatio);               break;
+      case 'DREADNOUGHT':   _drawBossDreadnought(radius, hpRatio);              break;
+      case 'SPECTER_LORD':  _drawBossSpecterLord(radius, hpRatio, shadeAlpha);  break;
+      case 'COLOSSUS':      _drawBossColossus(radius, hpRatio);                 break;
       default:           _drawDrone(radius, hpRatio);                     break;
     }
 
@@ -614,6 +620,254 @@ const Renderer = (() => {
     ctx.fillStyle = `rgba(196,181,253,${0.55 + p1 * 0.45})`; ctx.fill();
   }
 
+  // ── BOSS 1. OVERLORD (지배자) — 대형 뾰족 붉은 소행성 ──────
+  function _drawBossOverlord(r, hp) {
+    const pulse  = 0.5 + 0.5 * Math.sin(Date.now() * 0.0015);
+    const spikes = 8;
+    // 외부 코로나 글로우
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.65, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(220,38,38,${0.10 + pulse * 0.08})`; ctx.fill();
+    // 뾰족한 스타버스트 본체
+    ctx.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+      const a  = (i / (spikes * 2)) * Math.PI * 2;
+      const ri = i % 2 === 0 ? r : r * 0.52;
+      if (i === 0) ctx.moveTo(Math.cos(a) * ri, Math.sin(a) * ri);
+      else         ctx.lineTo(Math.cos(a) * ri, Math.sin(a) * ri);
+    }
+    ctx.closePath();
+    const d = Math.floor(40 + (1 - hp) * 20);
+    ctx.fillStyle  = `rgb(${d + 160},${d},${d})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(255,${80 + Math.floor(pulse * 60)},50,0.95)`;
+    ctx.lineWidth = 3; ctx.stroke();
+    // 내부 코어 글로우
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,100,50,${0.45 + pulse * 0.55})`; ctx.fill();
+  }
+
+  // ── BOSS 2. HIVEMOTHER (군체 어미) — 유기체형 어두운 녹색 ─
+  function _drawBossHivemother(r, hp) {
+    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.002);
+    // 촉수형 팔 6개
+    ctx.strokeStyle = `rgba(22,163,74,${0.25 + pulse * 0.22})`;
+    ctx.lineWidth   = 5;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r * 0.85, Math.sin(a) * r * 0.85);
+      ctx.lineTo(Math.cos(a) * r * 1.62, Math.sin(a) * r * 1.62);
+      ctx.stroke();
+    }
+    // 외부 메인 육각형
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+      else         ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+    }
+    ctx.closePath();
+    const g = Math.floor(70 + (1 - hp) * 40);
+    ctx.fillStyle   = `rgb(10,${g + 25},20)`;
+    ctx.fill();
+    ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2.5; ctx.stroke();
+    // 내부 발광 육각형
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      if (i === 0) ctx.moveTo(r * 0.5 * Math.cos(a), r * 0.5 * Math.sin(a));
+      else         ctx.lineTo(r * 0.5 * Math.cos(a), r * 0.5 * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle   = `rgba(74,222,128,${0.12 + pulse * 0.22})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(134,239,172,${0.4 + pulse * 0.45})`; ctx.lineWidth = 1.5; ctx.stroke();
+    // 코어 원
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(74,222,128,${0.55 + pulse * 0.45})`; ctx.fill();
+  }
+
+  // ── BOSS 3. DREADNOUGHT (무적함) — 중장갑 전함 형태 ───────
+  function _drawBossDreadnought(r, hp) {
+    const bright = Math.floor(62 + (1 - hp) * 28);
+    // 메인 함체 (8각 전함)
+    ctx.beginPath();
+    ctx.moveTo( r * 1.38,  0);
+    ctx.lineTo( r * 0.65, -r * 0.55);
+    ctx.lineTo(-r * 0.50, -r * 0.72);
+    ctx.lineTo(-r * 1.08, -r * 0.52);
+    ctx.lineTo(-r * 1.32,  0);
+    ctx.lineTo(-r * 1.08,  r * 0.52);
+    ctx.lineTo(-r * 0.50,  r * 0.72);
+    ctx.lineTo( r * 0.65,  r * 0.55);
+    ctx.closePath();
+    ctx.fillStyle   = `rgb(${bright},${bright + 5},${bright + 18})`;
+    ctx.fill();
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 3; ctx.stroke();
+    // 장갑판 내부선
+    ctx.strokeStyle = `rgba(148,163,184,0.32)`; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.85, -r * 0.5); ctx.lineTo(r * 0.82, 0);
+    ctx.moveTo(-r * 0.85,  r * 0.5); ctx.lineTo(r * 0.82, 0);
+    ctx.stroke();
+    // 좌우 포탑
+    for (const sign of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(r * 0.08, sign * r * 0.44, r * 0.18, 0, Math.PI * 2);
+      ctx.fillStyle   = `rgb(${bright + 22},${bright + 24},${bright + 34})`;
+      ctx.fill();
+      ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    // 주포신
+    ctx.beginPath();
+    ctx.moveTo(r * 1.05, -r * 0.11); ctx.lineTo(r * 1.62, -r * 0.11);
+    ctx.moveTo(r * 1.05,  r * 0.11); ctx.lineTo(r * 1.62,  r * 0.11);
+    ctx.strokeStyle = '#475569'; ctx.lineWidth = 5; ctx.stroke();
+    // 포구 강조
+    ctx.beginPath();
+    ctx.arc(r * 1.62, 0, r * 0.1, 0, Math.PI * 2);
+    ctx.fillStyle = '#334155'; ctx.fill();
+  }
+
+  // ── BOSS 4. SPECTER_LORD (유령 군주) — 왕관형 반투명 ──────
+  function _drawBossSpecterLord(r, hp, alpha) {
+    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.003);
+    ctx.globalAlpha = (alpha ?? 1) * (0.52 + pulse * 0.48);
+    // 왕관형 외부 스파이크 (7개)
+    ctx.beginPath();
+    for (let i = 0; i < 14; i++) {
+      const a  = (i / 14) * Math.PI * 2 - Math.PI / 2;
+      const ri = i % 2 === 0 ? r * 1.38 : r * 0.80;
+      if (i === 0) ctx.moveTo(Math.cos(a) * ri, Math.sin(a) * ri);
+      else         ctx.lineTo(Math.cos(a) * ri, Math.sin(a) * ri);
+    }
+    ctx.closePath();
+    ctx.fillStyle   = 'rgba(67,28,148,0.88)'; ctx.fill();
+    ctx.strokeStyle = `rgba(196,181,253,${0.5 + pulse * 0.5})`; ctx.lineWidth = 2.5; ctx.stroke();
+    // 내부 공허 원
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.46, 0, Math.PI * 2);
+    ctx.fillStyle   = 'rgba(12,4,32,0.92)'; ctx.fill();
+    ctx.strokeStyle = `rgba(167,139,250,${0.38 + pulse * 0.62})`; ctx.lineWidth = 2; ctx.stroke();
+    // 눈 글로우
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.21, 0, Math.PI * 2);
+    ctx.fillStyle   = `rgba(216,180,254,${0.55 + pulse * 0.45})`; ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // ── BOSS 5. COLOSSUS (콜로서스) — 거대 보라 요새 ──────────
+  function _drawBossColossus(r, hp) {
+    const pulse = 0.4 + 0.6 * Math.sin(Date.now() * 0.001);
+    // 외부 글로우 헤일로
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.75, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(109,40,217,${0.07 + pulse * 0.06})`; ctx.fill();
+    // 8각 외부 요새 본체
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      if (i === 0) ctx.moveTo(r * Math.cos(a), r * Math.sin(a));
+      else         ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+    }
+    ctx.closePath();
+    const d = Math.floor(18 + (1 - hp) * 14);
+    ctx.fillStyle   = `rgb(${d + 22},${d},${d + 38})`;
+    ctx.fill();
+    ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 4.5; ctx.stroke();
+    // 내부 8각형 링
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      if (i === 0) ctx.moveTo(r * 0.62 * Math.cos(a), r * 0.62 * Math.sin(a));
+      else         ctx.lineTo(r * 0.62 * Math.cos(a), r * 0.62 * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(139,92,246,${0.38 + pulse * 0.42})`; ctx.lineWidth = 2; ctx.stroke();
+    // 코어 글로우
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.26, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(167,139,250,${0.38 + pulse * 0.62})`; ctx.fill();
+    // 4방향 크리스탈 돌기
+    for (let i = 0; i < 4; i++) {
+      const a  = (i / 4) * Math.PI * 2;
+      const cx = Math.cos(a) * r * 0.75, cy = Math.sin(a) * r * 0.75;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.10, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(196,181,253,${0.48 + pulse * 0.52})`; ctx.fill();
+    }
+  }
+
+  /**
+   * 보스 투사체 그리기 (강렬한 글로우 + 코어)
+   */
+  function drawBossProjectile(sx, sy, radius, color) {
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.beginPath(); ctx.arc(sx, sy, radius * 2.6, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.globalAlpha = 0.48;
+    ctx.beginPath(); ctx.arc(sx, sy, radius * 1.65, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+    ctx.lineWidth   = 1.5; ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
+   * 보스 체력바 (화면 하단 중앙, zoom 미적용 UI 공간에 렌더)
+   * @param {string} type - 보스 타입 키
+   * @param {number} hp
+   * @param {number} maxHp
+   */
+  function drawBossHpBar(type, hp, maxHp) {
+    const W = canvas.width, H = canvas.height;
+    const barW  = Math.min(480, W * 0.52);
+    const barH  = 18;
+    const bx    = (W - barW) / 2;
+    const by    = H - 56;
+    const ratio = Math.max(0, Math.min(1, hp / maxHp));
+
+    const BOSS_NAMES = {
+      OVERLORD:    '오버로드',    HIVEMOTHER: '하이브마더',
+      DREADNOUGHT: '드레드노트',  SPECTER_LORD: '스펙터 군주',
+      COLOSSUS:    '콜로서스',
+    };
+    const BOSS_COLORS = {
+      OVERLORD:    '#ef4444',    HIVEMOTHER: '#4ade80',
+      DREADNOUGHT: '#94a3b8',   SPECTER_LORD: '#a78bfa',
+      COLOSSUS:    '#7c3aed',
+    };
+    const color = BOSS_COLORS[type] ?? '#ef4444';
+    const name  = BOSS_NAMES[type]  ?? type;
+
+    ctx.save();
+    // 배경 패널
+    ctx.fillStyle = 'rgba(0,0,0,0.68)';
+    ctx.fillRect(bx - 8, by - 30, barW + 16, barH + 42);
+    // 보스 이름
+    ctx.fillStyle     = color;
+    ctx.font          = 'bold 13px sans-serif';
+    ctx.textAlign     = 'center';
+    ctx.textBaseline  = 'bottom';
+    ctx.fillText(`⚡ ${name}`, W / 2, by - 5);
+    // HP 트랙
+    ctx.fillStyle = 'rgba(30,30,50,0.95)';
+    ctx.fillRect(bx, by, barW, barH);
+    // HP 채움
+    ctx.fillStyle = color;
+    ctx.fillRect(bx, by, barW * ratio, barH);
+    // 50% 페이즈 경계선
+    ctx.save();
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.32)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(bx + barW * 0.5, by); ctx.lineTo(bx + barW * 0.5, by + barH);
+    ctx.stroke();
+    ctx.restore();
+    // 테두리
+    ctx.strokeStyle = 'rgba(200,200,220,0.45)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx, by, barW, barH);
+    ctx.restore();
+  }
+
   /**
    * 투사체 그리기 (작은 빛나는 원)
    * @param {number} sx - 화면 X
@@ -728,7 +982,7 @@ const Renderer = (() => {
     init, clear, drawStars,
     drawPlayer, drawEnemy,
     drawProjectile, drawCannonball, drawXpGem, drawParticle,
-    drawModuleDrop,
+    drawModuleDrop, drawBossProjectile, drawBossHpBar,
     getCtx, getCanvas, getWidth, getHeight,
   };
 })();
