@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.9.5'; // 조립 UI 모듈 드래그&드롭 이동
+const VERSION = 'v0.9.6'; // Q키 항상 조립 화면 열기 + 우측 모듈 인벤토리 패널
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -355,12 +355,10 @@ const Game = (() => {
     // 인벤토리 토글 (I 키)
     if (InputHandler.consumeInventory()) { inventoryOpen = !inventoryOpen; }
 
-    // Q키: 보유 모듈 있을 때 조립 화면 열기
+    // Q키: 조립 화면 열기 (항상 가능 — 대기 모듈이 있으면 다음 모듈로 세팅)
     if (InputHandler.consumeOpenAssembly()) {
-      if (TetrisGrid.hasQueued()) {
-        TetrisGrid.nextModule();
-        setState(STATE.BUILDING);
-      }
+      if (TetrisGrid.hasQueued()) TetrisGrid.nextModule();
+      setState(STATE.BUILDING);
       return;
     }
 
@@ -437,8 +435,8 @@ const Game = (() => {
           InputHandler.state.mouseY,
           cx, cy, player
         );
-        // 드롭 후 pending이 없으면 (원래 pending도 없었을 경우) 조립 UI 닫기
-        if (!TetrisGrid.hasQueued()) setState(STATE.PLAYING);
+        // 드롭 후 배치할 모듈(pending)이 남아있으면 조립 UI 유지, 없으면 닫기
+        if (!TetrisGrid.hasPending()) setState(STATE.PLAYING);
       }
     }
   }

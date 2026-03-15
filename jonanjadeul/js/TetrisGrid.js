@@ -236,6 +236,11 @@ const TetrisGrid = (() => {
     return moduleQueue.length > 0 || pending !== null;
   }
 
+  /** pending에 배치 대기 모듈이 있으면 true */
+  function hasPending() {
+    return pending !== null;
+  }
+
   /** HUD 뱃지용: 총 대기 모듈 수 */
   function getQueueSize() {
     return moduleQueue.length + (pending ? 1 : 0);
@@ -701,8 +706,8 @@ const TetrisGrid = (() => {
     // ── 7. 좌측 패널: 현재 장착 모듈 목록
     _drawInstalledPanel(ctx, W, H, player);
 
-    // ── 8. 우측 패널: 제공 모듈 카드
-    if (pending) _drawModulePanel(ctx, W, H);
+    // ── 8. 우측 패널: 모듈 인벤토리 (항상 표시)
+    _drawModulePanel(ctx, W, H);
 
     // ── 9. 하단 힌트
     ctx.textAlign = 'center';
@@ -868,84 +873,227 @@ const TetrisGrid = (() => {
   }
 
   /** 우측 패널: 제공 모듈 정보 카드 */
+  /**
+   * 우측 패널: 모듈 인벤토리 — 배치 대기(pending + 큐) + 장착 완료 목록 표시
+   */
   function _drawModulePanel(ctx, W, H) {
-    const PAD    = 14;
-    const PW     = 175;
-    const PH     = 195;
-    const px     = W - PW - 24;
-    const py     = H / 2 - PH / 2;
-    const radius = 10;
-    const tier       = pending.tier ?? 'COMMON';
-    const tierColor  = TIER_COLORS[tier];
-    const tierLabel  = TIER_LABELS[tier];
+    const PAD  = 12;
+    const PW   = 185;
+    const PH   = Math.min(H - 100, 520);
+    const px   = W - PW - 16;
+    const py   = (H - PH) / 2;
+    const rad  = 10;
 
-    // 카드 배경 (티어 색상 테두리)
-    ctx.fillStyle = 'rgba(10, 20, 50, 0.94)';
-    _roundRect(ctx, px, py, PW, PH, radius);
+    // ── 패널 배경
+    ctx.fillStyle = 'rgba(8, 15, 40, 0.93)';
+    _roundRect(ctx, px, py, PW, PH, rad);
     ctx.fill();
-    ctx.strokeStyle = tierColor + 'aa';
-    ctx.lineWidth = 1.5;
-    _roundRect(ctx, px, py, PW, PH, radius);
+    ctx.strokeStyle = 'rgba(99,179,237,0.3)';
+    ctx.lineWidth   = 1;
+    _roundRect(ctx, px, py, PW, PH, rad);
     ctx.stroke();
 
-    // 티어 뱃지
-    ctx.font      = 'bold 10px "Segoe UI", sans-serif';
-    ctx.fillStyle = tierColor;
-    ctx.textAlign = 'left';
-    ctx.fillText(`★ ${tierLabel}`, px + PAD, py + PAD + 2);
+    // ── 헤더
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font         = 'bold 13px "Segoe UI", sans-serif';
+    ctx.fillStyle    = '#7dd3fc';
+    ctx.fillText('모듈 인벤토리', px + PAD, py + PAD + 4);
 
-    // 헤더
+    // 총 보유 수
+    const totalCount = (pending ? 1 : 0) + moduleQueue.length + placedModules.length;
     ctx.font      = '11px "Segoe UI", sans-serif';
-    ctx.fillStyle = '#5577aa';
-    ctx.fillText('제공 모듈', px + PAD, py + PAD + 16);
-
-    // 모듈 이름
-    ctx.font      = 'bold 14px "Segoe UI", sans-serif';
-    ctx.fillStyle = '#e0f0ff';
-    ctx.fillText(pending.name, px + PAD, py + PAD + 34);
-
-    // 미니 형태 프리뷰 (5×5 그리드, ±2 범위)
-    const mini  = 10;
-    const gridW = 5 * mini;
-    const offX  = px + PW / 2 - gridW / 2;
-    const offY  = py + PAD + 50;
-    ctx.strokeStyle = 'rgba(100,140,200,0.25)';
-    ctx.lineWidth   = 0.5;
-    for (let r = -2; r <= 2; r++) {
-      for (let c = -2; c <= 2; c++) {
-        ctx.strokeRect(offX + (c + 2) * mini, offY + (r + 2) * mini, mini, mini);
-      }
-    }
-    // 모듈 셀 채우기 (±2 범위 내)
-    for (const c of pending.cells) {
-      if (c.gx >= -2 && c.gx <= 2 && c.gy >= -2 && c.gy <= 2) {
-        ctx.fillStyle = pending.color;
-        ctx.fillRect(offX + (c.gx + 2) * mini, offY + (c.gy + 2) * mini, mini, mini);
-      }
-    }
-    // 코어 표시
-    ctx.fillStyle = '#1e3a8a';
-    ctx.fillRect(offX + 2 * mini, offY + 2 * mini, mini, mini);
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${totalCount}개`, px + PW - PAD, py + PAD + 4);
 
     // 구분선
-    const descY = offY + 5 * mini + 8;
+    const divY = py + PAD + 18;
     ctx.strokeStyle = 'rgba(100,140,200,0.2)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth   = 1;
     ctx.beginPath();
-    ctx.moveTo(px + PAD, descY - 4);
-    ctx.lineTo(px + PW - PAD, descY - 4);
+    ctx.moveTo(px + PAD, divY);
+    ctx.lineTo(px + PW - PAD, divY);
     ctx.stroke();
 
-    // 설명 (보너스)
-    ctx.font      = '11px "Segoe UI", sans-serif';
-    ctx.fillStyle = '#86efac';
-    ctx.textAlign = 'left';
-    ctx.fillText(pending.desc, px + PAD, descY + 8);
+    // ── 현재 배치 중 (pending)
+    let curY = divY + 10;
+    const itemH   = 38;
+    const maxY    = py + PH - PAD;
 
-    // 셀 수
-    ctx.font      = '10px "Segoe UI", sans-serif';
-    ctx.fillStyle = '#475569';
-    ctx.fillText(`${pending.cells.length}셀`, px + PAD, descY + 22);
+    // "배치 대기" 섹션 헤더
+    const waitCount = (pending ? 1 : 0) + moduleQueue.length;
+    ctx.font      = 'bold 10px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#fbbf24';
+    ctx.textAlign = 'left';
+    ctx.fillText(`▶ 배치 대기  (${waitCount})`, px + PAD, curY + 4);
+    curY += 16;
+
+    if (waitCount === 0) {
+      ctx.font      = '11px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#334466';
+      ctx.textAlign = 'center';
+      ctx.fillText('대기 모듈 없음', px + PW / 2, curY + 10);
+      curY += 24;
+    } else {
+      // pending 항목 (배치 중 강조)
+      if (pending && curY + itemH <= maxY) {
+        const tier  = pending.tier ?? 'COMMON';
+        const tc    = TIER_COLORS[tier] ?? '#94a3b8';
+        // 강조 배경
+        ctx.fillStyle = 'rgba(251,191,36,0.08)';
+        _roundRect(ctx, px + PAD - 2, curY, PW - PAD * 2 + 4, itemH - 2, 4);
+        ctx.fill();
+        ctx.strokeStyle = tc + '88';
+        ctx.lineWidth   = 1;
+        _roundRect(ctx, px + PAD - 2, curY, PW - PAD * 2 + 4, itemH - 2, 4);
+        ctx.stroke();
+
+        // 색상 스워치
+        ctx.fillStyle = pending.color;
+        ctx.fillRect(px + PAD + 2, curY + 8, 12, 12);
+        ctx.strokeStyle = tc;
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(px + PAD + 2, curY + 8, 12, 12);
+
+        // 이름
+        ctx.font      = 'bold 11px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#fef08a';
+        ctx.textAlign = 'left';
+        ctx.fillText(pending.name, px + PAD + 20, curY + 12);
+
+        // 설명
+        ctx.font      = '10px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#86efac';
+        ctx.fillText(pending.desc, px + PAD + 20, curY + 26);
+
+        // 티어 + 배치 중 표시
+        ctx.font      = '9px "Segoe UI", sans-serif';
+        ctx.fillStyle = tc;
+        ctx.textAlign = 'right';
+        ctx.fillText(TIER_LABELS[tier] ?? '일반', px + PW - PAD, curY + 12);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText('배치 중', px + PW - PAD, curY + 24);
+
+        curY += itemH;
+      }
+
+      // 대기 큐 항목
+      for (let i = 0; i < moduleQueue.length && curY + itemH <= maxY; i++) {
+        const key = moduleQueue[i];
+        const def = MODULE_DEFS[key];
+        if (!def) continue;
+        const tier = def.tier ?? 'COMMON';
+        const tc   = TIER_COLORS[tier] ?? '#94a3b8';
+
+        ctx.fillStyle = def.color;
+        ctx.fillRect(px + PAD + 2, curY + 8, 12, 12);
+        ctx.strokeStyle = tc;
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(px + PAD + 2, curY + 8, 12, 12);
+
+        ctx.font      = 'bold 11px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.textAlign = 'left';
+        ctx.fillText(def.name, px + PAD + 20, curY + 12);
+
+        ctx.font      = '10px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(def.desc, px + PAD + 20, curY + 26);
+
+        ctx.font      = '9px "Segoe UI", sans-serif';
+        ctx.fillStyle = tc;
+        ctx.textAlign = 'right';
+        ctx.fillText(TIER_LABELS[tier] ?? '일반', px + PW - PAD, curY + 14);
+
+        curY += itemH;
+      }
+      // 큐에 더 있으면 "+N개 더"
+      const shownQueue = Math.floor((maxY - curY + itemH) / itemH);
+      const hiddenQueue = moduleQueue.length - Math.min(moduleQueue.length, shownQueue);
+      if (hiddenQueue > 0 && curY <= maxY) {
+        ctx.font      = '10px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'center';
+        ctx.fillText(`+${hiddenQueue}개 더...`, px + PW / 2, curY + 6);
+        curY += 18;
+      }
+    }
+
+    // ── 장착 완료 섹션
+    if (curY + 20 <= maxY) {
+      ctx.strokeStyle = 'rgba(100,140,200,0.15)';
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.moveTo(px + PAD, curY + 4);
+      ctx.lineTo(px + PW - PAD, curY + 4);
+      ctx.stroke();
+      curY += 14;
+
+      ctx.font      = 'bold 10px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#4ade80';
+      ctx.textAlign = 'left';
+      ctx.fillText(`▶ 장착 완료  (${placedModules.length})`, px + PAD, curY + 4);
+      curY += 16;
+
+      if (placedModules.length === 0) {
+        ctx.font      = '11px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#334466';
+        ctx.textAlign = 'center';
+        ctx.fillText('장착된 모듈 없음', px + PW / 2, curY + 10);
+      } else {
+        for (let i = 0; i < placedModules.length && curY + itemH <= maxY; i++) {
+          const m   = placedModules[i];
+          const def = MODULE_DEFS[m.type];
+          if (!def) continue;
+          const tier = def.tier ?? 'COMMON';
+          const tc   = TIER_COLORS[tier] ?? '#94a3b8';
+
+          ctx.fillStyle = def.color;
+          ctx.fillRect(px + PAD + 2, curY + 8, 12, 12);
+          ctx.strokeStyle = tc;
+          ctx.lineWidth   = 1;
+          ctx.strokeRect(px + PAD + 2, curY + 8, 12, 12);
+
+          ctx.font      = 'bold 11px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#e2e8f0';
+          ctx.textAlign = 'left';
+          ctx.fillText(def.name, px + PAD + 20, curY + 10);
+
+          if (m.maxHp > 0) {
+            // 장갑판: HP 바
+            const ratio = Math.max(0, m.hp / m.maxHp);
+            const hbx = px + PAD + 20, hby = curY + 20;
+            const hbw = PW - PAD * 2 - 20;
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(hbx, hby, hbw, 5);
+            ctx.fillStyle = ratio > 0.5 ? '#4ade80' : ratio > 0.25 ? '#fbbf24' : '#ef4444';
+            ctx.fillRect(hbx, hby, hbw * ratio, 5);
+            ctx.font      = '9px "Segoe UI", sans-serif';
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText(`${Math.ceil(m.hp)}/${m.maxHp}`, hbx, curY + 34);
+          } else {
+            ctx.font      = '10px "Segoe UI", sans-serif';
+            ctx.fillStyle = '#64748b';
+            ctx.fillText(def.desc, px + PAD + 20, curY + 26);
+          }
+
+          ctx.font      = '9px "Segoe UI", sans-serif';
+          ctx.fillStyle = tc;
+          ctx.textAlign = 'right';
+          ctx.fillText(TIER_LABELS[tier] ?? '일반', px + PW - PAD, curY + 10);
+
+          curY += itemH;
+        }
+        const remaining = placedModules.length - Math.floor((curY - (divY + 10)) / itemH);
+        if (remaining > 0 && curY > maxY - itemH) {
+          ctx.font      = '10px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#475569';
+          ctx.textAlign = 'center';
+          ctx.fillText(`+${remaining}개 더...`, px + PW / 2, Math.min(curY, maxY - 8));
+        }
+      }
+    }
   }
 
   /** 둥근 사각형 헬퍼 */
@@ -1394,6 +1542,7 @@ const TetrisGrid = (() => {
     queueRandomModule,
     nextModule,
     hasQueued,
+    hasPending,
     getQueueSize,
     getGrid,
     canPlace,
