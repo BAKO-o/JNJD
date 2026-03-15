@@ -30,6 +30,14 @@ const TetrisGrid = (() => {
   let validSlots  = [];    // 배치 가능한 앵커 위치 [{gx,gy}]
   let moduleQueue = [];    // 드랍된 모듈 대기 큐 (타입 문자열 배열)
 
+  // ── 드래그 & 드롭 상태
+  let _isDragging         = false;
+  let _dragOriginAnchorGx = 0;
+  let _dragOriginAnchorGy = 0;
+  let _dragPendingBackup  = null; // 드래그 시작 전 pending 백업
+  let _dragPreservedHp    = 0;
+  let _dragPreservedMaxHp = 0;
+
   // ── 티어 시스템
   const TIER_WEIGHTS = { COMMON: 72, RARE: 20, EPIC: 6, LEGENDARY: 2 };
   const TIER_LABELS  = { COMMON: '일반', RARE: '희귀', EPIC: '에픽', LEGENDARY: '전설' };
@@ -100,6 +108,8 @@ const TetrisGrid = (() => {
     moduleQueue = [];
     maxHullSlots = 12;
     placedModules.length = 0;
+    _isDragging = false;
+    _dragPendingBackup = null;
   }
 
   // ────────────────── 슬롯 계산 ──────────────────
@@ -280,6 +290,101 @@ const TetrisGrid = (() => {
     placedModules.splice(idx, 1);
     return true;
   }
+
+  // ────────────────── 드래그 & 드롭 시스템 ──────────────────
+
+  /**
+   * (gx, gy) 셀의 모듈을 들어 올려 드래그 시작.
+   * 모듈을 그리드에서 제거하고 pending에 임시 설정한다.
+   * @returns {boolean} 드래그 시작 성공 여부
+   */
+  function tryStartDrag(gx, gy, player) {
+    const key = `${gx},${gy}`;
+    if (!grid.has(key) || grid.get(key) === 'CORE') return false;
+
+    const idx = placedModules.findIndex(m => m.cells.some(c => c.gx === gx && c.gy === gy));
+    if (idx < 0) return false;
+
+    const mod = placedModules[idx];
+    const def = MODULE_DEFS[mod.type];
+    if (!def) return false;
+
+    // pending 및 드래그 원점 백업
+    _dragPendingBackup  = pending;
+    _dragOriginAnchorGx = mod.anchorGx;
+    _dragOriginAnchorGy = mod.anchorGy;
+    _dragPreservedHp    = mod.hp;
+    _dragPreservedMaxHp = mod.maxHp;
+
+    // 그리드·placedModules 에서 제거
+    for (const c of mod.cells) grid.delete(`${c.gx},${c.gy}`);
+    placedModules.splice(idx, 1);
+
+    // 절대 좌표 → 앵커 기준 상대 좌표로 복원
+    const relativeCells = mod.cells.map(c => ({
+      gx: c.gx - mod.anchorGx,
+      gy: c.gy - mod.anchorGy,
+    }));
+    pending = {
+      type: mod.type, name: def.name, cells: relativeCells,
+      color: def.color, desc: def.desc, bonus: def.bonus, tier: def.tier,
+    };
+
+    validSlots  = _calcValidSlots();
+    recalcHitbox(player);
+    _isDragging = true;
+    return true;
+  }
+
+  /**
+   * 보너스 재적용 없이 지정 앵커에 pending 모듈을 배치한다 (드래그 전용).
+   * HP/MaxHp는 보존값을 사용한다.
+   */
+  function _placePreserved(agx, agy) {
+    const placedCells = [];
+    for (const c of pending.cells) {
+      const cx2 = agx + c.gx, cy2 = agy + c.gy;
+      grid.set(`${cx2},${cy2}`, pending.type);
+      placedCells.push({ gx: cx2, gy: cy2 });
+    }
+    placedModules.push({
+      type: pending.type, anchorGx: agx, anchorGy: agy,
+      cells: placedCells,
+      hp: _dragPreservedHp, maxHp: _dragPreservedMaxHp,
+    });
+  }
+
+  /**
+   * 드래그 종료: 현재 마우스 위치가 유효하면 새 위치에, 아니면 원위치에 드롭.
+   * @param {number} sx  - 마우스 화면 X
+   * @param {number} sy  - 마우스 화면 Y
+   * @param {number} cx  - 화면 중앙 X
+   * @param {number} cy  - 화면 중앙 Y
+   * @param {object} player
+   */
+  function endDrag(sx, sy, cx, cy, player) {
+    if (!_isDragging) return;
+    _isDragging = false;
+
+    const tgx = Math.round((sx - cx) / CELL);
+    const tgy = Math.round((sy - cy) / CELL);
+
+    if (canPlace(tgx, tgy)) {
+      _placePreserved(tgx, tgy);
+    } else {
+      // 원위치 복구 — canPlace 없이 직접 삽입 (원래 있던 자리이므로 항상 유효)
+      _placePreserved(_dragOriginAnchorGx, _dragOriginAnchorGy);
+    }
+
+    // 원래 pending 복원
+    pending    = _dragPendingBackup;
+    _dragPendingBackup = null;
+    validSlots = _calcValidSlots();
+    recalcHitbox(player);
+  }
+
+  /** 드래그 중 여부 반환 */
+  function isDragging() { return _isDragging; }
 
   /**
    * 함체 슬롯 증설 (스크랩 소모 후 Game.js에서 호출)
@@ -513,7 +618,7 @@ const TetrisGrid = (() => {
       ctx.fillText(`⚠ 함체 슬롯 포화 — 기존 모듈을 클릭하면 제거됩니다 (교체 후 재배치)`, cx, 62);
     } else {
       ctx.fillStyle = '#5577aa';
-      ctx.fillText('유효한 슬롯(파란 테두리)을 클릭하여 부착 · 가득 찼을 때 기존 모듈 클릭으로 교체', cx, 62);
+      ctx.fillText('유효한 슬롯(파란 테두리)을 클릭해 부착 · 기존 모듈을 클릭 드래그로 이동', cx, 62);
     }
 
     // ── 3. 마우스→그리드 좌표
@@ -532,10 +637,17 @@ const TetrisGrid = (() => {
       } else {
         const def   = MODULE_DEFS[type];
         const color = def ? def.color : '#334455';
-        ctx.fillStyle   = color;
+        // 드래그 중이 아닐 때 hover된 모듈 강조
+        const isDragHover = !_isDragging && (gx === hgx && gy === hgy);
+        ctx.fillStyle = isDragHover ? (def ? def.color + 'cc' : '#334455cc') : (def ? def.color : '#334455');
+        ctx.globalAlpha = isDragHover ? 1.0 : 0.9;
         ctx.fillRect(sx - HALF, sy - HALF, CELL, CELL);
-        // 슬롯 포화 시 기존 모듈에 오렌지 테두리 (교체 가능 표시)
-        if (isFull) {
+        ctx.globalAlpha = 1.0;
+        // 테두리: 드래그 가능 강조(hover) / 슬롯 포화 / 일반
+        if (isDragHover) {
+          ctx.strokeStyle = 'rgba(251,191,36,0.95)';
+          ctx.lineWidth   = 2;
+        } else if (isFull) {
           const pulse2 = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
           ctx.strokeStyle = `rgba(251,191,36,${0.5 + pulse2 * 0.5})`;
           ctx.lineWidth   = 1.5;
@@ -545,6 +657,20 @@ const TetrisGrid = (() => {
         }
         ctx.strokeRect(sx - HALF, sy - HALF, CELL, CELL);
       }
+    }
+
+    // ── 4b. 드래그 중: 원위치에 점선 테두리 표시
+    if (_isDragging && pending) {
+      const pulse3 = 0.5 + 0.5 * Math.sin(Date.now() * 0.006);
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = `rgba(251,191,36,${0.45 + pulse3 * 0.45})`;
+      ctx.lineWidth   = 1.5;
+      for (const c of pending.cells) {
+        const ox = cx + (_dragOriginAnchorGx + c.gx) * CELL;
+        const oy = cy + (_dragOriginAnchorGy + c.gy) * CELL;
+        ctx.strokeRect(ox - HALF + 1, oy - HALF + 1, CELL - 2, CELL - 2);
+      }
+      ctx.setLineDash([]);
     }
 
     // ── 5. 유효 슬롯 표시
@@ -1275,6 +1401,9 @@ const TetrisGrid = (() => {
     recalcHitbox,
     rotatePending,
     handleClick,
+    tryStartDrag,
+    endDrag,
+    isDragging,
     hitShip,
     updateFlash,
     drawShipModules,

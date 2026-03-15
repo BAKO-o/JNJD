@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.9.4'; // 장갑판 HP 체계, 스크랩 반감, 티어 확률 조정, 인벤토리 HP바
+const VERSION = 'v0.9.5'; // 조립 UI 모듈 드래그&드롭 이동
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -415,15 +415,31 @@ const Game = (() => {
       setState(STATE.PLAYING);
       return;
     }
-    // 클릭: 유효 슬롯에 배치 시도 (슬롯 포화 시 교체 모드)
+    // 클릭(mousedown): 드래그 시작 시도 → 아니면 일반 배치
     if (InputHandler.consumeClick()) {
       const { cx, cy } = screenCenter();
-      const placed = TetrisGrid.handleClick(
-        InputHandler.state.mouseX,
-        InputHandler.state.mouseY,
-        cx, cy, player
-      );
-      if (placed) setState(STATE.PLAYING);
+      const mx = InputHandler.state.mouseX, my = InputHandler.state.mouseY;
+      const gx = Math.round((mx - cx) / 22);
+      const gy = Math.round((my - cy) / 22);
+      const startedDrag = TetrisGrid.tryStartDrag(gx, gy, player);
+      if (!startedDrag) {
+        const placed = TetrisGrid.handleClick(mx, my, cx, cy, player);
+        if (placed) setState(STATE.PLAYING);
+      }
+    }
+
+    // mouseup: 드래그 중이면 드롭 처리
+    if (InputHandler.consumeMouseReleased()) {
+      if (TetrisGrid.isDragging()) {
+        const { cx, cy } = screenCenter();
+        TetrisGrid.endDrag(
+          InputHandler.state.mouseX,
+          InputHandler.state.mouseY,
+          cx, cy, player
+        );
+        // 드롭 후 pending이 없으면 (원래 pending도 없었을 경우) 조립 UI 닫기
+        if (!TetrisGrid.hasQueued()) setState(STATE.PLAYING);
+      }
     }
   }
 
