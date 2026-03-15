@@ -479,6 +479,19 @@ kbd {
   color: #8899bb;
 }
 
+/* ── 버전 표시 ── */
+#version-display {
+  position: fixed;
+  bottom: 10px;
+  right: 14px;
+  font-size: 11px;
+  color: #2a3a55;
+  font-family: monospace;
+  pointer-events: none;
+  z-index: 200;
+  letter-spacing: 0.06em;
+}
+
 /* ── 모듈 뱃지 ── */
 #module-badge {
   color: #fbbf24;

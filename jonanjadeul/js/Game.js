@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.9.7'; // 시작 화면 게임 방법 튜토리얼 추가
+const VERSION = 'v0.9.8'; // 버전표시·W/S 모듈 선택·줌 모듈 크기 고정
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -221,6 +221,9 @@ const Game = (() => {
     Renderer.init(canvas);
     InputHandler.init();
 
+    // 버전 표시
+    document.getElementById('version-display').textContent = VERSION;
+
     // 버튼 이벤트
     document.getElementById('btn-start').addEventListener('click', startGame);
     document.getElementById('btn-restart').addEventListener('click', restartGame);
@@ -340,6 +343,7 @@ const Game = (() => {
       zoom += (targetZoom - zoom) * Math.min(1, dt * 3);
       EnemyManager.setZoom(zoom);
       WeaponSystem.setZoom(zoom);
+      TetrisGrid.setZoom(zoom);
     }
 
     render();
@@ -354,6 +358,10 @@ const Game = (() => {
 
     // 인벤토리 토글 (I 키)
     if (InputHandler.consumeInventory()) { inventoryOpen = !inventoryOpen; }
+
+    // PLAYING 중 W/S 플래그 소비 (조립 화면에서만 사용, 누적 방지)
+    InputHandler.consumeSelectPrev();
+    InputHandler.consumeSelectNext();
 
     // Q키: 조립 화면 열기 (항상 가능 — 대기 모듈이 있으면 다음 모듈로 세팅)
     if (InputHandler.consumeOpenAssembly()) {
@@ -396,6 +404,10 @@ const Game = (() => {
    * 적·투사체 업데이트는 일시정지됨
    */
   function updateBuilding(dt) {
+    // W/S키: 대기 모듈 선택 변경
+    if (InputHandler.consumeSelectPrev()) TetrisGrid.cyclePending(-1);
+    if (InputHandler.consumeSelectNext()) TetrisGrid.cyclePending(+1);
+
     // R키: 모듈 회전 (90° 시계방향)
     if (InputHandler.consumeRotate()) {
       TetrisGrid.rotatePending();

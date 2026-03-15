@@ -276,6 +276,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-15 | v0.9.8 | 시작화면 우하단 버전 표시(version-display, Game.js init에서 동적 세팅), 조립 화면 W/S 키로 대기 모듈 선택(cyclePending/pendingSelectIdx, 큐에서 shift 제거→배치 시 splice), 우측 패널 상단 형태 프리뷰 카드(5×5 미니그리드+W/S 내비게이션 힌트) 복원, TetrisGrid.setZoom으로 drawShipModules 셀 크기 줌 역보정(EC=CELL/zoom, 화면상 고정 22px) |
 | 2026-03-15 | v0.9.7 | 시작 화면에 "게임 방법" 버튼 추가, 튜토리얼 오버레이(목표·조작·HP체계·모듈조립·등급·업그레이드·웨이브 7섹션, 스크롤 가능), btn-secondary 스타일 추가 |
 | 2026-03-15 | v0.9.6 | Q키 대기 모듈 없어도 조립 화면 열기(재배치 전용), 우측 패널 모듈 인벤토리 재설계(배치 대기+장착 완료 통합 목록, 티어·HP바·설명 표시), hasPending() 추가 |
 | 2026-03-15 | v0.9.5 | 조립 UI 모듈 드래그&드롭 이동(tryStartDrag/endDrag/_placePreserved), mouseHeld·mouseReleased 입력 추가, 드래그 원위치 점선 테두리 시각 피드백, HP·보너스 보존 |
