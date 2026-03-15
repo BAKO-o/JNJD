@@ -324,6 +324,9 @@ const Game = (() => {
 
     if (state === STATE.PLAYING) {
       update(dt);
+    } else if (state === STATE.PAUSED) {
+      // 일시정지 중에도 P/ESC 입력을 소비해 재개 가능하게 처리
+      if (InputHandler.consumePause()) togglePause();
     } else if (state === STATE.BUILDING) {
       updateBuilding(dt);
     }
