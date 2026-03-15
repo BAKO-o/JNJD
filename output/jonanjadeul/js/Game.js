@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v0.9.1'; // 티어 스케일링: 적 크기 1.2^(tier-1), 저티어 피해 면역
+const VERSION = 'v0.9.2'; // 모듈 등급 시스템, 15종 무기, 상단 카운트다운 HUD
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;

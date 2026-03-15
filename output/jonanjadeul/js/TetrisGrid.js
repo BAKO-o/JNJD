@@ -30,130 +30,61 @@ const TetrisGrid = (() => {
   let validSlots  = [];    // 배치 가능한 앵커 위치 [{gx,gy}]
   let moduleQueue = [];    // 드랍된 모듈 대기 큐 (타입 문자열 배열)
 
-  // ── 모듈 정의
+  // ── 티어 시스템
+  const TIER_WEIGHTS = { COMMON: 50, RARE: 30, EPIC: 15, LEGENDARY: 5 };
+  const TIER_LABELS  = { COMMON: '일반', RARE: '희귀', EPIC: '에픽', LEGENDARY: '전설' };
+  const TIER_COLORS  = { COMMON: '#94a3b8', RARE: '#3b82f6', EPIC: '#a855f7', LEGENDARY: '#f59e0b' };
+
+  // ── 모듈 정의 (tier: COMMON/RARE/EPIC/LEGENDARY)
   // cells: 앵커(0,0) 기준 차지하는 셀 오프셋 배열
   const MODULE_DEFS = {
-    HULL_1: {
-      name: '장갑판 I',
-      cells: [{gx:0,gy:0}],
-      color: '#64748b',
-      desc: 'HP +25',
-      bonus: { hp: 25 },
-    },
-    HULL_2: {
-      name: '장갑판 II',
-      cells: [{gx:0,gy:0},{gx:1,gy:0}],
-      color: '#475569',
-      desc: 'HP +50',
-      bonus: { hp: 50 },
-    },
-    GUN_1: {
-      name: '포탑 마운트',
-      cells: [{gx:0,gy:0}],
-      color: '#b45309',
-      desc: '데미지 +15%',
-      bonus: { damage: 0.15 },
-    },
-    GUN_2: {
-      name: '이중 포탑',
-      cells: [{gx:0,gy:0},{gx:0,gy:1}],
-      color: '#92400e',
-      desc: '데미지 +25% / 쿨다운 -15%',
-      bonus: { damage: 0.25, cooldownMult: 0.85 },
-    },
-    THRUSTER: {
-      name: '추진기',
-      cells: [{gx:0,gy:0},{gx:-1,gy:0}],
-      color: '#1e40af',
-      desc: '이동속도 +15%',
-      bonus: { speed: 0.15 },
-    },
-    WING_L: {
-      name: '좌익 모듈',
-      cells: [{gx:0,gy:0},{gx:0,gy:-1}],
-      color: '#0e7490',
-      desc: 'HP +20 / 속도 +8%',
-      bonus: { hp: 20, speed: 0.08 },
-    },
-    WING_R: {
-      name: '우익 모듈',
-      cells: [{gx:0,gy:0},{gx:0,gy:1}],
-      color: '#0e7490',
-      desc: 'HP +20 / 속도 +8%',
-      bonus: { hp: 20, speed: 0.08 },
-    },
+    // ─── 일반 (COMMON) ───
+    HULL_1:          { tier:'COMMON',    name:'장갑판 I',        cells:[{gx:0,gy:0}],                                          color:'#64748b', desc:'HP +25',                        bonus:{hp:25} },
+    HULL_2:          { tier:'COMMON',    name:'장갑판 II',       cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#475569', desc:'HP +50',                        bonus:{hp:50} },
+    THRUSTER:        { tier:'COMMON',    name:'추진기',          cells:[{gx:0,gy:0},{gx:-1,gy:0}],                             color:'#1e40af', desc:'이동속도 +15%',                  bonus:{speed:0.15} },
+    WING_L:          { tier:'COMMON',    name:'좌익 모듈',       cells:[{gx:0,gy:0},{gx:0,gy:-1}],                             color:'#0e7490', desc:'HP +20 / 속도 +8%',             bonus:{hp:20,speed:0.08} },
+    WING_R:          { tier:'COMMON',    name:'우익 모듈',       cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#0e7490', desc:'HP +20 / 속도 +8%',             bonus:{hp:20,speed:0.08} },
 
-    // ── 무기 모듈 10종
-    WPN_GATLING: {
-      name: '개틀링포',
-      cells: [{gx:0,gy:0}],
-      color: '#dc2626',
-      desc: '빠른 3방향 연사',
-      bonus: { weapon: 'WPN_GATLING' },
-    },
-    WPN_SPREAD: {
-      name: '산탄포',
-      cells: [{gx:0,gy:0},{gx:1,gy:0}],
-      color: '#ea580c',
-      desc: '5발 부채꼴 발사',
-      bonus: { weapon: 'WPN_SPREAD' },
-    },
-    WPN_SNIPER: {
-      name: '저격포',
-      cells: [{gx:0,gy:0},{gx:0,gy:1}],
-      color: '#7c3aed',
-      desc: '고데미지 단발 저격',
-      bonus: { weapon: 'WPN_SNIPER' },
-    },
-    WPN_MISSILE: {
-      name: '유도탄',
-      cells: [{gx:0,gy:0},{gx:1,gy:0}],
-      color: '#0891b2',
-      desc: '호밍 미사일 발사',
-      bonus: { weapon: 'WPN_MISSILE' },
-    },
-    WPN_FLAK: {
-      name: '플랙포',
-      cells: [{gx:0,gy:0}],
-      color: '#ca8a04',
-      desc: '8방향 근거리 폭발',
-      bonus: { weapon: 'WPN_FLAK' },
-    },
-    WPN_ORBIT: {
-      name: '궤도포',
-      cells: [{gx:0,gy:0},{gx:0,gy:1}],
-      color: '#059669',
-      desc: '3개 공전 탄',
-      bonus: { weapon: 'WPN_ORBIT' },
-    },
-    WPN_LASER: {
-      name: '레이저포',
-      cells: [{gx:0,gy:0}],
-      color: '#2563eb',
-      desc: '초고속 단일 연사',
-      bonus: { weapon: 'WPN_LASER' },
-    },
-    WPN_MINE: {
-      name: '기뢰',
-      cells: [{gx:0,gy:0},{gx:1,gy:0}],
-      color: '#7f1d1d',
-      desc: '정지 기뢰 설치',
-      bonus: { weapon: 'WPN_MINE' },
-    },
-    WPN_CHAIN: {
-      name: '연쇄탄',
-      cells: [{gx:0,gy:0}],
-      color: '#9d174d',
-      desc: '연쇄 충격파 3회',
-      bonus: { weapon: 'WPN_CHAIN' },
-    },
-    WPN_NOVA: {
-      name: '노바포',
-      cells: [{gx:0,gy:0},{gx:0,gy:1}],
-      color: '#6d28d9',
-      desc: '전방향 12발 폭발',
-      bonus: { weapon: 'WPN_NOVA' },
-    },
+    // ─── 희귀 (RARE) ───
+    GUN_1:           { tier:'RARE',      name:'포탑 마운트',     cells:[{gx:0,gy:0}],                                          color:'#b45309', desc:'데미지 +15%',                   bonus:{damage:0.15} },
+    GUN_2:           { tier:'RARE',      name:'이중 포탑',       cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#92400e', desc:'데미지 +25% / 쿨다운 -15%',     bonus:{damage:0.25,cooldownMult:0.85} },
+    HULL_3:          { tier:'RARE',      name:'중장갑판',        cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:2,gy:0}],                 color:'#334155', desc:'HP +90',                        bonus:{hp:90} },
+    THRUSTER_2:      { tier:'RARE',      name:'고출력 추진기',   cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#1d4ed8', desc:'이동속도 +25%',                  bonus:{speed:0.25} },
+    WING_HEAVY:      { tier:'RARE',      name:'강화익',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:-1}],                color:'#0c4a6e', desc:'HP +40 / 속도 +12%',            bonus:{hp:40,speed:0.12} },
+
+    // ─── 에픽 (EPIC) ───
+    REACTOR:         { tier:'EPIC',      name:'반응로',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#7e22ce', desc:'데미지 +30% / 쿨다운 -15%',     bonus:{damage:0.30,cooldownMult:0.85} },
+    SHIELD_CELL:     { tier:'EPIC',      name:'실드 셀',         cells:[{gx:0,gy:0}],                                          color:'#6d28d9', desc:'HP +60',                        bonus:{hp:60} },
+    REINFORCED_HULL: { tier:'EPIC',      name:'강화 외장',       cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1},{gx:1,gy:1}],    color:'#1e293b', desc:'HP +150',                       bonus:{hp:150} },
+    TWIN_GUN:        { tier:'EPIC',      name:'트윈 포대',       cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:-1,gy:0}],                color:'#78350f', desc:'데미지 +40% / 쿨다운 -20%',     bonus:{damage:0.40,cooldownMult:0.80} },
+
+    // ─── 전설 (LEGENDARY) ───
+    OVERCLOCK:       { tier:'LEGENDARY', name:'오버클럭 엔진',   cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#a16207', desc:'속도 +35% / 데미지 +20%',       bonus:{speed:0.35,damage:0.20} },
+    FURY_CORE:       { tier:'LEGENDARY', name:'분노 코어',       cells:[{gx:0,gy:0}],                                          color:'#7f1d1d', desc:'데미지 +50% / 쿨다운 -25%',     bonus:{damage:0.50,cooldownMult:0.75} },
+    TITAN_HULL:      { tier:'LEGENDARY', name:'타이탄 장갑',     cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:-1},{gx:0,gy:2}],   color:'#0f172a', desc:'HP +300',                       bonus:{hp:300} },
+
+    // ─── 무기 (COMMON) ───
+    WPN_GATLING:     { tier:'COMMON',    name:'개틀링포',        cells:[{gx:0,gy:0}],                                          color:'#dc2626', desc:'빠른 3방향 연사',               bonus:{weapon:'WPN_GATLING'} },
+    WPN_FLAK:        { tier:'COMMON',    name:'플랙포',          cells:[{gx:0,gy:0}],                                          color:'#ca8a04', desc:'8방향 근거리 폭발',              bonus:{weapon:'WPN_FLAK'} },
+    WPN_LASER:       { tier:'COMMON',    name:'레이저포',        cells:[{gx:0,gy:0}],                                          color:'#2563eb', desc:'초고속 단일 연사',               bonus:{weapon:'WPN_LASER'} },
+
+    // ─── 무기 (RARE) ───
+    WPN_SPREAD:      { tier:'RARE',      name:'산탄포',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#ea580c', desc:'5발 부채꼴 발사',               bonus:{weapon:'WPN_SPREAD'} },
+    WPN_MISSILE:     { tier:'RARE',      name:'유도탄',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#0891b2', desc:'호밍 미사일 발사',               bonus:{weapon:'WPN_MISSILE'} },
+    WPN_ORBIT:       { tier:'RARE',      name:'궤도포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#059669', desc:'3개 공전 탄',                   bonus:{weapon:'WPN_ORBIT'} },
+    WPN_MINE:        { tier:'RARE',      name:'기뢰',            cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#7f1d1d', desc:'정지 기뢰 설치',                bonus:{weapon:'WPN_MINE'} },
+
+    // ─── 무기 (EPIC) ───
+    WPN_SNIPER:      { tier:'EPIC',      name:'저격포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#7c3aed', desc:'고데미지 단발 저격',            bonus:{weapon:'WPN_SNIPER'} },
+    WPN_CHAIN:       { tier:'EPIC',      name:'연쇄탄',          cells:[{gx:0,gy:0}],                                          color:'#9d174d', desc:'연쇄 충격파 3회',              bonus:{weapon:'WPN_CHAIN'} },
+    WPN_NOVA:        { tier:'EPIC',      name:'노바포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#6d28d9', desc:'전방향 12발 폭발',              bonus:{weapon:'WPN_NOVA'} },
+    WPN_PLASMA:      { tier:'EPIC',      name:'플라즈마포',      cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#c026d3', desc:'7발 광역 플라즈마',             bonus:{weapon:'WPN_PLASMA'} },
+    WPN_RAILGUN:     { tier:'EPIC',      name:'레일건',          cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:2}],                 color:'#0369a1', desc:'초고데미지 관통탄',             bonus:{weapon:'WPN_RAILGUN'} },
+
+    // ─── 무기 (LEGENDARY) ───
+    WPN_TYPHOON:     { tier:'LEGENDARY', name:'태풍포',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#0c4a6e', desc:'8방향 고속 연사',               bonus:{weapon:'WPN_TYPHOON'} },
+    WPN_ANNIHILATOR: { tier:'LEGENDARY', name:'소멸자',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:2,gy:0}],                 color:'#450a0a', desc:'5연쇄 고데미지 충격파',         bonus:{weapon:'WPN_ANNIHILATOR'} },
+    WPN_OMEGA:       { tier:'LEGENDARY', name:'오메가포',        cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:1,gy:0},{gx:1,gy:1}],    color:'#312e81', desc:'24발 전방향 포격',             bonus:{weapon:'WPN_OMEGA'} },
   };
 
   const MODULE_KEYS = Object.keys(MODULE_DEFS);
@@ -220,12 +151,25 @@ const TetrisGrid = (() => {
 
   // ────────────────── 배치 실행 ──────────────────
 
+  /** 티어 가중치 기반 랜덤 모듈 키 선택 */
+  function _weightedRandomKey() {
+    const keys = MODULE_KEYS;
+    let total = 0;
+    for (const k of keys) total += TIER_WEIGHTS[MODULE_DEFS[k].tier] ?? 30;
+    let r = Math.random() * total;
+    for (const k of keys) {
+      r -= TIER_WEIGHTS[MODULE_DEFS[k].tier] ?? 30;
+      if (r <= 0) return k;
+    }
+    return keys[keys.length - 1];
+  }
+
   /**
    * 랜덤 모듈을 pending으로 설정하고 유효 슬롯 계산
    * @returns {object} pending 모듈
    */
   function offerRandom() {
-    const key  = MODULE_KEYS[Math.floor(Math.random() * MODULE_KEYS.length)];
+    const key  = _weightedRandomKey();
     const def  = MODULE_DEFS[key];
     // 셀 배열 복사 (원본 불변)
     pending = { type: key, ...def, cells: def.cells.map(c => ({...c})) };
@@ -244,10 +188,10 @@ const TetrisGrid = (() => {
   }
 
   /**
-   * 랜덤 모듈 타입 키 반환 (EnemyManager 드랍 시 호출)
+   * 랜덤 모듈 타입 키 반환 (EnemyManager 드랍 시 호출) — 티어 가중치 적용
    */
   function randomModuleKey() {
-    return MODULE_KEYS[Math.floor(Math.random() * MODULE_KEYS.length)];
+    return _weightedRandomKey();
   }
 
   /**
@@ -624,11 +568,12 @@ const TetrisGrid = (() => {
         if (!def) continue;
         const iy  = listStartY + i * itemH;
 
-        // 색상 스워치
+        // 색상 스워치 (티어 색상 테두리)
+        const tc = TIER_COLORS[def.tier] ?? '#94a3b8';
         ctx.fillStyle = def.color;
         ctx.fillRect(px + PAD, iy + 6, 12, 12);
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-        ctx.lineWidth   = 0.5;
+        ctx.strokeStyle = tc;
+        ctx.lineWidth   = 1;
         ctx.strokeRect(px + PAD, iy + 6, 12, 12);
 
         // 모듈 이름
@@ -642,11 +587,11 @@ const TetrisGrid = (() => {
         ctx.fillStyle = '#86efac';
         ctx.fillText(def.desc, px + PAD + 18, iy + 24);
 
-        // 셀 수 뱃지
+        // 티어 뱃지
         ctx.font      = '9px "Segoe UI", sans-serif';
-        ctx.fillStyle = '#475569';
+        ctx.fillStyle = tc;
         ctx.textAlign = 'right';
-        ctx.fillText(`${m.cells.length}셀`, px + PW - PAD, iy + 10);
+        ctx.fillText(TIER_LABELS[def.tier] ?? '일반', px + PW - PAD, iy + 10);
       }
       if (placedModules.length > maxItems) {
         ctx.font      = '10px "Segoe UI", sans-serif';
@@ -694,64 +639,83 @@ const TetrisGrid = (() => {
 
   /** 우측 패널: 제공 모듈 정보 카드 */
   function _drawModulePanel(ctx, W, H) {
-    const PAD    = 16;
-    const PW     = 170;
-    const PH     = 160;
+    const PAD    = 14;
+    const PW     = 175;
+    const PH     = 195;
     const px     = W - PW - 24;
     const py     = H / 2 - PH / 2;
     const radius = 10;
+    const tier       = pending.tier ?? 'COMMON';
+    const tierColor  = TIER_COLORS[tier];
+    const tierLabel  = TIER_LABELS[tier];
 
-    // 카드 배경
-    ctx.fillStyle = 'rgba(10, 20, 50, 0.92)';
+    // 카드 배경 (티어 색상 테두리)
+    ctx.fillStyle = 'rgba(10, 20, 50, 0.94)';
     _roundRect(ctx, px, py, PW, PH, radius);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(56,189,248,0.35)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = tierColor + 'aa';
+    ctx.lineWidth = 1.5;
     _roundRect(ctx, px, py, PW, PH, radius);
     ctx.stroke();
 
-    // 헤더
-    ctx.font      = 'bold 13px "Segoe UI", sans-serif';
-    ctx.fillStyle = '#7dd3fc';
+    // 티어 뱃지
+    ctx.font      = 'bold 10px "Segoe UI", sans-serif';
+    ctx.fillStyle = tierColor;
     ctx.textAlign = 'left';
-    ctx.fillText('제공 모듈', px + PAD, py + PAD + 4);
+    ctx.fillText(`★ ${tierLabel}`, px + PAD, py + PAD + 2);
+
+    // 헤더
+    ctx.font      = '11px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#5577aa';
+    ctx.fillText('제공 모듈', px + PAD, py + PAD + 16);
 
     // 모듈 이름
-    ctx.font      = 'bold 15px "Segoe UI", sans-serif';
+    ctx.font      = 'bold 14px "Segoe UI", sans-serif';
     ctx.fillStyle = '#e0f0ff';
-    ctx.fillText(pending.name, px + PAD, py + PAD + 28);
+    ctx.fillText(pending.name, px + PAD, py + PAD + 34);
 
-    // 미니 형태 프리뷰 (3×3 그리드 미니어처)
-    const mini  = 12;
-    const offX  = px + PAD;
-    const offY  = py + PAD + 45;
-    ctx.strokeStyle = 'rgba(100,140,200,0.3)';
+    // 미니 형태 프리뷰 (5×5 그리드, ±2 범위)
+    const mini  = 10;
+    const gridW = 5 * mini;
+    const offX  = px + PW / 2 - gridW / 2;
+    const offY  = py + PAD + 50;
+    ctx.strokeStyle = 'rgba(100,140,200,0.25)';
     ctx.lineWidth   = 0.5;
-    for (let r = -1; r <= 1; r++) {
-      for (let c = -1; c <= 1; c++) {
-        ctx.strokeRect(offX + c * mini + mini, offY + r * mini + mini, mini, mini);
+    for (let r = -2; r <= 2; r++) {
+      for (let c = -2; c <= 2; c++) {
+        ctx.strokeRect(offX + (c + 2) * mini, offY + (r + 2) * mini, mini, mini);
       }
     }
-    // 모듈 셀 채우기
+    // 모듈 셀 채우기 (±2 범위 내)
     for (const c of pending.cells) {
-      if (c.gx >= -1 && c.gx <= 1 && c.gy >= -1 && c.gy <= 1) {
+      if (c.gx >= -2 && c.gx <= 2 && c.gy >= -2 && c.gy <= 2) {
         ctx.fillStyle = pending.color;
-        ctx.fillRect(offX + c.gx * mini + mini, offY + c.gy * mini + mini, mini, mini);
+        ctx.fillRect(offX + (c.gx + 2) * mini, offY + (c.gy + 2) * mini, mini, mini);
       }
     }
     // 코어 표시
     ctx.fillStyle = '#1e3a8a';
-    ctx.fillRect(offX + mini, offY + mini, mini, mini);
+    ctx.fillRect(offX + 2 * mini, offY + 2 * mini, mini, mini);
+
+    // 구분선
+    const descY = offY + 5 * mini + 8;
+    ctx.strokeStyle = 'rgba(100,140,200,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px + PAD, descY - 4);
+    ctx.lineTo(px + PW - PAD, descY - 4);
+    ctx.stroke();
 
     // 설명 (보너스)
     ctx.font      = '11px "Segoe UI", sans-serif';
     ctx.fillStyle = '#86efac';
-    ctx.fillText(pending.desc, px + PAD, py + PH - 28);
+    ctx.textAlign = 'left';
+    ctx.fillText(pending.desc, px + PAD, descY + 8);
 
-    // 타입 태그
+    // 셀 수
     ctx.font      = '10px "Segoe UI", sans-serif';
     ctx.fillStyle = '#475569';
-    ctx.fillText(pending.type, px + PAD, py + PH - 12);
+    ctx.fillText(`${pending.cells.length}셀`, px + PAD, descY + 22);
   }
 
   /** 둥근 사각형 헬퍼 */
