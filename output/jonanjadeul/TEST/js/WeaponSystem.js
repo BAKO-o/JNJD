@@ -72,6 +72,9 @@ const WeaponSystem = (() => {
   // ── 보조 무기 슬롯 목록
   const secondaries = [];  // [{ type, timer, orbitAngle, orbitTimers }]
 
+  // ── 피격 이벤트 (Game.js에서 폭발 이펙트 생성에 사용)
+  const _hitEvents = [];
+
   // ── 상태
   let worldW, worldH;
   let _zoom           = 1.0;
@@ -553,7 +556,10 @@ const WeaponSystem = (() => {
             hit = true;
           }
         }
-        if (hit) { p.active = false; }
+        if (hit) {
+          _hitEvents.push({ wx: p.x, wy: p.y, color: p.color, splashR: p.splashR, attr: p.attr, type: 'cannon' });
+          p.active = false;
+        }
       } else {
         // 자동무기: pierceLeft > 0이면 관통, 아니면 첫 충돌 소멸
         for (const e of activeEnemies) {
@@ -565,6 +571,7 @@ const WeaponSystem = (() => {
             worldW, worldH
           );
           if (hit) {
+            _hitEvents.push({ wx: p.x, wy: p.y, color: p.color, splashR: p.splashR, attr: p.attr, type: 'auto' });
             EnemyManager.damageEnemy(e, p.damage, p.attr);
             if (p.chainCount > 0) {
               _chainHit(e.x, e.y, p.damage, p.chainCount - 1, activeEnemies, e, p.attr);
@@ -586,15 +593,16 @@ const WeaponSystem = (() => {
     const cullX = Math.ceil(W / _zoom / 2);
     const cullY = Math.ceil(H / _zoom / 2);
 
-    // 투사체
+    // 투사체 (이동 방향 기반 총알/포탄 모양)
     for (const p of projectiles) {
       if (!p.active) continue;
       const { sx, sy } = player.worldToScreen(p.x, p.y, worldW, worldH);
       if (sx < -cullX || sx > W + cullX || sy < -cullY || sy > H + cullY) continue;
+      const pAngle = Math.atan2(p.vy, p.vx);
       if (p.type === 'cannon') {
-        Renderer.drawCannonball(sx, sy, p.radius);
+        Renderer.drawCannonball(sx, sy, p.radius, pAngle);
       } else {
-        Renderer.drawProjectile(sx, sy, p.radius, p.color);
+        Renderer.drawProjectile(sx, sy, p.radius, p.color, pAngle);
       }
     }
 
@@ -654,7 +662,14 @@ const WeaponSystem = (() => {
   /** 현재 무기 스탯 읽기 (Game.js 업그레이드 계산용) */
   function getWeaponStat(key) { return weapon[key]; }
 
-  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, removeSecondary, reset, setZoom, setCooldownMult, SECONDARY_DEFS };
+  /** 피격 이벤트 소비 — Game.js에서 폭발 이펙트 생성 시 사용 */
+  function consumeHitEvents() {
+    const ev = _hitEvents.slice();
+    _hitEvents.length = 0;
+    return ev;
+  }
+
+  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, removeSecondary, reset, setZoom, setCooldownMult, consumeHitEvents, SECONDARY_DEFS };
 })();
 
 window.WeaponSystem = WeaponSystem;

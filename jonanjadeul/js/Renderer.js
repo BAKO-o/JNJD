@@ -39,46 +39,113 @@ const Renderer = (() => {
   }
 
   /**
-   * 플레이어 함선 그리기
-   * @param {number} sx - 화면 X
-   * @param {number} sy - 화면 Y
-   * @param {number} angle - 회전각 (라디안)
-   * @param {number} radius - 함선 반지름
-   * @param {boolean} shieldActive - 방어막 표시 여부 (Phase 4)
+   * 플레이어 함선 그리기 — 원형 비행선(UFO 디스크) 디자인
+   * @param {number} sx       - 화면 X
+   * @param {number} sy       - 화면 Y
+   * @param {number} angle    - 포탑 회전각(마우스 방향, 라디안)
+   * @param {number} radius   - 함선 반지름
+   * @param {boolean} shieldActive - 방어막 표시 여부
+   * @param {number} vx       - 이동 속도 X (추진체 방향 계산용)
+   * @param {number} vy       - 이동 속도 Y
    */
-  function drawPlayer(sx, sy, angle, radius, shieldActive = false) {
+  function drawPlayer(sx, sy, angle, radius, shieldActive = false, vx = 0, vy = 0) {
     ctx.save();
     ctx.translate(sx, sy);
-    ctx.rotate(angle);
 
-    // 기체 본체 — 파란 삼각형
+    const speed = Math.hypot(vx, vy);
+
+    // ── 추진체 불꽃: 이동 방향의 반대쪽에서 분출
+    if (speed > 12) {
+      const thrustAngle = Math.atan2(vy, vx) + Math.PI;
+      const intensity   = Math.min(1, speed / 200);
+      ctx.save();
+      ctx.rotate(thrustAngle);
+      const offsets = [-radius * 0.24, 0, radius * 0.24];
+      for (const yOff of offsets) {
+        const len = radius * (0.45 + intensity * 0.75 + Math.random() * 0.22);
+        ctx.beginPath();
+        ctx.moveTo(radius * 0.42, yOff - radius * 0.1);
+        ctx.lineTo(radius * 0.42 + len, yOff);
+        ctx.lineTo(radius * 0.42, yOff + radius * 0.1);
+        ctx.fillStyle = Math.random() < 0.55
+          ? 'rgba(251,191,36,0.92)'
+          : 'rgba(249,115,22,0.88)';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // ── 디스크 본체 (고정, 회전 없음)
     ctx.beginPath();
-    ctx.moveTo(radius, 0);            // 앞부분 (마우스 방향)
-    ctx.lineTo(-radius * 0.6, -radius * 0.7);
-    ctx.lineTo(-radius * 0.35, 0);
-    ctx.lineTo(-radius * 0.6, radius * 0.7);
-    ctx.closePath();
-    ctx.fillStyle = '#2563eb';
+    ctx.ellipse(0, 0, radius, radius * 0.5, 0, 0, Math.PI * 2);
+    const bodyGrad = ctx.createRadialGradient(-radius * 0.22, -radius * 0.1, 0, 0, 0, radius);
+    bodyGrad.addColorStop(0, '#3b82f6');
+    bodyGrad.addColorStop(1, '#1e40af');
+    ctx.fillStyle = bodyGrad;
     ctx.fill();
-    ctx.strokeStyle = '#74b9ff';
+    ctx.strokeStyle = '#60a5fa';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // 조종석 하이라이트
+    // 디스크 아랫면 하이라이트
     ctx.beginPath();
-    ctx.arc(radius * 0.2, 0, radius * 0.22, 0, Math.PI * 2);
-    ctx.fillStyle = '#93c5fd';
-    ctx.fill();
+    ctx.ellipse(0, 0, radius, radius * 0.5, 0, Math.PI * 1.08, Math.PI * 1.92);
+    ctx.strokeStyle = 'rgba(147,197,253,0.4)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
 
-    // 엔진 불꽃 (항상 표시)
+    // 상단·하단 해치 패널
+    const pw = radius * 0.36, ph = radius * 0.15;
+    for (const yOff of [-radius * 0.47, radius * 0.32]) {
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(-pw / 2, yOff, pw, ph);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(-pw / 2, yOff, pw, ph);
+    }
+
+    // 조종석 돔 (반투명 유리)
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(-radius * 0.35, -radius * 0.3);
-    ctx.lineTo(-radius * 0.7 - Math.random() * radius * 0.3, 0);
-    ctx.lineTo(-radius * 0.35, radius * 0.3);
-    ctx.fillStyle = 'rgba(251,191,36,0.7)';
+    ctx.ellipse(0, -radius * 0.17, radius * 0.3, radius * 0.19, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(147,197,253,0.68)';
     ctx.fill();
+    ctx.strokeStyle = 'rgba(191,219,254,0.82)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // 돔 하이라이트
+    ctx.beginPath();
+    ctx.ellipse(-radius * 0.07, -radius * 0.23, radius * 0.12, radius * 0.07, -0.4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.fill();
+    ctx.restore();
 
-    // 방어막 원 (Phase 4 시각화용)
+    // ── 포탑 (마우스 각도로 회전)
+    ctx.save();
+    ctx.rotate(angle);
+    // 포탑 베이스
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#374151';
+    ctx.fill();
+    ctx.strokeStyle = '#9ca3af';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // 포신
+    const bx = radius * 0.18, bw = radius * 0.62, bh = radius * 0.15;
+    ctx.fillStyle = '#4b5563';
+    ctx.beginPath();
+    ctx.rect(bx, -bh / 2, bw, bh);
+    ctx.fill();
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    // 포신 선단 강조
+    ctx.fillStyle = '#9ca3af';
+    ctx.fillRect(bx + bw - radius * 0.04, -bh / 2, radius * 0.04, bh);
+    ctx.restore();
+
+    // ── 방어막
     if (shieldActive) {
       ctx.beginPath();
       ctx.arc(0, 0, radius * 1.4, 0, Math.PI * 2);
@@ -869,22 +936,35 @@ const Renderer = (() => {
   }
 
   /**
-   * 투사체 그리기 (작은 빛나는 원)
-   * @param {number} sx - 화면 X
-   * @param {number} sy - 화면 Y
+   * 투사체 그리기 — 총알 모양 캡슐(이동 방향으로 늘어난 타원)
+   * @param {number} sx    - 화면 X
+   * @param {number} sy    - 화면 Y
    * @param {number} radius - 투사체 반지름
-   * @param {string} color - 색상 (기본: 노란빛)
+   * @param {string} color  - 색상
+   * @param {number} angle  - 이동 방향각(라디안)
    */
-  function drawProjectile(sx, sy, radius, color = '#fde68a') {
+  function drawProjectile(sx, sy, radius, color = '#fde68a', angle = 0) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(angle);
+    // 길쭉한 총알 캡슐
     ctx.beginPath();
-    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, radius * 2.2, radius, 0, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
-    // 글로우 효과
+    // 선단 하이라이트
     ctx.beginPath();
-    ctx.arc(sx, sy, radius * 1.8, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(253,230,138,0.22)';
+    ctx.arc(radius * 1.2, 0, radius * 0.55, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.fill();
+    // 글로우
+    ctx.globalAlpha = 0.22;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, radius * 3.2, radius * 1.6, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   /**
@@ -910,25 +990,84 @@ const Renderer = (() => {
   }
 
   /**
-   * 포탄 그리기 (크고 주황빛 나는 원)
-   * @param {number} sx - 화면 X
-   * @param {number} sy - 화면 Y
+   * 포탄 그리기 — 포탄 모양 (이동 방향으로 정렬된 껍데기형)
+   * @param {number} sx     - 화면 X
+   * @param {number} sy     - 화면 Y
    * @param {number} radius - 포탄 반지름
+   * @param {number} angle  - 이동 방향각(라디안)
    */
-  function drawCannonball(sx, sy, radius) {
-    // 핵심 원
+  function drawCannonball(sx, sy, radius, angle = 0) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(angle);
+    // 탄체 (구리빛 타원)
     ctx.beginPath();
-    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, radius * 1.4, radius * 0.75, 0, 0, Math.PI * 2);
     ctx.fillStyle = '#fb923c';
     ctx.fill();
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    // 글로우
+    // 뾰족한 선단
     ctx.beginPath();
-    ctx.arc(sx, sy, radius * 2.2, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(251,146,60,0.2)';
+    ctx.moveTo(radius * 1.4, 0);
+    ctx.lineTo(radius * 1.4 + radius * 0.55, -radius * 0.35);
+    ctx.lineTo(radius * 1.4 + radius * 0.9,  0);
+    ctx.lineTo(radius * 1.4 + radius * 0.55,  radius * 0.35);
+    ctx.closePath();
+    ctx.fillStyle = '#fbbf24';
     ctx.fill();
+    // 탄체 하이라이트
+    ctx.beginPath();
+    ctx.ellipse(-radius * 0.15, -radius * 0.22, radius * 0.55, radius * 0.22, -0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(254,215,170,0.38)';
+    ctx.fill();
+    // 글로우
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fb923c';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /**
+   * 폭발 플래시 그리기 — 피격 시 팽창하며 사라지는 번쩍임
+   * @param {number} sx    - 화면 X
+   * @param {number} sy    - 화면 Y
+   * @param {number} r     - 현재 폭발 반지름
+   * @param {string} color - 폭발 색상
+   * @param {number} alpha - 불투명도 (0~1)
+   */
+  function drawExplosionFlash(sx, sy, r, color, alpha) {
+    ctx.save();
+    // 외부 글로우
+    ctx.globalAlpha = alpha * 0.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 1.55, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    // 중심 코어
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    // 흰색 열점
+    ctx.globalAlpha = alpha * alpha;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 0.38, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    // 링 윤곽
+    ctx.globalAlpha = alpha * 0.65;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 1.15, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
   }
 
   /**
@@ -1037,7 +1176,7 @@ const Renderer = (() => {
   return {
     init, clear, drawStars,
     drawPlayer, drawEnemy,
-    drawProjectile, drawCannonball, drawXpGem, drawParticle,
+    drawProjectile, drawCannonball, drawXpGem, drawParticle, drawExplosionFlash,
     drawModuleDrop, drawBossProjectile, drawBossHpBar,
     drawMeteor, drawHazardOverlay,
     getCtx, getCanvas, getWidth, getHeight,

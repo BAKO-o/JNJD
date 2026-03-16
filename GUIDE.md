@@ -1,5 +1,5 @@
 # GUIDE.md — AP3: 잔해의 귀환 개발자 가이드
-> 버전: v1.2.0
+> 버전: v1.2.1
 > 최종 갱신: 2026-03-16
 
 ---
@@ -293,6 +293,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-16 | v1.2.1 | 플레이어 함선 비주얼 전면 개편: Renderer.drawPlayer → 원형 UFO 디스크 디자인(타원 본체·반투명 돔·상하 해치 패널), 포탑(마우스 방향 회전), 추진체 불꽃(이동 방향 반대쪽 분출·3중 젯). Player.draw에 vx/vy 전달, getHitPolygons 8각형 근사로 변경. drawProjectile·drawCannonball 방향각 파라미터 추가(길쭉한 총알/포탄 모양). drawExplosionFlash 신규(팽창 플래시+핵심+링). WeaponSystem _hitEvents+consumeHitEvents() 추가(피격 이벤트 전달). Game.js spawnExplosion 신규(타입/속성별 플래시+불꽃 파편+연기 구름: cannon·NUKE·FIRE·ELECTRIC·LASER·KINETIC 분기). 피격 이벤트→폭발 이펙트 실시간 연결 |
 | 2026-03-16 | v1.2.0 | 스테이지 시스템(5스테이지 순환, 보스 처치=클리어, 스크랩+80/모듈+2 보상), 환경 위험(METEORS·CRYO·HEAT·RADIATION), StageManager.js 신규, WeaponCombine.js 신규(8 레시피), NUKE 속성 추가(SynergySystem 5 시너지 + EnemyManager 보스 weak/resist 갱신), 무기 타입(FIREARM/ENERGY/CONVENTIONAL) 분류 + weaponType 필드, 조합 전용 무기 8종(WPN_ION_BLAST 등) + NUKE 기본 무기 2종(WPN_NUKE_SHELL·WPN_RADIATOR_BASE), WeaponSystem setCooldownMult·multi5·nova8·nuke_shell·radiator fire 타입 추가, Player.armorHazardMult + takeDamageEnv 추가, Game.js STATE.STAGE_CLEAR·STATE.CRAFTING 추가·_drawCraftingUI·_drawStageClearOverlay·_drawStageHUD 신규, config.js 신규, InputHandler C키 추가, 튜토리얼 스테이지·무기조합 탭 신규 |
 | 2026-03-16 | v1.1.0 | 적 타입별 속성 저항/약점 시스템: ENEMY_TYPES 전 25종에 weak/resist 배열 추가(약점×1.5/저항×0.6), damageEnemy(enemy,dmg,attr)로 확장, WeaponSystem 보조 무기 addSecondary(type,attr) attr 저장·_fireSecondary 전 발사 유형 p.attr 전달, orbit·chain 직접 데미지에도 sec.attr 전달. 조립창 우측 패널 프리뷰 카드 하단에 속성 뱃지(🔥⚡💜🔩) 표시. 튜토리얼 "속성 시너지" 탭 신규·조작법 X키 항목 추가. PLAN.md(개미게임 잔재) 삭제 |
 | 2026-03-16 | v1.0.2 | 속성 강화 모듈 8종 추가: 단일(RARE·2셀) FIRE_CORE/ELECTRIC_COIL/LASER_PRISM/KINETIC_MASS, 이중(EPIC·2~3셀) PLASMA_CONDUIT/ION_CIRCUIT/IGNITION_MASS, 삼중(LEGENDARY·4셀) RESONANCE_CORE. _applyBonus·_removeBonus에 weaponAttrs 배열 처리 추가. 장착·해제 시 SynergySystem 속성 카운트 자동 갱신 |
