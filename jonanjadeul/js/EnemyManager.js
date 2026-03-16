@@ -113,6 +113,7 @@ const EnemyManager = (() => {
   let spawnGroupCount = 0;
   let spawnGroupTimer = 0;
   let bossEnemy       = null;  // 현재 활성 보스 참조
+  let _stageClearConsumed = false; // 스테이지 클리어 중복 트리거 방지
 
   let _player = null;
 
@@ -172,6 +173,7 @@ const EnemyManager = (() => {
     spawnPending    = waveKillTarget;
     spawnTimer      = 0; spawnSide = 0; spawnGroupCount = 0; spawnGroupTimer = 0;
     bossEnemy       = null;
+    _stageClearConsumed = false;
   }
 
   function setZoom(z) { _zoom = z; }
@@ -441,6 +443,7 @@ const EnemyManager = (() => {
       if (restTimer <= 0) {
         isResting = false;
         waveNumber++;
+        _stageClearConsumed = false; // 다음 보스 킬을 위해 초기화
         waveKills      = 0;
         waveKillTarget = KILL_BASE + (waveNumber - 1) * KILL_PER_WAVE;
         spawnPending   = waveKillTarget;
@@ -717,7 +720,16 @@ const EnemyManager = (() => {
    * @returns {boolean}
    */
   function isStageClear() {
-    return (waveNumber % 5 === 0) && (bossEnemy === null);
+    if (_stageClearConsumed) return false;
+    return (waveNumber % 5 === 0) && (bossEnemy === null) && isResting && waveNumber > 0;
+  }
+
+  /**
+   * 스테이지 클리어를 '소비'하여 중복 트리거 방지
+   * Game.js _triggerStageClear()에서 호출
+   */
+  function consumeStageClear() {
+    _stageClearConsumed = true;
   }
 
   function reset(ww, wh) {
@@ -730,10 +742,10 @@ const EnemyManager = (() => {
     waveNumber=1; totalKills=0; waveKills=0; waveKillTarget=KILL_BASE;
     isResting=false; restTimer=0;
     spawnPending=KILL_BASE; spawnTimer=0; spawnSide=0; spawnGroupCount=0; spawnGroupTimer=0;
-    bossEnemy=null;
+    bossEnemy=null; _stageClearConsumed=false;
   }
 
-  return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset, setZoom, getBoss, isStageClear };
+  return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset, setZoom, getBoss, isStageClear, consumeStageClear };
 })();
 
 window.EnemyManager = EnemyManager;

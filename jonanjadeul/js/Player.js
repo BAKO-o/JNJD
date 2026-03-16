@@ -170,8 +170,8 @@ class Player {
     // 부착된 모듈을 함선 아래 레이어에 먼저 그린다 (회전 적용)
     TetrisGrid.drawShipModules(Renderer.getCtx(), screenCx, screenCy, this.angle);
 
-    // 함선 본체
-    Renderer.drawPlayer(screenCx, screenCy, this.angle, this.radius);
+    // 함선 본체 (vx/vy 전달 → 추진체 방향 계산)
+    Renderer.drawPlayer(screenCx, screenCy, this.angle, this.radius, false, this.vx, this.vy);
   }
 
   /**
@@ -189,11 +189,13 @@ class Player {
     });
 
     const r = this.radius;
-    // 선체 정점 (로컬: right=앞, down=오른쪽)
-    // 오목형 → 삼각형 두 개로 분할
-    const tri1 = [ t(r, 0), t(-r * 0.6, -r * 0.7), t(-r * 0.35, 0) ];
-    const tri2 = [ t(r, 0), t(-r * 0.35, 0), t(-r * 0.6,  r * 0.7) ];
-    const polys = [tri1, tri2];
+    // 선체 정점 — 원형 함선에 맞게 8각형 근사
+    const hull = [];
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      hull.push(t(Math.cos(a) * r, Math.sin(a) * r));
+    }
+    const polys = [hull];
 
     // 모듈 셀 (TetrisGrid 전역 참조)
     if (window.TetrisGrid) {

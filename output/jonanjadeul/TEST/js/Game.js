@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v1.2.0'; // 스테이지 시스템, 환경 위험, NUKE 속성, 무기 조합 시스템
+const VERSION = 'v1.2.2'; // 원형 함선, 미사일 포탄, 스테이지 연쇄클리어 버그 수정
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -202,18 +202,100 @@ const Game = (() => {
         color: Math.random() < 0.5 ? '#f97316' : '#fbbf24',
         lifetime: 0.4 + Math.random() * 0.3,
         age: 0,
+        ptype: 'spark',
       });
     }
   }
 
-  /** 파티클 업데이트 & 렌더링 */
+  /**
+   * 폭발 이펙트 생성 — 피격 시 플래시 + 불꽃 파편
+   * @param {number} wx      - 월드 X
+   * @param {number} wy      - 월드 Y
+   * @param {string} color   - 기본 폭발 색상
+   * @param {string} hitType - 'cannon'|'auto'
+   * @param {number} splashR - 스플래시 반지름 (폭발 크기 기준)
+   * @param {string|null} attr - 무기 속성 (NUKE 등)
+   */
+  function spawnExplosion(wx, wy, color, hitType, splashR, attr) {
+    // 속성/타입에 따른 폭발 색/크기 결정
+    let flashColor = color;
+    let sparkCount = hitType === 'cannon' ? 12 : 5;
+    let flashRadius = splashR > 0 ? splashR : (hitType === 'cannon' ? 40 : 18);
+    let sparkColor2 = '#fbbf24';
+
+    if (attr === 'NUKE') {
+      flashColor = '#4ade80'; sparkColor2 = '#86efac';
+      sparkCount = 18; flashRadius = Math.max(flashRadius, 80);
+    } else if (attr === 'FIRE') {
+      flashColor = '#ef4444'; sparkColor2 = '#f97316';
+    } else if (attr === 'ELECTRIC') {
+      flashColor = '#60a5fa'; sparkColor2 = '#a78bfa';
+      sparkCount = Math.max(sparkCount, 8);
+    } else if (attr === 'LASER') {
+      flashColor = '#bef264'; sparkColor2 = '#86efac';
+    } else if (attr === 'KINETIC') {
+      flashColor = '#94a3b8'; sparkColor2 = '#e2e8f0';
+    }
+
+    // 플래시 링 (팽창하며 사라지는 원형 번쩍임)
+    particles.push({
+      x: wx, y: wy, vx: 0, vy: 0,
+      radius: flashRadius * 0.28,
+      alpha: 0.92,
+      color: flashColor,
+      lifetime: hitType === 'cannon' ? 0.38 : 0.22,
+      age: 0,
+      ptype: 'flash',
+      flashRadius,
+    });
+
+    // 불꽃 파편
+    for (let i = 0; i < sparkCount; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const spd = (70 + Math.random() * 150) * (flashRadius / 45);
+      particles.push({
+        x: wx, y: wy,
+        vx: Math.cos(a) * spd,
+        vy: Math.sin(a) * spd,
+        radius: 1.5 + Math.random() * 2.5,
+        alpha: 1,
+        color: Math.random() < 0.52 ? flashColor : sparkColor2,
+        lifetime: 0.28 + Math.random() * 0.28,
+        age: 0,
+        ptype: 'spark',
+      });
+    }
+
+    // 큰 폭발(cannon/nuke)일 때 연기 구름 추가
+    if (hitType === 'cannon' || (splashR > 60)) {
+      for (let i = 0; i < 5; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const spd = 20 + Math.random() * 50;
+        particles.push({
+          x: wx, y: wy,
+          vx: Math.cos(a) * spd,
+          vy: Math.sin(a) * spd,
+          radius: 6 + Math.random() * 8,
+          alpha: 0.55,
+          color: '#6b7280',
+          lifetime: 0.55 + Math.random() * 0.35,
+          age: 0,
+          ptype: 'spark',
+        });
+      }
+    }
+  }
+
+  /** 파티클 업데이트 */
   function updateParticles(dt) {
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.age += dt;
       if (p.age >= p.lifetime) { particles.splice(i, 1); continue; }
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
+      if (p.ptype !== 'flash') {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+      }
       p.alpha = 1 - p.age / p.lifetime;
     }
   }
@@ -221,7 +303,13 @@ const Game = (() => {
   function drawParticles() {
     for (const p of particles) {
       const { sx, sy } = player.worldToScreen(p.x, p.y, WORLD_W, WORLD_H);
-      Renderer.drawParticle(sx, sy, p.radius, p.alpha, p.color);
+      if (p.ptype === 'flash') {
+        const progress = p.age / p.lifetime;
+        const r = p.flashRadius * (0.25 + progress * 0.75);
+        Renderer.drawExplosionFlash(sx, sy, r, p.color, p.alpha);
+      } else {
+        Renderer.drawParticle(sx, sy, p.radius, p.alpha, p.color);
+      }
     }
   }
 
@@ -420,6 +508,11 @@ const Game = (() => {
     const { cx: scCx, cy: scCy } = screenCenter();
     StageManager.update(dt, player, { cx: scCx, cy: scCy });
 
+    // 피격 이벤트 → 폭발 이펙트 생성
+    for (const ev of WeaponSystem.consumeHitEvents()) {
+      spawnExplosion(ev.wx, ev.wy, ev.color, ev.type, ev.splashR, ev.attr);
+    }
+
     // 파티클 & 별 스크롤
     updateParticles(dt);
     updateStars(dt);
@@ -516,6 +609,9 @@ const Game = (() => {
 
   /** 스테이지 클리어 트리거 — 보상 지급 후 STAGE_CLEAR 상태로 전환 */
   function _triggerStageClear() {
+    // 중복 트리거 방지: EnemyManager에 소비 플래그 세팅
+    EnemyManager.consumeStageClear();
+
     // 보상: 스크랩 + 모듈 드랍
     const cfg = window.GameConfig ?? {};
     const scrapReward   = cfg.STAGE_CLEAR_SCRAP   ?? 80;
