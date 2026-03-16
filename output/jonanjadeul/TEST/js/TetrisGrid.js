@@ -97,6 +97,20 @@ const TetrisGrid = (() => {
     WPN_TYPHOON:     { tier:'LEGENDARY', name:'태풍포',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#0c4a6e', desc:'8방향 고속 연사',               bonus:{weapon:'WPN_TYPHOON',    weaponAttr:'KINETIC'} },
     WPN_ANNIHILATOR: { tier:'LEGENDARY', name:'소멸자',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:2,gy:0}],                 color:'#450a0a', desc:'5연쇄 고데미지 충격파',         bonus:{weapon:'WPN_ANNIHILATOR',weaponAttr:'ELECTRIC'} },
     WPN_OMEGA:       { tier:'LEGENDARY', name:'오메가포',        cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:1,gy:0},{gx:1,gy:1}],    color:'#312e81', desc:'24발 전방향 포격',             bonus:{weapon:'WPN_OMEGA',      weaponAttr:'FIRE'} },
+
+    // ─── 속성 강화 (RARE) — 단일 속성 +1, 1셀 ───
+    FIRE_CORE:       { tier:'RARE',      name:'화염 코어',       cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#b91c1c', desc:'🔥 FIRE +1 (화염 시너지 강화)', bonus:{weaponAttr:'FIRE'} },
+    ELECTRIC_COIL:   { tier:'RARE',      name:'전기 코일',       cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#a16207', desc:'⚡ ELECTRIC +1 (전기 시너지 강화)', bonus:{weaponAttr:'ELECTRIC'} },
+    LASER_PRISM:     { tier:'RARE',      name:'레이저 프리즘',   cells:[{gx:0,gy:0},{gx:0,gy:-1}],                             color:'#5b21b6', desc:'💜 LASER +1 (레이저 시너지 강화)', bonus:{weaponAttr:'LASER'} },
+    KINETIC_MASS:    { tier:'RARE',      name:'질량 코어',       cells:[{gx:0,gy:0},{gx:-1,gy:0}],                             color:'#1f2937', desc:'🔩 KINETIC +1 (동역학 시너지 강화)', bonus:{weaponAttr:'KINETIC'} },
+
+    // ─── 속성 강화 (EPIC) — 두 속성 +1씩, 2~3셀 ───
+    PLASMA_CONDUIT:  { tier:'EPIC',      name:'플라즈마 도관',   cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#c026d3', desc:'🔥⚡ FIRE+ELECTRIC +1씩 (플라즈마 방전 강화)', bonus:{weaponAttrs:['FIRE','ELECTRIC']} },
+    ION_CIRCUIT:     { tier:'EPIC',      name:'이온 회로',       cells:[{gx:0,gy:0},{gx:-1,gy:0},{gx:1,gy:0}],                color:'#4338ca', desc:'💜⚡ LASER+ELECTRIC +1씩 (이온 방전 강화)', bonus:{weaponAttrs:['LASER','ELECTRIC']} },
+    IGNITION_MASS:   { tier:'EPIC',      name:'점화 질량체',     cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:-1}],                color:'#9a3412', desc:'🔥🔩 FIRE+KINETIC +1씩 (폭발탄 강화)', bonus:{weaponAttrs:['FIRE','KINETIC']} },
+
+    // ─── 속성 강화 (LEGENDARY) — 세 속성 +1씩, 4셀 ───
+    RESONANCE_CORE:  { tier:'LEGENDARY', name:'공명 코어',       cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:-1,gy:0},{gx:0,gy:1}],   color:'#5b21b6', desc:'🔥💜⚡ FIRE+LASER+ELECTRIC +1씩 (다중 시너지)', bonus:{weaponAttrs:['FIRE','LASER','ELECTRIC']} },
   };
 
   const MODULE_KEYS = Object.keys(MODULE_DEFS);
@@ -451,8 +465,9 @@ const TetrisGrid = (() => {
       const cur = WeaponSystem.getWeaponStat('cooldown') ?? 0.72;
       WeaponSystem.upgradeWeapon('cooldown', Math.max(0.15, cur * bonus.cooldownMult));
     }
-    if (bonus.weapon)      WeaponSystem.addSecondary(bonus.weapon);
-    if (bonus.weaponAttr)  SynergySystem.addWeaponAttr(bonus.weaponAttr);
+    if (bonus.weapon)       WeaponSystem.addSecondary(bonus.weapon);
+    if (bonus.weaponAttr)   SynergySystem.addWeaponAttr(bonus.weaponAttr);
+    if (bonus.weaponAttrs)  bonus.weaponAttrs.forEach(a => SynergySystem.addWeaponAttr(a));
   }
 
   /** 보너스 역적용 — unequipModule 시 호출 */
@@ -464,8 +479,9 @@ const TetrisGrid = (() => {
       // 장착 시 cur * mult 적용했으므로, 해제 시 cur / mult 로 복원
       WeaponSystem.upgradeWeapon('cooldown', Math.min(0.72, cur / bonus.cooldownMult));
     }
-    if (bonus.weapon)      WeaponSystem.removeSecondary(bonus.weapon);
-    if (bonus.weaponAttr)  SynergySystem.removeWeaponAttr(bonus.weaponAttr);
+    if (bonus.weapon)       WeaponSystem.removeSecondary(bonus.weapon);
+    if (bonus.weaponAttr)   SynergySystem.removeWeaponAttr(bonus.weaponAttr);
+    if (bonus.weaponAttrs)  bonus.weaponAttrs.forEach(a => SynergySystem.removeWeaponAttr(a));
   }
 
   /**

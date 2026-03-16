@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v1.0.1'; // 무기 속성 시너지 + 모듈 장착해제/파괴
+const VERSION = 'v1.0.2'; // 속성 강화 모듈 8종 추가
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;

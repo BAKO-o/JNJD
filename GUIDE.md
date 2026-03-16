@@ -290,6 +290,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-16 | v1.0.2 | 속성 강화 모듈 8종 추가: 단일(RARE·2셀) FIRE_CORE/ELECTRIC_COIL/LASER_PRISM/KINETIC_MASS, 이중(EPIC·2~3셀) PLASMA_CONDUIT/ION_CIRCUIT/IGNITION_MASS, 삼중(LEGENDARY·4셀) RESONANCE_CORE. _applyBonus·_removeBonus에 weaponAttrs 배열 처리 추가. 장착·해제 시 SynergySystem 속성 카운트 자동 갱신 |
 | 2026-03-16 | v1.0.1 | 시너지 시스템 재설계: 레벨업 속성 코어 카드 → 무기 모듈 장착 자동 속성 등록 방식으로 전환. 무기 15종에 weaponAttr 추가(KINETIC/FIRE/LASER/ELECTRIC), _applyBonus에서 SynergySystem.addWeaponAttr 호출, _removeBonus 신규(보너스 역적용+WeaponSystem.removeSecondary+SynergySystem.removeWeaponAttr), unequipModule 신규([X]키: 그리드 모듈→큐 반환), scrapPending 신규([X]키: 대기모듈 파괴→스크랩 획득), InputHandler에 X키 consumeScrap 추가, 시너지 HUD 속성카운트 표시로 갱신 |
 | 2026-03-16 | v1.0.0 | Phase 4: 속성 시너지 시스템 — SynergySystem.js 신규(5속성 슬롯·12종 시너지/상쇄 테이블·getDamageMult·getActiveEffects), 레벨업 UPGRADE_POOL에 속성 코어 카드 5종 추가(FIRE/LASER/ELECTRIC/KINETIC/WATER), WeaponSystem 전체 투사체 데미지에 시너지 배율 적용, 캔버스 우측 시너지 HUD(_drawSynergyHUD: 슬롯 아이콘·활성 시너지명·총 배율), 재시작 시 SynergySystem.reset() 호출 |
 | 2026-03-15 | v0.9.8 | 시작화면 우하단 버전 표시(version-display, Game.js init에서 동적 세팅), 조립 화면 W/S 키로 대기 모듈 선택(cyclePending/pendingSelectIdx, 큐에서 shift 제거→배치 시 splice), 우측 패널 상단 형태 프리뷰 카드(5×5 미니그리드+W/S 내비게이션 힌트) 복원, TetrisGrid.setZoom으로 drawShipModules 셀 크기 줌 역보정(EC=CELL/zoom, 화면상 고정 22px) |
