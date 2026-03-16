@@ -189,11 +189,11 @@ class Player {
     });
 
     const r = this.radius;
-    // 선체 정점 — 디스크(타원) 형태에 맞게 8각형 근사 (가로r, 세로r*0.5)
+    // 선체 정점 — 원형 함선에 맞게 8각형 근사
     const hull = [];
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
-      hull.push(t(Math.cos(a) * r, Math.sin(a) * r * 0.5));
+      hull.push(t(Math.cos(a) * r, Math.sin(a) * r));
     }
     const polys = [hull];
 

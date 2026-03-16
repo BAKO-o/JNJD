@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v1.2.1'; // 비주얼 개편: UFO 디스크 함선, 포탑, 추진체, 총알 모양, 폭발 이펙트
+const VERSION = 'v1.2.2'; // 원형 함선, 미사일 포탄, 스테이지 연쇄클리어 버그 수정
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -609,6 +609,9 @@ const Game = (() => {
 
   /** 스테이지 클리어 트리거 — 보상 지급 후 STAGE_CLEAR 상태로 전환 */
   function _triggerStageClear() {
+    // 중복 트리거 방지: EnemyManager에 소비 플래그 세팅
+    EnemyManager.consumeStageClear();
+
     // 보상: 스크랩 + 모듈 드랍
     const cfg = window.GameConfig ?? {};
     const scrapReward   = cfg.STAGE_CLEAR_SCRAP   ?? 80;

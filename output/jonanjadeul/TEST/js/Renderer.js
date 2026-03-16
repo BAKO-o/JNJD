@@ -60,13 +60,14 @@ const Renderer = (() => {
       const intensity   = Math.min(1, speed / 200);
       ctx.save();
       ctx.rotate(thrustAngle);
-      const offsets = [-radius * 0.24, 0, radius * 0.24];
+      const offsets = [-radius * 0.22, 0, radius * 0.22];
       for (const yOff of offsets) {
-        const len = radius * (0.45 + intensity * 0.75 + Math.random() * 0.22);
+        const len = radius * (0.5 + intensity * 0.8 + Math.random() * 0.25);
+        const startX = radius * 0.88; // 원형 가장자리 근처에서 시작
         ctx.beginPath();
-        ctx.moveTo(radius * 0.42, yOff - radius * 0.1);
-        ctx.lineTo(radius * 0.42 + len, yOff);
-        ctx.lineTo(radius * 0.42, yOff + radius * 0.1);
+        ctx.moveTo(startX, yOff - radius * 0.1);
+        ctx.lineTo(startX + len, yOff);
+        ctx.lineTo(startX, yOff + radius * 0.1);
         ctx.fillStyle = Math.random() < 0.55
           ? 'rgba(251,191,36,0.92)'
           : 'rgba(249,115,22,0.88)';
@@ -75,10 +76,10 @@ const Renderer = (() => {
       ctx.restore();
     }
 
-    // ── 디스크 본체 (고정, 회전 없음)
+    // ── 원형 본체 (고정, 회전 없음)
     ctx.beginPath();
-    ctx.ellipse(0, 0, radius, radius * 0.5, 0, 0, Math.PI * 2);
-    const bodyGrad = ctx.createRadialGradient(-radius * 0.22, -radius * 0.1, 0, 0, 0, radius);
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    const bodyGrad = ctx.createRadialGradient(-radius * 0.28, -radius * 0.2, 0, 0, 0, radius);
     bodyGrad.addColorStop(0, '#3b82f6');
     bodyGrad.addColorStop(1, '#1e40af');
     ctx.fillStyle = bodyGrad;
@@ -87,16 +88,16 @@ const Renderer = (() => {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // 디스크 아랫면 하이라이트
+    // 원 하이라이트 (상단 반원 밝기)
     ctx.beginPath();
-    ctx.ellipse(0, 0, radius, radius * 0.5, 0, Math.PI * 1.08, Math.PI * 1.92);
+    ctx.arc(0, 0, radius, Math.PI * 1.1, Math.PI * 1.9);
     ctx.strokeStyle = 'rgba(147,197,253,0.4)';
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // 상단·하단 해치 패널
-    const pw = radius * 0.36, ph = radius * 0.15;
-    for (const yOff of [-radius * 0.47, radius * 0.32]) {
+    // 상단·하단 해치 패널 (원형에 맞게 위치 조정)
+    const pw = radius * 0.38, ph = radius * 0.15;
+    for (const yOff of [-radius * 0.92, radius * 0.77]) {
       ctx.fillStyle = '#1e3a8a';
       ctx.fillRect(-pw / 2, yOff, pw, ph);
       ctx.strokeStyle = '#3b82f6';
@@ -104,10 +105,10 @@ const Renderer = (() => {
       ctx.strokeRect(-pw / 2, yOff, pw, ph);
     }
 
-    // 조종석 돔 (반투명 유리)
+    // 조종석 돔 (원 중앙 상단)
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(0, -radius * 0.17, radius * 0.3, radius * 0.19, 0, 0, Math.PI * 2);
+    ctx.arc(0, -radius * 0.28, radius * 0.32, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(147,197,253,0.68)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(191,219,254,0.82)';
@@ -115,7 +116,7 @@ const Renderer = (() => {
     ctx.stroke();
     // 돔 하이라이트
     ctx.beginPath();
-    ctx.ellipse(-radius * 0.07, -radius * 0.23, radius * 0.12, radius * 0.07, -0.4, 0, Math.PI * 2);
+    ctx.arc(-radius * 0.08, -radius * 0.35, radius * 0.13, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.28)';
     ctx.fill();
     ctx.restore();
@@ -990,45 +991,80 @@ const Renderer = (() => {
   }
 
   /**
-   * 포탄 그리기 — 포탄 모양 (이동 방향으로 정렬된 껍데기형)
+   * 미사일/포탄 그리기 — 실제 미사일 형태 (이동 방향으로 정렬)
+   * 구조: 뾰족한 노즈콘 → 금속 동체 → 뒤쪽 안정날개(핀)
    * @param {number} sx     - 화면 X
    * @param {number} sy     - 화면 Y
-   * @param {number} radius - 포탄 반지름
+   * @param {number} radius - 포탄 반지름 (크기 기준)
    * @param {number} angle  - 이동 방향각(라디안)
    */
   function drawCannonball(sx, sy, radius, angle = 0) {
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(angle);
-    // 탄체 (구리빛 타원)
+
+    // 크기 상수 (radius=14 기준: 총 길이 ~36px, 폭 ~8px)
+    const L  = radius * 1.3;  // 동체 반길이
+    const W  = radius * 0.3;  // 동체 반폭
+
+    // ── 후방 안정날개 (어두운 올리브 그린)
+    for (const sign of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(-L + W * 0.5,  sign * W);        // 날개 앞 뿌리
+      ctx.lineTo(-L - W * 1.6,  sign * W * 2.8);  // 날개 끝
+      ctx.lineTo(-L - W * 1.8,  sign * W);         // 날개 뒤 끝
+      ctx.lineTo(-L,             sign * W);         // 뒷면 뿌리
+      ctx.closePath();
+      ctx.fillStyle = '#2d4a2d';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(20,60,20,0.7)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // ── 동체 (금속 실린더, 세로 그라디언트로 입체감)
+    const bodyGrad = ctx.createLinearGradient(0, -W, 0, W);
+    bodyGrad.addColorStop(0,    '#6b7280');
+    bodyGrad.addColorStop(0.28, '#9ca3af');
+    bodyGrad.addColorStop(0.62, '#6b7280');
+    bodyGrad.addColorStop(1,    '#374151');
     ctx.beginPath();
-    ctx.ellipse(0, 0, radius * 1.4, radius * 0.75, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#fb923c';
+    ctx.rect(-L, -W, L * 2, W * 2);
+    ctx.fillStyle = bodyGrad;
     ctx.fill();
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    // 뾰족한 선단
+
+    // 동체 중간 밴드 링 (실제 미사일의 분리 링)
+    ctx.fillStyle = 'rgba(55,65,81,0.75)';
+    ctx.fillRect(-W * 0.6, -W, W * 1.2, W * 2);
+
+    // ── 노즈콘 (크림/베이지색, 뾰족한 삼각형)
     ctx.beginPath();
-    ctx.moveTo(radius * 1.4, 0);
-    ctx.lineTo(radius * 1.4 + radius * 0.55, -radius * 0.35);
-    ctx.lineTo(radius * 1.4 + radius * 0.9,  0);
-    ctx.lineTo(radius * 1.4 + radius * 0.55,  radius * 0.35);
+    ctx.moveTo(L + W * 1.8, 0);      // 선단 끝
+    ctx.lineTo(L,            -W);    // 베이스 상단
+    ctx.lineTo(L,             W);    // 베이스 하단
     ctx.closePath();
-    ctx.fillStyle = '#fbbf24';
+    ctx.fillStyle = '#d4c4a0';
     ctx.fill();
-    // 탄체 하이라이트
+
+    // 노즈콘 하이라이트 (상단 밝은 삼각형)
     ctx.beginPath();
-    ctx.ellipse(-radius * 0.15, -radius * 0.22, radius * 0.55, radius * 0.22, -0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(254,215,170,0.38)';
+    ctx.moveTo(L + W * 1.8, 0);
+    ctx.lineTo(L,            -W);
+    ctx.lineTo(L + W * 0.85, 0);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
     ctx.fill();
-    // 글로우
-    ctx.globalAlpha = 0.18;
+
+    // ── 엔진 점화 흔적 (후방 짧은 불꽃)
+    const flen = W * (1.2 + Math.random() * 0.6);
     ctx.beginPath();
-    ctx.arc(0, 0, radius * 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fb923c';
+    ctx.moveTo(-L,        -W * 0.55);
+    ctx.lineTo(-L - flen,  0);
+    ctx.lineTo(-L,         W * 0.55);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(251,146,60,0.72)';
     ctx.fill();
-    ctx.globalAlpha = 1;
+
     ctx.restore();
   }
 
