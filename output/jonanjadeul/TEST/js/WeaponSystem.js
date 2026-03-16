@@ -147,6 +147,7 @@ const WeaponSystem = (() => {
     p.color    = '#fb923c';
     p.type     = 'cannon';
     p.splashR  = CANNON_SPLASH_R;
+    p.attr     = null;
   }
 
   /**
@@ -173,13 +174,14 @@ const WeaponSystem = (() => {
     p.color    = weapon.projColor;
     p.type     = 'auto';
     p.splashR  = 0;
+    p.attr     = weapon.attr ?? null;
   }
 
   /**
    * 보조 무기 장착 (TetrisGrid._applyBonus에서 호출)
    */
-  function addSecondary(type) {
-    secondaries.push({ type, timer: 0, orbitAngle: 0, orbitTimers: [0, 0, 0] });
+  function addSecondary(type, attr) {
+    secondaries.push({ type, timer: 0, orbitAngle: 0, orbitTimers: [0, 0, 0], attr: attr ?? null });
   }
 
   /**
@@ -196,6 +198,7 @@ const WeaponSystem = (() => {
    */
   function _fireSecondary(sec, def, player, target, activeEnemies) {
     const fire = def.fire;
+    const secAttr = sec.attr ?? null;
 
     if (fire === 'single') {
       const p = acquireProjectile(); if (!p || !target) return;
@@ -205,7 +208,7 @@ const WeaponSystem = (() => {
       p.vx = (dx/dist) * PROJ_SPEED; p.vy = (dy/dist) * PROJ_SPEED;
       p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
-      p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+      p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
 
     } else if (fire === 'multi3') {
       const targets = activeEnemies
@@ -222,7 +225,7 @@ const WeaponSystem = (() => {
         p.vx = (dx/dist) * PROJ_SPEED * 1.3; p.vy = (dy/dist) * PROJ_SPEED * 1.3;
         p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME; p.color = def.color;
-        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
       }
 
     } else if (fire === 'spread5') {
@@ -237,7 +240,7 @@ const WeaponSystem = (() => {
         p.vx = Math.cos(a) * PROJ_SPEED; p.vy = Math.sin(a) * PROJ_SPEED;
         p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.75; p.color = def.color;
-        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
       }
 
     } else if (fire === 'spread7') {
@@ -253,7 +256,7 @@ const WeaponSystem = (() => {
         p.vx = Math.cos(a) * PROJ_SPEED * 0.9; p.vy = Math.sin(a) * PROJ_SPEED * 0.9;
         p.radius = PROJ_RADIUS + 1; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.85; p.color = def.color;
-        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
       }
 
     } else if (fire === 'homing') {
@@ -265,7 +268,7 @@ const WeaponSystem = (() => {
       p.radius = PROJ_RADIUS + 3; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME * 1.5; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = true;
-      p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0;
+      p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
 
     } else if (fire === 'flak8') {
       for (let i = 0; i < 8; i++) {
@@ -276,7 +279,7 @@ const WeaponSystem = (() => {
         p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / (PROJ_SPEED * 0.7);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
-        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
       }
 
     } else if (fire === 'mine') {
@@ -286,7 +289,7 @@ const WeaponSystem = (() => {
       p.radius = 9; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = 15; p.color = def.color;
       p.type = 'cannon'; p.splashR = 60;
-      p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+      p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
 
     } else if (fire === 'chain3') {
       const p = acquireProjectile(); if (!p || !target) return;
@@ -297,7 +300,7 @@ const WeaponSystem = (() => {
       p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false;
-      p.chainCount = 2; p.pierceLeft = 0;  // 2번 추가 체인
+      p.chainCount = 2; p.pierceLeft = 0; p.attr = secAttr;  // 2번 추가 체인
 
     } else if (fire === 'chain5') {
       // 5연쇄 고데미지 충격파 (소멸자)
@@ -309,7 +312,7 @@ const WeaponSystem = (() => {
       p.radius = PROJ_RADIUS + 2; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false;
-      p.chainCount = 4; p.pierceLeft = 0;  // 4번 추가 체인 (총 5회)
+      p.chainCount = 4; p.pierceLeft = 0; p.attr = secAttr;  // 4번 추가 체인 (총 5회)
 
     } else if (fire === 'railgun') {
       // 관통탄 — 최대 3적 관통, 고속·고데미지
@@ -321,7 +324,7 @@ const WeaponSystem = (() => {
       p.radius = PROJ_RADIUS + 3; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME * 1.5; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0;
-      p.pierceLeft = 3;  // 최대 4적 관통
+      p.pierceLeft = 3; p.attr = secAttr;  // 최대 4적 관통
 
     } else if (fire === 'nova12') {
       for (let i = 0; i < 12; i++) {
@@ -332,7 +335,7 @@ const WeaponSystem = (() => {
         p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / (PROJ_SPEED * 0.85);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
-        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
       }
 
     } else if (fire === 'nova24') {
@@ -345,7 +348,7 @@ const WeaponSystem = (() => {
         p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / PROJ_SPEED;
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
-        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
       }
     }
   }
@@ -353,7 +356,7 @@ const WeaponSystem = (() => {
   /**
    * 체인 탄 연쇄 데미지 헬퍼
    */
-  function _chainHit(x, y, damage, remaining, activeEnemies, exclude) {
+  function _chainHit(x, y, damage, remaining, activeEnemies, exclude, attr) {
     const CHAIN_R = 220;
     let nearest = null;
     let minDSq = CHAIN_R * CHAIN_R;
@@ -363,8 +366,8 @@ const WeaponSystem = (() => {
       if (dsq < minDSq) { minDSq = dsq; nearest = e; }
     }
     if (!nearest) return;
-    EnemyManager.damageEnemy(nearest, damage);
-    if (remaining > 0) _chainHit(nearest.x, nearest.y, damage, remaining - 1, activeEnemies, nearest);
+    EnemyManager.damageEnemy(nearest, damage, attr);
+    if (remaining > 0) _chainHit(nearest.x, nearest.y, damage, remaining - 1, activeEnemies, nearest, attr);
   }
 
   /**
@@ -412,7 +415,7 @@ const WeaponSystem = (() => {
             if (!e.active) continue;
             const { dx, dy } = Collision.wrappedDelta(ox, oy, e.x, e.y, worldW, worldH);
             if (Math.hypot(dx, dy) < e.radius + 10) {
-              EnemyManager.damageEnemy(e, def.damage * (player.damageMult * SynergySystem.getDamageMult()));
+              EnemyManager.damageEnemy(e, def.damage * (player.damageMult * SynergySystem.getDamageMult()), sec.attr);
               sec.orbitTimers[i] = 0.5;
               break;
             }
@@ -483,7 +486,7 @@ const WeaponSystem = (() => {
             e.x, e.y, e.radius,
             worldW, worldH
           )) {
-            EnemyManager.damageEnemy(e, p.damage);
+            EnemyManager.damageEnemy(e, p.damage, p.attr);
             hit = true;
           }
         }
@@ -499,9 +502,9 @@ const WeaponSystem = (() => {
             worldW, worldH
           );
           if (hit) {
-            EnemyManager.damageEnemy(e, p.damage);
+            EnemyManager.damageEnemy(e, p.damage, p.attr);
             if (p.chainCount > 0) {
-              _chainHit(e.x, e.y, p.damage, p.chainCount - 1, activeEnemies, e);
+              _chainHit(e.x, e.y, p.damage, p.chainCount - 1, activeEnemies, e, p.attr);
             }
             if (p.pierceLeft > 0) {
               p.pierceLeft--;  // 관통: 계속 진행

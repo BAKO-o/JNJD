@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v1.0.2'; // 속성 강화 모듈 8종 추가
+const VERSION = 'v1.1.0'; // 적 속성 저항/약점 시스템, 조립창 속성 HUD, 튜토리얼 시너지 탭
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;

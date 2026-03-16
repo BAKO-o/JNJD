@@ -465,7 +465,7 @@ const TetrisGrid = (() => {
       const cur = WeaponSystem.getWeaponStat('cooldown') ?? 0.72;
       WeaponSystem.upgradeWeapon('cooldown', Math.max(0.15, cur * bonus.cooldownMult));
     }
-    if (bonus.weapon)       WeaponSystem.addSecondary(bonus.weapon);
+    if (bonus.weapon)       WeaponSystem.addSecondary(bonus.weapon, bonus.weaponAttr ?? null);
     if (bonus.weaponAttr)   SynergySystem.addWeaponAttr(bonus.weaponAttr);
     if (bonus.weaponAttrs)  bonus.weaponAttrs.forEach(a => SynergySystem.addWeaponAttr(a));
   }
@@ -1104,6 +1104,23 @@ const TetrisGrid = (() => {
       ctx.font      = '9px "Segoe UI", sans-serif';
       ctx.fillStyle = '#475569';
       ctx.fillText(`${pending.cells.length}셀`, infoX, offY + 52);
+
+      // ── 속성 뱃지 (무기 모듈이면 표시)
+      const _ATTR_COLORS = { FIRE:'#ef4444', ELECTRIC:'#fbbf24', LASER:'#a78bfa', KINETIC:'#94a3b8', WATER:'#38bdf8' };
+      const _ATTR_ICONS  = { FIRE:'🔥', ELECTRIC:'⚡', LASER:'💜', KINETIC:'🔩', WATER:'💧' };
+      const _pendingAttrs = pending.bonus?.weaponAttrs ?? (pending.bonus?.weaponAttr ? [pending.bonus.weaponAttr] : []);
+      if (_pendingAttrs.length > 0) {
+        const attrBaseY = curY + (moduleQueue.length > 1 ? CARD_H - 28 : CARD_H - 16);
+        let attrDrawX = px + PAD + 4;
+        ctx.textAlign = 'left';
+        for (const attr of _pendingAttrs) {
+          const label = `${_ATTR_ICONS[attr] ?? ''} ${attr}`;
+          ctx.font      = 'bold 9px "Segoe UI", sans-serif';
+          ctx.fillStyle = _ATTR_COLORS[attr] ?? '#e2e8f0';
+          ctx.fillText(label, attrDrawX, attrBaseY);
+          attrDrawX += ctx.measureText(label).width + 8;
+        }
+      }
 
       // W/S 내비게이션 힌트
       if (moduleQueue.length > 1) {
