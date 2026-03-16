@@ -1,6 +1,6 @@
 # GUIDE.md — AP3: 잔해의 귀환 개발자 가이드
-> 버전: v0.9.0
-> 최종 갱신: 2026-03-15
+> 버전: v1.2.0
+> 최종 갱신: 2026-03-16
 
 ---
 
@@ -15,7 +15,11 @@ JNJD/
     ├── index.html
     ├── css/style.css
     └── js/
+        ├── config.js            ← v1.2.0 신규 — 환경 위험 수치
         ├── Game.js
+        ├── SynergySystem.js    ← NUKE 속성·시너지 추가
+        ├── StageManager.js      ← v1.2.0 신규 — 스테이지 시스템
+        ├── WeaponCombine.js     ← v1.2.0 신규 — 무기 조합 레시피
         ├── InputHandler.js
         ├── Renderer.js
         ├── Player.js
@@ -86,7 +90,18 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - 메인 게임 루프 (`requestAnimationFrame`)
 - 상태머신: `START → PLAYING ↔ PAUSED → LEVELUP / BUILDING → GAMEOVER`
 - HUD 업데이트, 파티클, 업그레이드 카드 UI, BUILDING 조립 화면
+- 시너지 HUD 렌더 (`_drawSynergyHUD`) — 활성 속성 슬롯·시너지·총 배율 표시
 - **진입점**: `window.addEventListener('DOMContentLoaded', init)`
+
+### `SynergySystem.js` (전역 `window.SynergySystem`) — Phase 4
+- `addWeaponAttr(attr)`: 무기 장착 시 속성 등록 (TetrisGrid._applyBonus에서 호출)
+- `removeWeaponAttr(attr)`: 무기 해제 시 속성 제거 (TetrisGrid._removeBonus에서 호출)
+- `getDamageMult()`: 현재 장착 무기 속성 조합 기반 데미지 배율 반환 (WeaponSystem에서 호출)
+- `getActiveEffects()`: HUD용 활성 시너지 목록 `[{name, mult, color}]` 반환
+- `getAttrCounts()`: 현재 속성별 장착 수 반환 (HUD 아이콘 표시용)
+- `reset()`: 게임 재시작 시 속성 카운트 초기화
+- **속성 할당**: KINETIC(개틀링/플랙/산탄/기뢰/레일건/태풍포), FIRE(유도탄/노바/플라즈마/오메가), LASER(레이저/저격포), ELECTRIC(궤도포/연쇄탄/소멸자)
+- **시너지 테이블**: FIRE+FIRE=×1.5, ELECTRIC+FIRE=×1.6, ELECTRIC+LASER=×1.7, FIRE+LASER=×1.45, KINETIC+KINETIC=×1.3 등 10종
 
 ### `TetrisGrid.js` (IIFE, `window.TetrisGrid`)
 - `init()`: 그리드·큐 초기화, 코어(0,0) 배치
@@ -95,6 +110,8 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `hasQueued()`: 큐 또는 pending에 모듈이 있으면 true
 - `getQueueSize()`: HUD 뱃지용 총 대기 모듈 수
 - `handleClick(sx,sy,cx,cy,player)`: 클릭→그리드 좌표 변환→배치 시도
+- `unequipModule(gx,gy,player)`: 그리드 (gx,gy) 모듈을 해제해 큐 맨 앞으로 돌려줌, 보너스 역적용 — [X]키
+- `scrapPending()`: 현재 pending 모듈 파괴 → 티어별 스크랩 반환(COMMON5/RARE15/EPIC30/LEGENDARY60) — [X]키
 - `recalcHitbox(player)`: 부착 모듈 기반 `player.hitboxRadius` 재계산
 - `drawOnCanvas(ctx,cx,cy,mouseX,mouseY,player)`: BUILDING 상태 조립 UI 렌더 (3패널)
 - `drawShipModules(ctx,cx,cy,angle)`: 게임플레이 중 모듈 렌더 (회전 적용)
@@ -102,7 +119,7 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `queueModule(typeKey)`: 특정 모듈을 대기 큐에 추가 (ModuleDrop 수집 시 호출)
 - `expandHullSlots(n)`: 함체 슬롯 증설 (+n)
 - `getUsedSlots()` / `getMaxSlots()` / `getExpandCost()` / `getExpandAmount()`: 슬롯 정보
-- **모듈 17종**: HULL_1/2, GUN_1/2, THRUSTER, WING_L/R + WPN_GATLING/SPREAD/SNIPER/MISSILE/FLAK/ORBIT/LASER/MINE/CHAIN/NOVA
+- **모듈 32종**: HULL_1/2/3, GUN_1/2, THRUSTER/2, WING_L/R/HEAVY, REACTOR, SHIELD_CELL, REINFORCED_HULL, TWIN_GUN, OVERCLOCK, FURY_CORE, TITAN_HULL + WPN_GATLING/FLAK/LASER/SPREAD/MISSILE/ORBIT/MINE/SNIPER/CHAIN/NOVA/PLASMA/RAILGUN/TYPHOON/ANNIHILATOR/OMEGA (각 무기에 weaponAttr 포함)
 
 ### `InputHandler.js` (IIFE, `window.InputHandler`)
 - `state.up/down/left/right`: WASD 상태
@@ -136,12 +153,12 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 ### `EnemyManager.js` (IIFE, `window.EnemyManager`)
 - `init(ww, wh)`: 풀 초기화
 - `update(dt, player)`: 웨이브 스폰, AI 이동, XP 젬 흡수 → `{levelUp}`
-- `damageEnemy(enemy, dmg)`: 데미지 적용 + 파괴 시 젬·ModuleDrop 드랍, 분열(SPLITTER→SWARM×3, SENTINEL→GRUNT×2, TITAN→BRUTE×2)
+- `damageEnemy(enemy, dmg, attr)`: 데미지 적용 (속성 있으면 weak×1.5/resist×0.6 적용) + 파괴 시 젬·ModuleDrop 드랍, 분열(SPLITTER→SWARM×3, SENTINEL→GRUNT×2, TITAN→BRUTE×2)
 - `getActiveEnemies()`: 활성 적 배열 반환
 - `getStats()`: `{waveNumber, totalKills, waveKills, waveKillTarget, restTimer, isResting}`
 - `getBoss()`: 현재 활성 보스 참조 반환 (없으면 null)
-- **20종 일반 적**: DRONE·RUSHER(Tier1) / SWARM·ZIGZAGGER(Tier2) / GRUNT·DASHER(Tier3) / LANCER·SHADE(Tier4) / BRUTE·BOMBER(Tier5) / SPLITTER·SENTINEL(Tier6) / PHANTOM·RAVAGER(Tier7) / JUGGERNAUT·WRAITH(Tier8) / ANCHOR·ELITE(Tier9) / TITAN·APEX(Tier10)
-- **5종 보스** (`isBoss:true`, `weight:0`): OVERLORD(w5) / HIVEMOTHER(w10) / DREADNOUGHT(w15) / SPECTER_LORD(w20) / COLOSSUS(w25) → 이후 반복·강화
+- **20종 일반 적** (각 `weak`/`resist` 속성 포함): DRONE·RUSHER(Tier1) / SWARM·ZIGZAGGER(Tier2) / GRUNT·DASHER(Tier3) / LANCER·SHADE(Tier4) / BRUTE·BOMBER(Tier5) / SPLITTER·SENTINEL(Tier6) / PHANTOM·RAVAGER(Tier7) / JUGGERNAUT·WRAITH(Tier8) / ANCHOR·ELITE(Tier9) / TITAN·APEX(Tier10)
+- **5종 보스** (`isBoss:true`, `weight:0`, `weak`/`resist` 포함): OVERLORD(w5,🔥) / HIVEMOTHER(w10,🔥) / DREADNOUGHT(w15,⚡) / SPECTER_LORD(w20,💜) / COLOSSUS(w25,💜) → 이후 반복·강화
 - **순차 스폰**: 상→하→좌→우 순서로 SPAWN_GROUP_SIZE마리씩, 방향 전환 시 SPAWN_GROUP_GAP 대기
 - **보스 풀**: `bossProjs[150]` — 보스 전용 투사체 풀, 보스 사망 시 전부 비활성화
 
@@ -149,7 +166,7 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - `init(ww, wh)`: 풀 초기화
 - `update(dt, player, activeEnemies, clicked)`: 자동 타겟팅, 발사, 포탄(클릭), 보조 무기, 충돌
   - `clicked=true` → 포탄 발사 (CANNON_COOLDOWN 준수, 함선 방향, 스플래시 데미지)
-- `addSecondary(type)`: 보조 무기 장착 (TetrisGrid._applyBonus에서 호출)
+- `addSecondary(type, attr)`: 보조 무기 장착 (TetrisGrid._applyBonus에서 호출, attr 저장으로 투사체에 속성 전달)
 - `upgradeWeapon(key, value)`: 무기 스탯 변경
 - `getWeaponStat(key)`: 현재 무기 스탯 읽기
 
@@ -276,6 +293,18 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-16 | v1.2.0 | 스테이지 시스템(5스테이지 순환, 보스 처치=클리어, 스크랩+80/모듈+2 보상), 환경 위험(METEORS·CRYO·HEAT·RADIATION), StageManager.js 신규, WeaponCombine.js 신규(8 레시피), NUKE 속성 추가(SynergySystem 5 시너지 + EnemyManager 보스 weak/resist 갱신), 무기 타입(FIREARM/ENERGY/CONVENTIONAL) 분류 + weaponType 필드, 조합 전용 무기 8종(WPN_ION_BLAST 등) + NUKE 기본 무기 2종(WPN_NUKE_SHELL·WPN_RADIATOR_BASE), WeaponSystem setCooldownMult·multi5·nova8·nuke_shell·radiator fire 타입 추가, Player.armorHazardMult + takeDamageEnv 추가, Game.js STATE.STAGE_CLEAR·STATE.CRAFTING 추가·_drawCraftingUI·_drawStageClearOverlay·_drawStageHUD 신규, config.js 신규, InputHandler C키 추가, 튜토리얼 스테이지·무기조합 탭 신규 |
+| 2026-03-16 | v1.1.0 | 적 타입별 속성 저항/약점 시스템: ENEMY_TYPES 전 25종에 weak/resist 배열 추가(약점×1.5/저항×0.6), damageEnemy(enemy,dmg,attr)로 확장, WeaponSystem 보조 무기 addSecondary(type,attr) attr 저장·_fireSecondary 전 발사 유형 p.attr 전달, orbit·chain 직접 데미지에도 sec.attr 전달. 조립창 우측 패널 프리뷰 카드 하단에 속성 뱃지(🔥⚡💜🔩) 표시. 튜토리얼 "속성 시너지" 탭 신규·조작법 X키 항목 추가. PLAN.md(개미게임 잔재) 삭제 |
+| 2026-03-16 | v1.0.2 | 속성 강화 모듈 8종 추가: 단일(RARE·2셀) FIRE_CORE/ELECTRIC_COIL/LASER_PRISM/KINETIC_MASS, 이중(EPIC·2~3셀) PLASMA_CONDUIT/ION_CIRCUIT/IGNITION_MASS, 삼중(LEGENDARY·4셀) RESONANCE_CORE. _applyBonus·_removeBonus에 weaponAttrs 배열 처리 추가. 장착·해제 시 SynergySystem 속성 카운트 자동 갱신 |
+| 2026-03-16 | v1.0.1 | 시너지 시스템 재설계: 레벨업 속성 코어 카드 → 무기 모듈 장착 자동 속성 등록 방식으로 전환. 무기 15종에 weaponAttr 추가(KINETIC/FIRE/LASER/ELECTRIC), _applyBonus에서 SynergySystem.addWeaponAttr 호출, _removeBonus 신규(보너스 역적용+WeaponSystem.removeSecondary+SynergySystem.removeWeaponAttr), unequipModule 신규([X]키: 그리드 모듈→큐 반환), scrapPending 신규([X]키: 대기모듈 파괴→스크랩 획득), InputHandler에 X키 consumeScrap 추가, 시너지 HUD 속성카운트 표시로 갱신 |
+| 2026-03-16 | v1.0.0 | Phase 4: 속성 시너지 시스템 — SynergySystem.js 신규(5속성 슬롯·12종 시너지/상쇄 테이블·getDamageMult·getActiveEffects), 레벨업 UPGRADE_POOL에 속성 코어 카드 5종 추가(FIRE/LASER/ELECTRIC/KINETIC/WATER), WeaponSystem 전체 투사체 데미지에 시너지 배율 적용, 캔버스 우측 시너지 HUD(_drawSynergyHUD: 슬롯 아이콘·활성 시너지명·총 배율), 재시작 시 SynergySystem.reset() 호출 |
+| 2026-03-15 | v0.9.8 | 시작화면 우하단 버전 표시(version-display, Game.js init에서 동적 세팅), 조립 화면 W/S 키로 대기 모듈 선택(cyclePending/pendingSelectIdx, 큐에서 shift 제거→배치 시 splice), 우측 패널 상단 형태 프리뷰 카드(5×5 미니그리드+W/S 내비게이션 힌트) 복원, TetrisGrid.setZoom으로 drawShipModules 셀 크기 줌 역보정(EC=CELL/zoom, 화면상 고정 22px) |
+| 2026-03-15 | v0.9.7 | 시작 화면에 "게임 방법" 버튼 추가, 튜토리얼 오버레이(목표·조작·HP체계·모듈조립·등급·업그레이드·웨이브 7섹션, 스크롤 가능), btn-secondary 스타일 추가 |
+| 2026-03-15 | v0.9.6 | Q키 대기 모듈 없어도 조립 화면 열기(재배치 전용), 우측 패널 모듈 인벤토리 재설계(배치 대기+장착 완료 통합 목록, 티어·HP바·설명 표시), hasPending() 추가 |
+| 2026-03-15 | v0.9.5 | 조립 UI 모듈 드래그&드롭 이동(tryStartDrag/endDrag/_placePreserved), mouseHeld·mouseReleased 입력 추가, 드래그 원위치 점선 테두리 시각 피드백, HP·보너스 보존 |
+| 2026-03-15 | v0.9.4 | 스크랩 반감(보스 10-15/일반 0-1), 티어 확률 조정(COMMON 72/RARE 20/EPIC 6/LEGENDARY 2), 코어HP=10 고정(업그레이드 불가), 장갑판 개별 내구도 시스템(hitShip 방향성 피격), 비장갑 모듈 즉시 파괴, 인벤토리 HP 바+장착 완료 내구도 표시, 피격 셀 플래시 이펙트 |
+| 2026-03-15 | v0.9.3 | 모듈 인벤토리 UI(I키 토글, 대기중·장착완료 2섹션, 30종 캔버스 아이콘), 슬롯 증설 비용 15→150 Scrap, 인벤토리 닫기: ESC/I/BUILDING전환 연동 |
+| 2026-03-15 | v0.9.2 | 모듈 등급 시스템(COMMON 50%/RARE 30%/EPIC 15%/LEGENDARY 5% 가중치 드랍), 구조 모듈 8→15종·무기 모듈 10→15종 확장(태풍포·소멸자·오메가포·플라즈마포·레일건), 레일건 관통 메카닉(pierceLeft), 웨이브 카운트다운 풀스크린→상단 소형 HUD로 변경 |
 | 2026-03-15 | v0.9.1 | 티어 크기 스케일링·피해 면역: 적 tier 필드 추가(1~10, 보스=11), 반경 = ENEMY_RADIUS × radiusMult × 1.2^(tier-1), 최고 활성 티어 기준 2 이상 낮은 티어 적 접촉 피해 면역 |
 | 2026-03-15 | v0.9.0 | 시스템 개편: 스크랩(Scrap) 자원(일반 적 1~3·보스 20~30), 함체 슬롯 시스템(초기 12슬롯, 포화 시 교체 모드, [E]키 15scrap→+3슬롯), 장갑 감소(armorReduction 0~75%), 연구원 4명 체계(송-전술/건-공학/학-과학/종-군사), 종 업그레이드 2종(장갑보강·함체증설), 송 방어 업그레이드→전술 사격으로 교체, 조립 UI 3패널(좌=장착모듈·중=그리드·우=제공모듈), 게임 이름 "조난자들"→"AP3: 잔해의 귀환" |
 | 2026-03-15 | v0.8.0 | 보스 시스템: 5의 배수 웨이브마다 5종 보스(OVERLORD·HIVEMOTHER·DREADNOUGHT·SPECTER_LORD·COLOSSUS) 순환 등장, 보스 전용 투사체 풀(MAX_BOSS_PROJS=150), 5종 공격 패턴(8/16방향 노바·부채꼴·회전포격·고속 스프레드·12방향 느린 포격), HP 50% 시 페이즈 2 전환, 보스 사망 시 모듈 3개 보장 드랍, Renderer에 5종 보스 draw 함수 + drawBossProjectile + drawBossHpBar 추가, 휴식 오버레이에 보스 웨이브 경고(⚠ 보스 웨이브 ⚠) 표시 |
