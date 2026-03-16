@@ -50,7 +50,6 @@ class Player {
     this.speedMult     = 1.0;
     this.damageMult    = 1.0;
     this.armorReduction = 0.0; // 받는 피해 감소율 (0.0 ~ 0.75 상한)
-    this.armorHazardMult = 1.0; // 환경 위험 장갑 효율 배율 (RADIATION: 0.7)
 
     // ── 자원
     this.scrap = 0; // 함선 스크랩 (함체 슬롯 증설에 사용)
@@ -132,14 +131,6 @@ class Player {
     this.invincibleTime = 1.0; // 1초 무적 (코어 노출 상황 보정)
   }
 
-  /**
-   * 환경 피해 (무적 무시, HEAT 지속 데미지 등)
-   * @param {number} dmg
-   */
-  takeDamageEnv(dmg) {
-    this.hp = Math.max(0, this.hp - dmg);
-  }
-
   /** XP 획득 및 레벨업 체크
    * @returns {boolean} 레벨업 발생 여부
    */
@@ -170,8 +161,8 @@ class Player {
     // 부착된 모듈을 함선 아래 레이어에 먼저 그린다 (회전 적용)
     TetrisGrid.drawShipModules(Renderer.getCtx(), screenCx, screenCy, this.angle);
 
-    // 함선 본체 (vx/vy 전달 → 추진체 방향 계산)
-    Renderer.drawPlayer(screenCx, screenCy, this.angle, this.radius, false, this.vx, this.vy);
+    // 함선 본체
+    Renderer.drawPlayer(screenCx, screenCy, this.angle, this.radius);
   }
 
   /**
@@ -189,13 +180,11 @@ class Player {
     });
 
     const r = this.radius;
-    // 선체 정점 — 원형 함선에 맞게 8각형 근사
-    const hull = [];
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      hull.push(t(Math.cos(a) * r, Math.sin(a) * r));
-    }
-    const polys = [hull];
+    // 선체 정점 (로컬: right=앞, down=오른쪽)
+    // 오목형 → 삼각형 두 개로 분할
+    const tri1 = [ t(r, 0), t(-r * 0.6, -r * 0.7), t(-r * 0.35, 0) ];
+    const tri2 = [ t(r, 0), t(-r * 0.35, 0), t(-r * 0.6,  r * 0.7) ];
+    const polys = [tri1, tri2];
 
     // 모듈 셀 (TetrisGrid 전역 참조)
     if (window.TetrisGrid) {
