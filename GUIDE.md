@@ -1,6 +1,6 @@
 # GUIDE.md — AP3: 잔해의 귀환 개발자 가이드
-> 버전: v0.9.0
-> 최종 갱신: 2026-03-15
+> 버전: v1.0.0
+> 최종 갱신: 2026-03-16
 
 ---
 
@@ -16,6 +16,7 @@ JNJD/
     ├── css/style.css
     └── js/
         ├── Game.js
+        ├── SynergySystem.js   ← Phase 4 신규
         ├── InputHandler.js
         ├── Renderer.js
         ├── Player.js
@@ -86,7 +87,16 @@ jonanjadeul/index.html 을 브라우저에서 열기 (로컬 파일 직접 실�
 - 메인 게임 루프 (`requestAnimationFrame`)
 - 상태머신: `START → PLAYING ↔ PAUSED → LEVELUP / BUILDING → GAMEOVER`
 - HUD 업데이트, 파티클, 업그레이드 카드 UI, BUILDING 조립 화면
+- 시너지 HUD 렌더 (`_drawSynergyHUD`) — 활성 속성 슬롯·시너지·총 배율 표시
 - **진입점**: `window.addEventListener('DOMContentLoaded', init)`
+
+### `SynergySystem.js` (전역 `window.SynergySystem`) — Phase 4 신규
+- `addSlot(attr)`: 속성 슬롯 추가 (FIRE/LASER/ELECTRIC/KINETIC/WATER, 최대 5개)
+- `getDamageMult()`: 현재 슬롯 조합 기반 데미지 배율 반환 (WeaponSystem에서 호출)
+- `getActiveEffects()`: HUD용 활성 시너지 목록 `[{name, mult, color}]` 반환
+- `getSlots()`: 현재 슬롯 배열 복사본 반환
+- `reset()`: 게임 재시작 시 슬롯 초기화
+- **시너지 테이블**: FIRE+FIRE=×1.5, ELECTRIC+WATER=×2.0, LASER+ELECTRIC=×1.7, FIRE+WATER=×0.8(상쇄) 등 12종
 
 ### `TetrisGrid.js` (IIFE, `window.TetrisGrid`)
 - `init()`: 그리드·큐 초기화, 코어(0,0) 배치
@@ -276,6 +286,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-03-16 | v1.0.0 | Phase 4: 속성 시너지 시스템 — SynergySystem.js 신규(5속성 슬롯·12종 시너지/상쇄 테이블·getDamageMult·getActiveEffects), 레벨업 UPGRADE_POOL에 속성 코어 카드 5종 추가(FIRE/LASER/ELECTRIC/KINETIC/WATER), WeaponSystem 전체 투사체 데미지에 시너지 배율 적용, 캔버스 우측 시너지 HUD(_drawSynergyHUD: 슬롯 아이콘·활성 시너지명·총 배율), 재시작 시 SynergySystem.reset() 호출 |
 | 2026-03-15 | v0.9.8 | 시작화면 우하단 버전 표시(version-display, Game.js init에서 동적 세팅), 조립 화면 W/S 키로 대기 모듈 선택(cyclePending/pendingSelectIdx, 큐에서 shift 제거→배치 시 splice), 우측 패널 상단 형태 프리뷰 카드(5×5 미니그리드+W/S 내비게이션 힌트) 복원, TetrisGrid.setZoom으로 drawShipModules 셀 크기 줌 역보정(EC=CELL/zoom, 화면상 고정 22px) |
 | 2026-03-15 | v0.9.7 | 시작 화면에 "게임 방법" 버튼 추가, 튜토리얼 오버레이(목표·조작·HP체계·모듈조립·등급·업그레이드·웨이브 7섹션, 스크롤 가능), btn-secondary 스타일 추가 |
 | 2026-03-15 | v0.9.6 | Q키 대기 모듈 없어도 조립 화면 열기(재배치 전용), 우측 패널 모듈 인벤토리 재설계(배치 대기+장착 완료 통합 목록, 티어·HP바·설명 표시), hasPending() 추가 |

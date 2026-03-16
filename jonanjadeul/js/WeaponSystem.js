@@ -142,7 +142,7 @@ const WeaponSystem = (() => {
     p.vx       = Math.cos(player.angle) * CANNON_SPEED;
     p.vy       = Math.sin(player.angle) * CANNON_SPEED;
     p.radius   = CANNON_RADIUS;
-    p.damage   = CANNON_DAMAGE * player.damageMult;
+    p.damage   = CANNON_DAMAGE * (player.damageMult * SynergySystem.getDamageMult());
     p.lifetime = CANNON_LIFETIME;
     p.color    = '#fb923c';
     p.type     = 'cannon';
@@ -168,7 +168,7 @@ const WeaponSystem = (() => {
     p.vx       = (dx / dist) * PROJ_SPEED;
     p.vy       = (dy / dist) * PROJ_SPEED;
     p.radius   = PROJ_RADIUS;
-    p.damage   = weapon.damage * player.damageMult;
+    p.damage   = weapon.damage * (player.damageMult * SynergySystem.getDamageMult());
     p.lifetime = PROJ_LIFETIME;
     p.color    = weapon.projColor;
     p.type     = 'auto';
@@ -194,7 +194,7 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED; p.vy = (dy/dist) * PROJ_SPEED;
-      p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
 
@@ -211,7 +211,7 @@ const WeaponSystem = (() => {
         const dist = Math.hypot(dx, dy); if (dist === 0) continue;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = (dx/dist) * PROJ_SPEED * 1.3; p.vy = (dy/dist) * PROJ_SPEED * 1.3;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME; p.color = def.color;
         p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
       }
@@ -226,7 +226,7 @@ const WeaponSystem = (() => {
         const a = baseAngle + (i / 2) * spread;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED; p.vy = Math.sin(a) * PROJ_SPEED;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.75; p.color = def.color;
         p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
       }
@@ -242,7 +242,7 @@ const WeaponSystem = (() => {
         const a = baseAngle + (i / 3) * spread;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED * 0.9; p.vy = Math.sin(a) * PROJ_SPEED * 0.9;
-        p.radius = PROJ_RADIUS + 1; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS + 1; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.85; p.color = def.color;
         p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
       }
@@ -253,7 +253,7 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED * 0.8; p.vy = (dy/dist) * PROJ_SPEED * 0.8;
-      p.radius = PROJ_RADIUS + 3; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS + 3; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME * 1.5; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = true;
       p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0;
@@ -264,7 +264,7 @@ const WeaponSystem = (() => {
         const a = (i / 8) * Math.PI * 2;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED * 0.7; p.vy = Math.sin(a) * PROJ_SPEED * 0.7;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / (PROJ_SPEED * 0.7);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
         p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
@@ -274,7 +274,7 @@ const WeaponSystem = (() => {
       const p = acquireProjectile(); if (!p) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = 0; p.vy = 0;
-      p.radius = 9; p.damage = def.damage * player.damageMult;
+      p.radius = 9; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = 15; p.color = def.color;
       p.type = 'cannon'; p.splashR = 60;
       p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
@@ -285,7 +285,7 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED; p.vy = (dy/dist) * PROJ_SPEED;
-      p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false;
       p.chainCount = 2; p.pierceLeft = 0;  // 2번 추가 체인
@@ -297,7 +297,7 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED; p.vy = (dy/dist) * PROJ_SPEED;
-      p.radius = PROJ_RADIUS + 2; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS + 2; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false;
       p.chainCount = 4; p.pierceLeft = 0;  // 4번 추가 체인 (총 5회)
@@ -309,7 +309,7 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED * 1.8; p.vy = (dy/dist) * PROJ_SPEED * 1.8;
-      p.radius = PROJ_RADIUS + 3; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS + 3; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME * 1.5; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0;
       p.pierceLeft = 3;  // 최대 4적 관통
@@ -320,7 +320,7 @@ const WeaponSystem = (() => {
         const a = (i / 12) * Math.PI * 2;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED * 0.85; p.vy = Math.sin(a) * PROJ_SPEED * 0.85;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / (PROJ_SPEED * 0.85);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
         p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
@@ -333,7 +333,7 @@ const WeaponSystem = (() => {
         const a = (i / 24) * Math.PI * 2;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED; p.vy = Math.sin(a) * PROJ_SPEED;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / PROJ_SPEED;
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
         p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
@@ -403,7 +403,7 @@ const WeaponSystem = (() => {
             if (!e.active) continue;
             const { dx, dy } = Collision.wrappedDelta(ox, oy, e.x, e.y, worldW, worldH);
             if (Math.hypot(dx, dy) < e.radius + 10) {
-              EnemyManager.damageEnemy(e, def.damage * player.damageMult);
+              EnemyManager.damageEnemy(e, def.damage * (player.damageMult * SynergySystem.getDamageMult()));
               sec.orbitTimers[i] = 0.5;
               break;
             }
