@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v1.0.0'; // Phase 4: 속성 시너지 시스템 추가
+const VERSION = 'v1.0.1'; // 무기 속성 시너지 + 모듈 장착해제/파괴
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -131,32 +131,6 @@ const Game = (() => {
       id: 'jong_bulkhead', icon: '⚙️', name: '종: 함체 증설',
       desc: `함체 슬롯 +${TetrisGrid.getExpandAmount ? TetrisGrid.getExpandAmount() : 3}`,
       apply: () => { TetrisGrid.expandHullSlots(3); }
-    },
-    // ── Phase 4: 속성 코어 카드 (SynergySystem 슬롯에 추가)
-    {
-      id: 'attr_fire', icon: '🔥', name: '속성: FIRE 코어',
-      desc: 'FIRE 슬롯 추가. 같은 속성 2개→데미지×1.5 / FIRE+KINETIC→×1.6 / FIRE+WATER→×0.8(상쇄)',
-      apply: () => { SynergySystem.addSlot('FIRE'); }
-    },
-    {
-      id: 'attr_laser', icon: '💜', name: '속성: LASER 코어',
-      desc: 'LASER 슬롯 추가. 같은 속성 2개→데미지×1.4 / LASER+ELECTRIC→×1.7',
-      apply: () => { SynergySystem.addSlot('LASER'); }
-    },
-    {
-      id: 'attr_electric', icon: '⚡', name: '속성: ELECTRIC 코어',
-      desc: 'ELECTRIC 슬롯 추가. ELECTRIC+WATER→데미지×2.0 / ELECTRIC+ELECTRIC→×1.35',
-      apply: () => { SynergySystem.addSlot('ELECTRIC'); }
-    },
-    {
-      id: 'attr_kinetic', icon: '🔩', name: '속성: KINETIC 코어',
-      desc: 'KINETIC 슬롯 추가. FIRE+KINETIC→데미지×1.6 / 같은 속성 2개→×1.3',
-      apply: () => { SynergySystem.addSlot('KINETIC'); }
-    },
-    {
-      id: 'attr_water', icon: '💧', name: '속성: WATER 코어',
-      desc: 'WATER 슬롯 추가. ELECTRIC+WATER→데미지×2.0 / KINETIC+WATER→×1.2',
-      apply: () => { SynergySystem.addSlot('WATER'); }
     },
   ];
 
@@ -452,6 +426,23 @@ const Game = (() => {
       setState(STATE.PLAYING);
       return;
     }
+    // X키: 마우스가 그리드 모듈 위 → 장착해제 / 아니면 대기 모듈 파괴+스크랩
+    if (InputHandler.consumeScrap()) {
+      const { cx, cy } = screenCenter();
+      const mx = InputHandler.state.mouseX, my = InputHandler.state.mouseY;
+      const gx = Math.round((mx - cx) / 22);
+      const gy = Math.round((my - cy) / 22);
+      const gridMap = TetrisGrid.getGrid();
+      const cellKey = `${gx},${gy}`;
+      if (gridMap.has(cellKey) && gridMap.get(cellKey) !== 'CORE') {
+        // 그리드 위 모듈 → 장착 해제 (인벤토리로)
+        TetrisGrid.unequipModule(gx, gy, player);
+      } else {
+        // 대기 모듈 파괴 → 스크랩 획득
+        const gained = TetrisGrid.scrapPending();
+        if (gained > 0) player.scrap += gained;
+      }
+    }
     // 클릭(mousedown): 드래그 시작 시도 → 아니면 일반 배치
     if (InputHandler.consumeClick()) {
       const { cx, cy } = screenCenter();
@@ -535,36 +526,41 @@ const Game = (() => {
    * @param {CanvasRenderingContext2D} ctx
    */
   function _drawSynergyHUD(ctx) {
-    const slots   = SynergySystem.getSlots();
+    const counts  = SynergySystem.getAttrCounts();
     const effects = SynergySystem.getActiveEffects();
-    if (slots.length === 0) return;
+    const icons   = SynergySystem.ATTR_ICONS;
 
-    const W = Renderer.getWidth();
-    const ATTR_ICONS = { FIRE: '🔥', LASER: '💜', ELECTRIC: '⚡', KINETIC: '🔩', WATER: '💧' };
+    // 장착된 무기 속성이 하나도 없으면 표시 안 함
+    const hasAny  = Object.values(counts).some(v => v > 0);
+    if (!hasAny) return;
+
+    const W  = Renderer.getWidth();
     const x0 = W - 16;
-    let   y  = 52; // HUD 상단 여백 확보 (타이머 아래)
+    let   y  = 52; // 타이머 아래
 
     ctx.save();
     ctx.textAlign = 'right';
     ctx.font = '12px monospace';
 
-    // 슬롯 표시 (아이콘 나열)
-    const slotStr = slots.map(a => ATTR_ICONS[a] || a[0]).join(' ');
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillText(slotStr, x0, y);
+    // 속성 카운트 표시 (아이콘×개수)
+    const attrParts = [];
+    for (const attr of SynergySystem.ATTRIBUTES) {
+      if (counts[attr] > 0) attrParts.push(`${icons[attr]}×${counts[attr]}`);
+    }
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(attrParts.join('  '), x0, y);
     y += 16;
 
-    // 활성 시너지/상쇄 목록
+    // 활성 시너지 목록
     const totalMult = SynergySystem.getDamageMult();
     if (effects.length > 0) {
       for (const ef of effects) {
         ctx.fillStyle = ef.color;
-        const multStr = ef.mult >= 1 ? `×${ef.mult.toFixed(2)}` : `×${ef.mult.toFixed(2)} ↓`;
-        ctx.fillText(`${ef.name} ${multStr}`, x0, y);
+        ctx.fillText(`${ef.name} ×${ef.mult.toFixed(2)}`, x0, y);
         y += 14;
       }
       // 총 배율
-      ctx.fillStyle = totalMult >= 1 ? '#86efac' : '#fca5a5';
+      ctx.fillStyle = '#86efac';
       ctx.fillText(`총 배율 ×${totalMult.toFixed(2)}`, x0, y);
     }
 

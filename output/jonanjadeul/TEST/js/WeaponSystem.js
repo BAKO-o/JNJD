@@ -183,6 +183,15 @@ const WeaponSystem = (() => {
   }
 
   /**
+   * 보조 무기 해제 (TetrisGrid.unequipModule에서 호출)
+   * 해당 type 중 첫 번째 항목을 제거한다.
+   */
+  function removeSecondary(type) {
+    const idx = secondaries.findIndex(s => s.type === type);
+    if (idx >= 0) secondaries.splice(idx, 1);
+  }
+
+  /**
    * 단일 보조 무기 발사 헬퍼
    */
   function _fireSecondary(sec, def, player, target, activeEnemies) {
@@ -565,7 +574,7 @@ const WeaponSystem = (() => {
   /** 현재 무기 스탯 읽기 (Game.js 업그레이드 계산용) */
   function getWeaponStat(key) { return weapon[key]; }
 
-  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, reset, setZoom };
+  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, removeSecondary, reset, setZoom };
 })();
 
 window.WeaponSystem = WeaponSystem;

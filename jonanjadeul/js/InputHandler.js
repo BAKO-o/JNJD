@@ -25,6 +25,7 @@ const InputHandler = (() => {
     mouseReleased: false, // 마우스 버튼 뗀 프레임만 true (consumeMouseReleased()로 소비)
     selectPrev: false,   // W 키 — 조립 UI에서 이전 모듈 선택 (consumeSelectPrev()으로 소비)
     selectNext: false,   // S 키 — 조립 UI에서 다음 모듈 선택 (consumeSelectNext()으로 소비)
+    scrap: false,        // X 키 — 조립 UI에서 모듈 장착해제/파괴 (consumeScrap()으로 소비)
   };
 
   // 키 코드 → state 필드 매핑
@@ -50,6 +51,7 @@ const InputHandler = (() => {
     if (e.code === 'KeyI') state.inventory = true;
     if (e.code === 'KeyW' || e.code === 'ArrowUp')   state.selectPrev = true;
     if (e.code === 'KeyS' || e.code === 'ArrowDown') state.selectNext = true;
+    if (e.code === 'KeyX') state.scrap = true;
   }
 
   function onMouseDown() {
@@ -150,7 +152,14 @@ const InputHandler = (() => {
     return v;
   }
 
-  return { init, state, consumePause, consumeClick, consumeSkip, consumeOpenAssembly, consumeRotate, consumeExpand, consumeInventory, consumeMouseReleased, consumeSelectPrev, consumeSelectNext };
+  /** X키 모듈 장착해제/파괴 플래그 소비 (조립 UI 전용) */
+  function consumeScrap() {
+    const v = state.scrap;
+    state.scrap = false;
+    return v;
+  }
+
+  return { init, state, consumePause, consumeClick, consumeSkip, consumeOpenAssembly, consumeRotate, consumeExpand, consumeInventory, consumeMouseReleased, consumeSelectPrev, consumeSelectNext, consumeScrap };
 })();
 
 // ES Module 방식으로 전역 접근 허용

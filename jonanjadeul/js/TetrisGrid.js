@@ -76,27 +76,27 @@ const TetrisGrid = (() => {
     TITAN_HULL:      { tier:'LEGENDARY', name:'타이탄 장갑',     cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:-1},{gx:0,gy:2}],   color:'#0f172a', desc:'HP +300',                       bonus:{hp:300} },
 
     // ─── 무기 (COMMON) ───
-    WPN_GATLING:     { tier:'COMMON',    name:'개틀링포',        cells:[{gx:0,gy:0}],                                          color:'#dc2626', desc:'빠른 3방향 연사',               bonus:{weapon:'WPN_GATLING'} },
-    WPN_FLAK:        { tier:'COMMON',    name:'플랙포',          cells:[{gx:0,gy:0}],                                          color:'#ca8a04', desc:'8방향 근거리 폭발',              bonus:{weapon:'WPN_FLAK'} },
-    WPN_LASER:       { tier:'COMMON',    name:'레이저포',        cells:[{gx:0,gy:0}],                                          color:'#2563eb', desc:'초고속 단일 연사',               bonus:{weapon:'WPN_LASER'} },
+    WPN_GATLING:     { tier:'COMMON',    name:'개틀링포',        cells:[{gx:0,gy:0}],                                          color:'#dc2626', desc:'빠른 3방향 연사',               bonus:{weapon:'WPN_GATLING',    weaponAttr:'KINETIC'} },
+    WPN_FLAK:        { tier:'COMMON',    name:'플랙포',          cells:[{gx:0,gy:0}],                                          color:'#ca8a04', desc:'8방향 근거리 폭발',              bonus:{weapon:'WPN_FLAK',       weaponAttr:'KINETIC'} },
+    WPN_LASER:       { tier:'COMMON',    name:'레이저포',        cells:[{gx:0,gy:0}],                                          color:'#2563eb', desc:'초고속 단일 연사',               bonus:{weapon:'WPN_LASER',      weaponAttr:'LASER'} },
 
     // ─── 무기 (RARE) ───
-    WPN_SPREAD:      { tier:'RARE',      name:'산탄포',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#ea580c', desc:'5발 부채꼴 발사',               bonus:{weapon:'WPN_SPREAD'} },
-    WPN_MISSILE:     { tier:'RARE',      name:'유도탄',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#0891b2', desc:'호밍 미사일 발사',               bonus:{weapon:'WPN_MISSILE'} },
-    WPN_ORBIT:       { tier:'RARE',      name:'궤도포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#059669', desc:'3개 공전 탄',                   bonus:{weapon:'WPN_ORBIT'} },
-    WPN_MINE:        { tier:'RARE',      name:'기뢰',            cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#7f1d1d', desc:'정지 기뢰 설치',                bonus:{weapon:'WPN_MINE'} },
+    WPN_SPREAD:      { tier:'RARE',      name:'산탄포',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#ea580c', desc:'5발 부채꼴 발사',               bonus:{weapon:'WPN_SPREAD',     weaponAttr:'KINETIC'} },
+    WPN_MISSILE:     { tier:'RARE',      name:'유도탄',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#0891b2', desc:'호밍 미사일 발사',               bonus:{weapon:'WPN_MISSILE',    weaponAttr:'FIRE'} },
+    WPN_ORBIT:       { tier:'RARE',      name:'궤도포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#059669', desc:'3개 공전 탄',                   bonus:{weapon:'WPN_ORBIT',      weaponAttr:'ELECTRIC'} },
+    WPN_MINE:        { tier:'RARE',      name:'기뢰',            cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#7f1d1d', desc:'정지 기뢰 설치',                bonus:{weapon:'WPN_MINE',       weaponAttr:'KINETIC'} },
 
     // ─── 무기 (EPIC) ───
-    WPN_SNIPER:      { tier:'EPIC',      name:'저격포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#7c3aed', desc:'고데미지 단발 저격',            bonus:{weapon:'WPN_SNIPER'} },
-    WPN_CHAIN:       { tier:'EPIC',      name:'연쇄탄',          cells:[{gx:0,gy:0}],                                          color:'#9d174d', desc:'연쇄 충격파 3회',              bonus:{weapon:'WPN_CHAIN'} },
-    WPN_NOVA:        { tier:'EPIC',      name:'노바포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#6d28d9', desc:'전방향 12발 폭발',              bonus:{weapon:'WPN_NOVA'} },
-    WPN_PLASMA:      { tier:'EPIC',      name:'플라즈마포',      cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#c026d3', desc:'7발 광역 플라즈마',             bonus:{weapon:'WPN_PLASMA'} },
-    WPN_RAILGUN:     { tier:'EPIC',      name:'레일건',          cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:2}],                 color:'#0369a1', desc:'초고데미지 관통탄',             bonus:{weapon:'WPN_RAILGUN'} },
+    WPN_SNIPER:      { tier:'EPIC',      name:'저격포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#7c3aed', desc:'고데미지 단발 저격',            bonus:{weapon:'WPN_SNIPER',     weaponAttr:'LASER'} },
+    WPN_CHAIN:       { tier:'EPIC',      name:'연쇄탄',          cells:[{gx:0,gy:0}],                                          color:'#9d174d', desc:'연쇄 충격파 3회',              bonus:{weapon:'WPN_CHAIN',      weaponAttr:'ELECTRIC'} },
+    WPN_NOVA:        { tier:'EPIC',      name:'노바포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#6d28d9', desc:'전방향 12발 폭발',              bonus:{weapon:'WPN_NOVA',       weaponAttr:'FIRE'} },
+    WPN_PLASMA:      { tier:'EPIC',      name:'플라즈마포',      cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#c026d3', desc:'7발 광역 플라즈마',             bonus:{weapon:'WPN_PLASMA',     weaponAttr:'FIRE'} },
+    WPN_RAILGUN:     { tier:'EPIC',      name:'레일건',          cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:2}],                 color:'#0369a1', desc:'초고데미지 관통탄',             bonus:{weapon:'WPN_RAILGUN',    weaponAttr:'KINETIC'} },
 
     // ─── 무기 (LEGENDARY) ───
-    WPN_TYPHOON:     { tier:'LEGENDARY', name:'태풍포',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#0c4a6e', desc:'8방향 고속 연사',               bonus:{weapon:'WPN_TYPHOON'} },
-    WPN_ANNIHILATOR: { tier:'LEGENDARY', name:'소멸자',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:2,gy:0}],                 color:'#450a0a', desc:'5연쇄 고데미지 충격파',         bonus:{weapon:'WPN_ANNIHILATOR'} },
-    WPN_OMEGA:       { tier:'LEGENDARY', name:'오메가포',        cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:1,gy:0},{gx:1,gy:1}],    color:'#312e81', desc:'24발 전방향 포격',             bonus:{weapon:'WPN_OMEGA'} },
+    WPN_TYPHOON:     { tier:'LEGENDARY', name:'태풍포',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#0c4a6e', desc:'8방향 고속 연사',               bonus:{weapon:'WPN_TYPHOON',    weaponAttr:'KINETIC'} },
+    WPN_ANNIHILATOR: { tier:'LEGENDARY', name:'소멸자',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:2,gy:0}],                 color:'#450a0a', desc:'5연쇄 고데미지 충격파',         bonus:{weapon:'WPN_ANNIHILATOR',weaponAttr:'ELECTRIC'} },
+    WPN_OMEGA:       { tier:'LEGENDARY', name:'오메가포',        cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:1,gy:0},{gx:1,gy:1}],    color:'#312e81', desc:'24발 전방향 포격',             bonus:{weapon:'WPN_OMEGA',      weaponAttr:'FIRE'} },
   };
 
   const MODULE_KEYS = Object.keys(MODULE_DEFS);
@@ -439,6 +439,9 @@ const TetrisGrid = (() => {
   /** 슬롯 증설 시 증가량 */
   function getExpandAmount() { return HULL_SLOT_EXPAND_AMOUNT; }
 
+  // 장착 해제 시 스크랩 획득량 (티어별)
+  const SCRAP_VALUES = { COMMON: 5, RARE: 15, EPIC: 30, LEGENDARY: 60 };
+
   /** 보너스 적용 (hp는 코어HP에 영향 없음 — 모듈 자체 내구도로 처리) */
   function _applyBonus(bonus, player) {
     // bonus.hp: 장갑판 내구도로 사용; 플레이어 HP에는 가산하지 않음
@@ -448,7 +451,72 @@ const TetrisGrid = (() => {
       const cur = WeaponSystem.getWeaponStat('cooldown') ?? 0.72;
       WeaponSystem.upgradeWeapon('cooldown', Math.max(0.15, cur * bonus.cooldownMult));
     }
-    if (bonus.weapon) WeaponSystem.addSecondary(bonus.weapon);
+    if (bonus.weapon)      WeaponSystem.addSecondary(bonus.weapon);
+    if (bonus.weaponAttr)  SynergySystem.addWeaponAttr(bonus.weaponAttr);
+  }
+
+  /** 보너스 역적용 — unequipModule 시 호출 */
+  function _removeBonus(bonus, player) {
+    if (bonus.speed)        player.speedMult  = Math.max(1.0, player.speedMult  - bonus.speed);
+    if (bonus.damage)       player.damageMult = Math.max(1.0, player.damageMult - bonus.damage);
+    if (bonus.cooldownMult) {
+      const cur = WeaponSystem.getWeaponStat('cooldown') ?? 0.72;
+      // 장착 시 cur * mult 적용했으므로, 해제 시 cur / mult 로 복원
+      WeaponSystem.upgradeWeapon('cooldown', Math.min(0.72, cur / bonus.cooldownMult));
+    }
+    if (bonus.weapon)      WeaponSystem.removeSecondary(bonus.weapon);
+    if (bonus.weaponAttr)  SynergySystem.removeWeaponAttr(bonus.weaponAttr);
+  }
+
+  /**
+   * 그리드의 (gx, gy) 모듈을 해제하여 moduleQueue 맨 앞에 돌려준다.
+   * 보너스를 역적용하고 hitbox를 재계산한다.
+   * @param {number} gx
+   * @param {number} gy
+   * @param {object} player
+   * @returns {boolean} 성공 여부
+   */
+  function unequipModule(gx, gy, player) {
+    const key = `${gx},${gy}`;
+    if (!grid.has(key) || grid.get(key) === 'CORE') return false;
+
+    const idx = placedModules.findIndex(m => m.cells.some(c => c.gx === gx && c.gy === gy));
+    if (idx < 0) return false;
+
+    const mod = placedModules[idx];
+    const def = MODULE_DEFS[mod.type];
+    if (!def) return false;
+
+    // 보너스 역적용
+    _removeBonus(def.bonus, player);
+
+    // 그리드 & placedModules 에서 제거
+    for (const c of mod.cells) grid.delete(`${c.gx},${c.gy}`);
+    placedModules.splice(idx, 1);
+
+    // 큐 맨 앞에 다시 추가
+    moduleQueue.unshift(mod.type);
+    // pending이 없으면 즉시 활성화
+    if (!pending) _rebuildPending();
+
+    recalcHitbox(player);
+    validSlots = _calcValidSlots();
+    return true;
+  }
+
+  /**
+   * 현재 pending 모듈을 파괴하고 스크랩을 반환한다.
+   * @returns {number} 획득 스크랩량 (0이면 pending 없음)
+   */
+  function scrapPending() {
+    if (!pending) return 0;
+    const def = MODULE_DEFS[pending.type];
+    const gained = def ? (SCRAP_VALUES[def.tier] ?? 5) : 5;
+
+    // 큐에서 현재 선택 항목 제거
+    moduleQueue.splice(pendingSelectIdx, 1);
+    _rebuildPending();
+    return gained;
   }
 
   /**
@@ -756,7 +824,7 @@ const TetrisGrid = (() => {
     ctx.fillStyle = '#334466';
     const scrap = player ? player.scrap : 0;
     ctx.fillText(
-      `[W/S] 모듈 선택   [R] 회전   [Space] 닫기   [E] 슬롯 증설 (+${HULL_SLOT_EXPAND_AMOUNT}슬롯, ${HULL_SLOT_EXPAND_COST} Scrap)  ─  Scrap: ${scrap}`,
+      `[W/S] 모듈 선택   [R] 회전   [Space] 닫기   [E] 슬롯 증설 (+${HULL_SLOT_EXPAND_AMOUNT}슬롯, ${HULL_SLOT_EXPAND_COST}Scrap)   [X] 그리드 위: 장착해제 / 대기모듈: 파괴+Scrap  ─  Scrap: ${scrap}`,
       cx, H - 28
     );
   }
@@ -1663,6 +1731,9 @@ const TetrisGrid = (() => {
     getMaxSlots,
     getExpandCost,
     getExpandAmount,
+    // 장착 해제 & 파괴
+    unequipModule,
+    scrapPending,
   };
 
 })();
