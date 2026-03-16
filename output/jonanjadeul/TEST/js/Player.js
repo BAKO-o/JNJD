@@ -50,6 +50,7 @@ class Player {
     this.speedMult     = 1.0;
     this.damageMult    = 1.0;
     this.armorReduction = 0.0; // 받는 피해 감소율 (0.0 ~ 0.75 상한)
+    this.armorHazardMult = 1.0; // 환경 위험 장갑 효율 배율 (RADIATION: 0.7)
 
     // ── 자원
     this.scrap = 0; // 함선 스크랩 (함체 슬롯 증설에 사용)
@@ -129,6 +130,14 @@ class Player {
     if (this.invincibleTime > 0) return;
     this.hp = Math.max(0, this.hp - Math.max(1, dmg));
     this.invincibleTime = 1.0; // 1초 무적 (코어 노출 상황 보정)
+  }
+
+  /**
+   * 환경 피해 (무적 무시, HEAT 지속 데미지 등)
+   * @param {number} dmg
+   */
+  takeDamageEnv(dmg) {
+    this.hp = Math.max(0, this.hp - dmg);
   }
 
   /** XP 획득 및 레벨업 체크

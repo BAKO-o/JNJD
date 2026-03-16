@@ -21,10 +21,10 @@
 
 'use strict';
 
-const ATTRIBUTES = ['FIRE', 'LASER', 'ELECTRIC', 'KINETIC'];
+const ATTRIBUTES = ['FIRE', 'LASER', 'ELECTRIC', 'KINETIC', 'NUKE'];
 
 // 속성 아이콘 (HUD 표시용)
-const ATTR_ICONS = { FIRE: '🔥', LASER: '💜', ELECTRIC: '⚡', KINETIC: '🔩' };
+const ATTR_ICONS = { FIRE: '🔥', LASER: '💜', ELECTRIC: '⚡', KINETIC: '🔩', NUKE: '☢' };
 
 // 시너지/상쇄 테이블: 정렬된 'A+B' 키 → { mult, name, color }
 // A+A 동일 속성 2개 이상, A+B 다른 속성 조합
@@ -41,10 +41,16 @@ const SYNERGY_TABLE = {
   'FIRE+KINETIC':          { mult: 1.55, name: '폭발탄 강화',   color: '#ea580c' },
   'ELECTRIC+KINETIC':      { mult: 1.4,  name: '자기 가속',     color: '#818cf8' },
   'KINETIC+LASER':         { mult: 1.35, name: '레일 추진',     color: '#d8b4fe' },
+  // NUKE 혼합 시너지
+  'NUKE+NUKE':             { mult: 1.8,  name: '핵 연쇄 반응', color: '#4ade80' },
+  'FIRE+NUKE':             { mult: 2.0,  name: '열핵 폭발',    color: '#f97316' },
+  'ELECTRIC+NUKE':         { mult: 1.9,  name: '핵 EMP',       color: '#86efac' },
+  'KINETIC+NUKE':          { mult: 1.6,  name: '핵 관통탄',    color: '#a3e635' },
+  'LASER+NUKE':            { mult: 1.7,  name: '감마선 포격',  color: '#bef264' },
 };
 
 // 속성별 장착 수 (무기 모듈 장착/해제 시 갱신)
-let _counts = { FIRE: 0, LASER: 0, ELECTRIC: 0, KINETIC: 0 };
+let _counts = { FIRE: 0, LASER: 0, ELECTRIC: 0, KINETIC: 0, NUKE: 0 };
 
 /**
  * 무기 장착 시 속성 추가

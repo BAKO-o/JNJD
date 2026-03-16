@@ -86,6 +86,7 @@
         <span><kbd>Mouse</kbd> 조준·회전</span>
         <span><kbd>Click</kbd> 포탄 발사</span>
         <span><kbd>Q</kbd> 모듈 조립</span>
+        <span><kbd>C</kbd> 무기 조합</span>
         <span><kbd>E</kbd> 슬롯 증설 (조립 중)</span>
         <span><kbd>ESC / P</kbd> 일시정지</span>
         <span><kbd>I</kbd> 인벤토리</span>
@@ -136,6 +137,12 @@
           <button class="howto-nav-item" onclick="howtoShow('ht-synergy',this)">
             <span class="hnav-icon">⚡</span><span>속성 시너지</span>
           </button>
+          <button class="howto-nav-item" onclick="howtoShow('ht-stage',this)">
+            <span class="hnav-icon">🌌</span><span>스테이지</span>
+          </button>
+          <button class="howto-nav-item" onclick="howtoShow('ht-craft',this)">
+            <span class="hnav-icon">⚗</span><span>무기 조합</span>
+          </button>
         </nav>
 
         <!-- ── 오른쪽 콘텐츠 -->
@@ -167,6 +174,7 @@
               <div class="htab-key-row"><kbd>Space</kbd><span>조립 화면 닫기</span></div>
               <div class="htab-key-sep">기타</div>
               <div class="htab-key-row"><kbd>X</kbd><span>그리드 위 모듈: 장착 해제 / 대기 모듈: 파괴 후 Scrap 획득</span></div>
+              <div class="htab-key-row"><kbd>C</kbd><span>무기 조합창 열기 / 닫기 (장착된 무기 2개를 조합)</span></div>
               <div class="htab-key-row"><kbd>I</kbd><span>모듈 인벤토리 보기</span></div>
               <div class="htab-key-row"><kbd>ESC / P</kbd><span>일시정지</span></div>
             </div>
@@ -298,6 +306,33 @@
             <div class="htab-note" style="margin-top:6px">⚠ 약점(×1.5)과 저항(×0.6)은 투사체 속성에만 적용된다. 포탄(클릭) 및 기본 자동무기는 속성이 없어 배율 영향을 받지 않는다.</div>
           </div>
 
+          <!-- 스테이지 시스템 -->
+          <div class="howto-tab" id="ht-stage">
+            <h3 class="htab-title">스테이지 시스템</h3>
+            <p class="htab-lead">보스를 처치하면 스테이지 클리어! 총 5개의 스테이지를 순서대로 진행한다. 모듈·무기·업그레이드는 스테이지 간 유지된다.</p>
+            <div class="htab-card">
+              <div class="htab-row"><span class="htab-icon">🏆</span><div>스테이지 클리어 시 <strong>Scrap +80</strong> · <strong>모듈 2개</strong>를 즉시 지급한다.</div></div>
+              <div class="htab-row"><span class="htab-icon">1️⃣</span><div><strong style="color:#94a3b8">Stage 1 — 잔해 지대</strong>: 환경 위험 없음. 함선을 준비하라.</div></div>
+              <div class="htab-row"><span class="htab-icon">2️⃣</span><div><strong style="color:#f97316">Stage 2 — 소행성대</strong>: <strong>☄ 유성</strong>이 화면을 가로지른다. 접촉 시 데미지.</div></div>
+              <div class="htab-row"><span class="htab-icon">3️⃣</span><div><strong style="color:#38bdf8">Stage 3 — 극저온 성운</strong>: <strong>❄ CRYO</strong> — 모든 무기 쿨다운 ×1.3.</div></div>
+              <div class="htab-row"><span class="htab-icon">4️⃣</span><div><strong style="color:#ef4444">Stage 4 — 항성 코로나</strong>: <strong>🔥 HEAT</strong> — 0.5 HP/s 지속 데미지. 장갑으로 버텨라.</div></div>
+              <div class="htab-row"><span class="htab-icon">5️⃣</span><div><strong style="color:#4ade80">Stage 5 — 방사성 구름</strong>: <strong>☢ RADIATION</strong> — 장갑 효율 ×0.7 감소.</div></div>
+            </div>
+          </div>
+
+          <!-- 무기 조합 -->
+          <div class="howto-tab" id="ht-craft">
+            <h3 class="htab-title">무기 조합 시스템</h3>
+            <p class="htab-lead"><kbd>C</kbd> 키로 무기 조합창을 연다. 장착된 무기 2개를 소비해 더 강력한 조합 무기를 생성한다.</p>
+            <div class="htab-card">
+              <div class="htab-row"><span class="htab-icon">⚗</span><div>두 무기의 <strong>타입(화기/에너지/재래식)</strong>과 <strong>속성(FIRE/LASER/ELECTRIC/KINETIC/NUKE)</strong> 조합으로 결과가 결정된다.</div></div>
+              <div class="htab-row"><span class="htab-icon">☢</span><div><strong style="color:#4ade80">NUKE 속성</strong> 무기로는 <strong>핵탄두(WPN_NUKE_SHELL)</strong>와 <strong>방사체(WPN_RADIATOR_BASE)</strong>가 있으며, 조합하면 더 강력한 핵 무기가 된다.</div></div>
+              <div class="htab-row"><span class="htab-icon">🔀</span><div>조합 예시: <strong>[에너지+레이저] × [에너지+화염]</strong> → 이온 방전포 / <strong>[재래식+핵] × [아무거나]</strong> → 핵 발사기</div></div>
+              <div class="htab-row"><span class="htab-icon">⚠</span><div>조합 시 원본 무기 2개는 <strong>소비(Consumed)</strong>된다. 조합 결과는 모듈 대기 큐에 추가된다.</div></div>
+            </div>
+            <div class="htab-note">💡 조합 전용 무기는 드랍으로는 획득 불가하며, 오직 조합창에서만 얻을 수 있다.</div>
+          </div>
+
         </div><!-- /.howto-content -->
       </div><!-- /.howto-body -->
 
@@ -319,6 +354,7 @@
   </script>
 
   <!-- 스크립트 로드 순서: 의존성 없는 것부터 (window 전역 패턴) -->
+  <script src="js/config.js"></script>
   <script src="js/SynergySystem.js"></script>
   <script src="js/InputHandler.js"></script>
   <script src="js/Renderer.js"></script>
@@ -327,6 +363,8 @@
   <script src="js/EnemyManager.js"></script>
   <script src="js/WeaponSystem.js"></script>
   <script src="js/TetrisGrid.js"></script>
+  <script src="js/WeaponCombine.js"></script>
+  <script src="js/StageManager.js"></script>
   <script src="js/Game.js"></script>
 </body>
 </html>

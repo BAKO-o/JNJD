@@ -52,6 +52,18 @@ const WeaponSystem = (() => {
     WPN_TYPHOON:     { cooldown: 0.5,  damage: 1.8,  range: 250, color: '#0ea5e9', fire: 'flak8'        },
     WPN_ANNIHILATOR: { cooldown: 2.5,  damage: 5.0,  range: 380, color: '#dc2626', fire: 'chain5'       },
     WPN_OMEGA:       { cooldown: 6.0,  damage: 3.0,  range: 340, color: '#818cf8', fire: 'nova24'       },
+    // ── NUKE 기본 무기
+    WPN_NUKE_SHELL:  { cooldown: 5.0,  damage: 8.0,  range: 550, color: '#4ade80', fire: 'nuke_shell'   },
+    WPN_RADIATOR_BASE:{ cooldown: 0.0, damage: 2.0,  range: 90,  color: '#86efac', fire: 'radiator'     },
+    // ── 조합 결과 무기
+    WPN_ION_BLAST:   { cooldown: 3.5,  damage: 6.0,  range: 420, color: '#c4b5fd', fire: 'nova8'        },
+    WPN_EXPLOSIVE_MISSILE:{ cooldown:3.0, damage:7.0, range:520, color: '#f97316', fire: 'homing'        },
+    WPN_MINIGUN:     { cooldown: 0.10, damage: 0.8,  range: 340, color: '#fca5a5', fire: 'multi5'       },
+    WPN_ION_CANNON:  { cooldown: 2.0,  damage: 12.0, range: 650, color: '#818cf8', fire: 'railgun'      },
+    WPN_INCENDIARY:  { cooldown: 2.2,  damage: 3.0,  range: 220, color: '#ef4444', fire: 'flak8'        },
+    WPN_NUKE_LAUNCHER:{ cooldown:8.0,  damage: 20.0, range: 600, color: '#4ade80', fire: 'nuke_shell'   },
+    WPN_RADIATOR:    { cooldown: 0.0,  damage: 3.5,  range: 110, color: '#86efac', fire: 'radiator'     },
+    WPN_GAMMA_RAY:   { cooldown: 1.8,  damage: 10.0, range: 750, color: '#bef264', fire: 'single'       },
   };
 
   // ── 풀 배열
@@ -62,9 +74,10 @@ const WeaponSystem = (() => {
 
   // ── 상태
   let worldW, worldH;
-  let _zoom       = 1.0;
-  let fireTimer   = 0; // 자동무기 다음 발사까지 남은 시간
-  let cannonTimer = 0; // 포탄 재사용 대기 시간
+  let _zoom           = 1.0;
+  let fireTimer       = 0; // 자동무기 다음 발사까지 남은 시간
+  let cannonTimer     = 0; // 포탄 재사용 대기 시간
+  let _cooldownMult   = 1.0; // 환경 쿨다운 배율 (CRYO: 1.3)
 
   // ── 플레이어 무기 슬롯 (Phase 4 확장용)
   // 현재는 단일 기본 무기만 사용
@@ -350,6 +363,50 @@ const WeaponSystem = (() => {
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
         p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
       }
+
+    } else if (fire === 'multi5') {
+      // 5방향 동시 연사 (미니건)
+      const targets = activeEnemies
+        .filter(e => e.active)
+        .map(e => ({ e, dsq: Collision.wrappedDistSq(player.x, player.y, e.x, e.y, worldW, worldH) }))
+        .filter(t => t.dsq < def.range * def.range)
+        .sort((a, b) => a.dsq - b.dsq)
+        .slice(0, 5);
+      for (const { e: t } of targets) {
+        const p = acquireProjectile(); if (!p) break;
+        const { dx, dy } = Collision.wrappedDelta(player.x, player.y, t.x, t.y, worldW, worldH);
+        const dist = Math.hypot(dx, dy); if (dist === 0) continue;
+        p.active = true; p.x = player.x; p.y = player.y;
+        p.vx = (dx/dist) * PROJ_SPEED * 1.4; p.vy = (dy/dist) * PROJ_SPEED * 1.4;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
+        p.lifetime = PROJ_LIFETIME * 0.85; p.color = def.color;
+        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      }
+
+    } else if (fire === 'nova8') {
+      // 8발 전방향 (이온 방전포)
+      for (let i = 0; i < 8; i++) {
+        const p = acquireProjectile(); if (!p) break;
+        const a = (i / 8) * Math.PI * 2;
+        p.active = true; p.x = player.x; p.y = player.y;
+        p.vx = Math.cos(a) * PROJ_SPEED * 0.9; p.vy = Math.sin(a) * PROJ_SPEED * 0.9;
+        p.radius = PROJ_RADIUS + 2; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
+        p.lifetime = def.range / (PROJ_SPEED * 0.9);
+        p.color = def.color; p.type = 'auto'; p.splashR = 0;
+        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      }
+
+    } else if (fire === 'nuke_shell') {
+      // 핵탄두: 느린 호밍 + 도달 시 광역 폭발 (r=100)
+      const p = acquireProjectile(); if (!p || !target) return;
+      const { dx, dy } = Collision.wrappedDelta(player.x, player.y, target.x, target.y, worldW, worldH);
+      const dist = Math.hypot(dx, dy); if (dist === 0) return;
+      p.active = true; p.x = player.x; p.y = player.y;
+      p.vx = (dx/dist) * PROJ_SPEED * 0.5; p.vy = (dy/dist) * PROJ_SPEED * 0.5;
+      p.radius = PROJ_RADIUS + 5; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
+      p.lifetime = PROJ_LIFETIME * 2.5; p.color = def.color;
+      p.type = 'cannon'; p.splashR = 100;
+      p.isHoming = true; p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
     }
   }
 
@@ -391,7 +448,7 @@ const WeaponSystem = (() => {
       const target = findNearestEnemy(player, activeEnemies);
       if (target) {
         fire(player, target);
-        fireTimer = weapon.cooldown;
+        fireTimer = weapon.cooldown * _cooldownMult;
       } else {
         fireTimer = 0.05; // 타겟 없을 때 빠른 재탐색
       }
@@ -402,13 +459,19 @@ const WeaponSystem = (() => {
       const def = SECONDARY_DEFS[sec.type];
       if (!def) continue;
 
-      if (def.fire === 'orbit') {
+      if (def.fire === 'orbit' || def.fire === 'radiator') {
         // 궤도 탄: 투사체 풀 미사용, 직접 위치 계산 & 충돌
-        sec.orbitAngle += dt * 2.2;
-        const orbitR = Math.max(def.range, player.hitboxRadius + 15);
-        for (let i = 0; i < 3; i++) {
+        const isRadiator = def.fire === 'radiator';
+        const orbitSpeed = isRadiator ? 1.5 : 2.2;
+        const ballCount  = isRadiator ? 5 : 3;
+        const ballRadius = isRadiator ? 15 : 10;
+        sec.orbitAngle += dt * orbitSpeed;
+        // orbitTimers 배열 길이 확보
+        while (sec.orbitTimers.length < ballCount) sec.orbitTimers.push(0);
+        const orbitR = Math.max(def.range, player.hitboxRadius + (isRadiator ? 25 : 15));
+        for (let i = 0; i < ballCount; i++) {
           if (sec.orbitTimers[i] > 0) { sec.orbitTimers[i] -= dt; continue; }
-          const a = sec.orbitAngle + (i * Math.PI * 2 / 3);
+          const a = sec.orbitAngle + (i * Math.PI * 2 / ballCount);
           const ox = player.x + Math.cos(a) * orbitR;
           const oy = player.y + Math.sin(a) * orbitR;
           for (const e of activeEnemies) {
@@ -440,7 +503,7 @@ const WeaponSystem = (() => {
       }
 
       _fireSecondary(sec, def, player, target, activeEnemies);
-      sec.timer = def.cooldown;
+      sec.timer = def.cooldown * _cooldownMult;
     }
 
     // ── 투사체 이동 & 충돌
@@ -535,24 +598,29 @@ const WeaponSystem = (() => {
       }
     }
 
-    // 궤도 탄 렌더 (WPN_ORBIT)
+    // 궤도 탄 렌더 (WPN_ORBIT, WPN_RADIATOR_BASE, WPN_RADIATOR)
     const ctx = Renderer.getCtx();
     for (const sec of secondaries) {
-      if (sec.type !== 'WPN_ORBIT') continue;
-      const def = SECONDARY_DEFS['WPN_ORBIT'];
+      const def = SECONDARY_DEFS[sec.type];
+      if (!def || (def.fire !== 'orbit' && def.fire !== 'radiator')) continue;
+      const isRadiator = def.fire === 'radiator';
+      const ballCount  = isRadiator ? 5 : 3;
+      const ballRadius = isRadiator ? 14 : 8;
+      const glowRadius = isRadiator ? 20 : 12;
+      const glowAlpha  = isRadiator ? 0.15 : 0.2;
       const { sx: pcx, sy: pcy } = player.worldToScreen(player.x, player.y, worldW, worldH);
-      const orbitR = Math.max(SECONDARY_DEFS['WPN_ORBIT'].range, player.hitboxRadius + 15);
-      for (let i = 0; i < 3; i++) {
-        const a = sec.orbitAngle + (i * Math.PI * 2 / 3);
+      const orbitR = Math.max(def.range, player.hitboxRadius + (isRadiator ? 25 : 15));
+      for (let i = 0; i < ballCount; i++) {
+        const a = sec.orbitAngle + (i * Math.PI * 2 / ballCount);
         const osx = pcx + Math.cos(a) * orbitR;
         const osy = pcy + Math.sin(a) * orbitR;
         ctx.beginPath();
-        ctx.arc(osx, osy, 8, 0, Math.PI * 2);
+        ctx.arc(osx, osy, ballRadius, 0, Math.PI * 2);
         ctx.fillStyle = def.color;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(osx, osy, 12, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(110,231,183,0.2)';
+        ctx.arc(osx, osy, glowRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(134,239,172,${glowAlpha})`;
         ctx.fill();
       }
     }
@@ -563,10 +631,19 @@ const WeaponSystem = (() => {
     if (key in weapon) weapon[key] = value;
   }
 
+  /**
+   * 환경 쿨다운 배율 설정 (CRYO: 1.3, 기본: 1.0)
+   * StageManager.js에서 호출
+   */
+  function setCooldownMult(mult) {
+    _cooldownMult = mult;
+  }
+
   /** 리셋 */
   function reset(ww, wh) {
     worldW = ww; worldH = wh;
     _zoom = 1.0;
+    _cooldownMult = 1.0;
     for (const p of projectiles) p.active = false;
     fireTimer        = 0;
     cannonTimer      = 0;
@@ -577,7 +654,7 @@ const WeaponSystem = (() => {
   /** 현재 무기 스탯 읽기 (Game.js 업그레이드 계산용) */
   function getWeaponStat(key) { return weapon[key]; }
 
-  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, removeSecondary, reset, setZoom };
+  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, removeSecondary, reset, setZoom, setCooldownMult, SECONDARY_DEFS };
 })();
 
 window.WeaponSystem = WeaponSystem;

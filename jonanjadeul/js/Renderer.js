@@ -972,6 +972,62 @@ const Renderer = (() => {
     ctx.restore();
   }
 
+  /**
+   * 유성 그리기 (화면 좌표 기반, StageManager에서 호출)
+   * @param {number} sx - 화면 X
+   * @param {number} sy - 화면 Y
+   * @param {number} radius
+   * @param {number} vx - 속도 벡터 (방향각 계산용)
+   * @param {number} vy
+   */
+  function drawMeteor(sx, sy, radius, vx, vy) {
+    const angle = Math.atan2(vy, vx);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(angle);
+    // 꼬리
+    const tailLen = radius * 3.5;
+    const grad = ctx.createLinearGradient(-tailLen, 0, 0, 0);
+    grad.addColorStop(0, 'rgba(251,146,60,0)');
+    grad.addColorStop(1, 'rgba(251,146,60,0.55)');
+    ctx.beginPath();
+    ctx.moveTo(-tailLen, -radius * 0.4);
+    ctx.lineTo(0, -radius * 0.5);
+    ctx.lineTo(0,  radius * 0.5);
+    ctx.lineTo(-tailLen,  radius * 0.4);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // 본체
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#78350f';
+    ctx.fill();
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 내부 하이라이트
+    ctx.beginPath();
+    ctx.arc(-radius * 0.25, -radius * 0.25, radius * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(251,191,36,0.35)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /**
+   * 스테이지 환경 위험 화면 오버레이
+   * @param {string} hazard - 'METEORS'|'CRYO'|'HEAT'|'RADIATION'|'NONE'
+   * @param {string|null} bgTint - 배경 색조 (null이면 없음)
+   */
+  function drawHazardOverlay(hazard, bgTint) {
+    if (!bgTint || hazard === 'NONE') return;
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = bgTint;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
   /** 컨텍스트 직접 접근용 getter */
   function getCtx() { return ctx; }
   function getCanvas() { return canvas; }
@@ -983,6 +1039,7 @@ const Renderer = (() => {
     drawPlayer, drawEnemy,
     drawProjectile, drawCannonball, drawXpGem, drawParticle,
     drawModuleDrop, drawBossProjectile, drawBossHpBar,
+    drawMeteor, drawHazardOverlay,
     getCtx, getCanvas, getWidth, getHeight,
   };
 })();

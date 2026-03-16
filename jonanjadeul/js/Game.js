@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v1.1.0'; // 적 속성 저항/약점 시스템, 조립창 속성 HUD, 튜토리얼 시너지 탭
+const VERSION = 'v1.2.0'; // 스테이지 시스템, 환경 위험, NUKE 속성, 무기 조합 시스템
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -17,12 +17,14 @@ const WORLD_H = 7200;
 
 // ── 상태 열거
 const STATE = {
-  START:    'START',
-  PLAYING:  'PLAYING',
-  PAUSED:   'PAUSED',
-  LEVELUP:  'LEVELUP',
-  BUILDING: 'BUILDING', // Phase 3: 테트리스 모듈 조립
-  GAMEOVER: 'GAMEOVER',
+  START:       'START',
+  PLAYING:     'PLAYING',
+  PAUSED:      'PAUSED',
+  LEVELUP:     'LEVELUP',
+  BUILDING:    'BUILDING',    // 테트리스 모듈 조립
+  STAGE_CLEAR: 'STAGE_CLEAR', // 스테이지 클리어 연출
+  CRAFTING:    'CRAFTING',    // 무기 조합창
+  GAMEOVER:    'GAMEOVER',
 };
 
 // ── 별 배경 설정
@@ -47,6 +49,20 @@ const Game = (() => {
 
   // ── 인벤토리 패널 표시 여부
   let inventoryOpen = false;
+
+  // ── 스테이지 클리어 연출
+  let _stageClearTimer   = 0;    // 클리어 메시지 표시 시간
+  const STAGE_CLEAR_SHOW = 3.5;  // 초
+
+  // ── 조합창 상태
+  let _craftSlotA      = null;   // { key, anchorGx, anchorGy }
+  let _craftSlotB      = null;
+  let _craftRecipe     = null;   // WeaponCombine.findRecipe 결과
+  let _craftList       = [];     // getCraftableWeapons() 결과 (UI 목록)
+  let _craftSelectIdx  = 0;      // 목록 선택 인덱스
+
+  // ── 스테이지 클리어 확인용 플래그 (보스 처치 후 한 번만 트리거)
+  let _stageClearPending = false;
 
   // ── 별 배경 데이터 (화면 좌표 기반, 시차 스크롤 없음)
   let stars = [];
@@ -245,9 +261,14 @@ const Game = (() => {
     WeaponSystem.init(WORLD_W, WORLD_H);
     TetrisGrid.init();
     SynergySystem.reset();
+    StageManager.init(WORLD_W, WORLD_H);
     particles.length = 0;
     elapsedTime = 0;
     zoom = 1.0;
+    _stageClearPending = false;
+    _stageClearTimer   = 0;
+    _craftSlotA = null; _craftSlotB = null; _craftRecipe = null;
+    _craftList = []; _craftSelectIdx = 0;
 
     setState(STATE.PLAYING);
   }
@@ -263,13 +284,13 @@ const Game = (() => {
     prevState = state;
     state     = newState;
 
-    // DOM 오버레이 제어 (BUILDING은 캔버스 기반이므로 DOM 불필요)
+    // DOM 오버레이 제어
     elOverlayPause.classList.toggle('hidden',    state !== STATE.PAUSED);
     elOverlayLevelup.classList.toggle('hidden',  state !== STATE.LEVELUP);
     elOverlayGameover.classList.toggle('hidden', state !== STATE.GAMEOVER);
 
-    // 조립/레벨업 진입 시 인벤토리 닫기
-    if (newState === STATE.BUILDING || newState === STATE.LEVELUP) inventoryOpen = false;
+    // 조립/레벨업/조합창 진입 시 인벤토리 닫기
+    if (newState === STATE.BUILDING || newState === STATE.LEVELUP || newState === STATE.CRAFTING) inventoryOpen = false;
 
     // 휴식 오버레이: PLAYING이 아닌 상태(레벨업·조립·일시정지)로 전환 시 즉시 숨김
     // → 레벨업 카드나 모듈 조립창이 앞에 보여야 함
@@ -331,11 +352,14 @@ const Game = (() => {
     if (state === STATE.PLAYING) {
       update(dt);
     } else if (state === STATE.PAUSED) {
-      // 일시정지 중에도 P/ESC 입력을 소비해 재개 가능하게 처리
       if (InputHandler.consumePause()) { inventoryOpen = false; togglePause(); }
       if (InputHandler.consumeInventory()) inventoryOpen = !inventoryOpen;
     } else if (state === STATE.BUILDING) {
       updateBuilding(dt);
+    } else if (state === STATE.STAGE_CLEAR) {
+      updateStageClear(dt);
+    } else if (state === STATE.CRAFTING) {
+      updateCrafting(dt);
     }
 
     // 줌 부드럽게 갱신 (PLAYING/BUILDING 모두)
@@ -364,10 +388,18 @@ const Game = (() => {
     InputHandler.consumeSelectPrev();
     InputHandler.consumeSelectNext();
 
-    // Q키: 조립 화면 열기 (항상 가능 — 대기 모듈이 있으면 다음 모듈로 세팅)
+    // Q키: 조립 화면 열기
     if (InputHandler.consumeOpenAssembly()) {
       if (TetrisGrid.hasQueued()) TetrisGrid.nextModule();
       setState(STATE.BUILDING);
+      return;
+    }
+
+    // C키: 무기 조합창 열기
+    if (InputHandler.consumeOpenCrafting()) {
+      _craftList = TetrisGrid.getCraftableWeapons();
+      _craftSelectIdx = 0; _craftSlotA = null; _craftSlotB = null; _craftRecipe = null;
+      setState(STATE.CRAFTING);
       return;
     }
 
@@ -384,6 +416,10 @@ const Game = (() => {
     WeaponSystem.update(dt, player, activeEnemies, clicked);
     const { levelUp } = EnemyManager.update(dt, player);
 
+    // 스테이지 매니저 업데이트 (환경 피해, 유성)
+    const { cx: scCx, cy: scCy } = screenCenter();
+    StageManager.update(dt, player, { cx: scCx, cy: scCy });
+
     // 파티클 & 별 스크롤
     updateParticles(dt);
     updateStars(dt);
@@ -391,7 +427,14 @@ const Game = (() => {
     // 게임오버 체크
     if (player.isDead) { gameOver(); return; }
 
-    // 레벨업: 항상 업그레이드 카드 (모듈은 적 처치로 확률 드랍)
+    // 스테이지 클리어 감지 (보스 처치 = 스테이지 클리어)
+    if (!_stageClearPending && EnemyManager.isStageClear()) {
+      _stageClearPending = true;
+      _triggerStageClear();
+      return;
+    }
+
+    // 레벨업: 항상 업그레이드 카드
     if (levelUp) {
       showLevelUp();
     }
@@ -467,6 +510,73 @@ const Game = (() => {
         );
         // 드롭 후 배치할 모듈(pending)이 남아있으면 조립 UI 유지, 없으면 닫기
         if (!TetrisGrid.hasPending()) setState(STATE.PLAYING);
+      }
+    }
+  }
+
+  /** 스테이지 클리어 트리거 — 보상 지급 후 STAGE_CLEAR 상태로 전환 */
+  function _triggerStageClear() {
+    // 보상: 스크랩 + 모듈 드랍
+    const cfg = window.GameConfig ?? {};
+    const scrapReward   = cfg.STAGE_CLEAR_SCRAP   ?? 80;
+    const moduleReward  = cfg.STAGE_CLEAR_MODULES ?? 2;
+    if (player) player.scrap += scrapReward;
+    for (let i = 0; i < moduleReward; i++) {
+      TetrisGrid.queueRandomModule();
+    }
+    _stageClearTimer = STAGE_CLEAR_SHOW;
+    setState(STATE.STAGE_CLEAR);
+  }
+
+  /** 스테이지 클리어 연출 업데이트 */
+  function updateStageClear(dt) {
+    _stageClearTimer -= dt;
+    if (_stageClearTimer <= 0) {
+      // 다음 스테이지로
+      const hasNext = StageManager.advanceStage();
+      _stageClearPending = false;
+      setState(STATE.PLAYING);
+    }
+    // ESC나 Space로 스킵
+    if (InputHandler.consumeSkip() || InputHandler.consumePause()) {
+      _stageClearTimer = 0;
+    }
+  }
+
+  /** 무기 조합창 업데이트 */
+  function updateCrafting(dt) {
+    // ESC/Space/C → 닫기
+    if (InputHandler.consumePause() || InputHandler.consumeSkip() || InputHandler.consumeOpenCrafting()) {
+      setState(STATE.PLAYING);
+      return;
+    }
+    // W/S: 조합 목록 선택
+    if (InputHandler.consumeSelectPrev()) {
+      if (_craftList.length > 0) {
+        _craftSelectIdx = (_craftSelectIdx - 1 + _craftList.length) % _craftList.length;
+        _craftSlotA = null; _craftSlotB = null; _craftRecipe = null;
+      }
+    }
+    if (InputHandler.consumeSelectNext()) {
+      if (_craftList.length > 0) {
+        _craftSelectIdx = (_craftSelectIdx + 1) % _craftList.length;
+        _craftSlotA = null; _craftSlotB = null; _craftRecipe = null;
+      }
+    }
+    // Enter/클릭: 선택한 조합 실행
+    if (InputHandler.consumeClick() && _craftList.length > 0) {
+      const recipe = _craftList[_craftSelectIdx];
+      if (recipe) {
+        const ok = TetrisGrid.craftCombine(
+          recipe.anchorGxA, recipe.anchorGyA,
+          recipe.anchorGxB, recipe.anchorGyB,
+          recipe.result, player
+        );
+        if (ok) {
+          // 조합 성공 → 목록 갱신
+          _craftList = TetrisGrid.getCraftableWeapons();
+          _craftSelectIdx = Math.min(_craftSelectIdx, _craftList.length - 1);
+        }
       }
     }
   }
@@ -573,12 +683,16 @@ const Game = (() => {
     // 별 배경
     Renderer.drawStars(stars);
 
-    if (state === STATE.START) return; // 게임 시작 전 캔버스는 빈 우주
+    if (state === STATE.START) return;
 
     if (!player) return;
 
     const { cx, cy } = screenCenter();
     const ctx = Renderer.getCtx();
+
+    // 환경 오버레이 (색조 배경)
+    const stageInfo = StageManager.getStage();
+    Renderer.drawHazardOverlay(stageInfo.hazard, stageInfo.bgTint);
 
     // ── 줌 transform 적용 (화면 중앙 기준)
     ctx.save();
@@ -586,28 +700,39 @@ const Game = (() => {
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
 
-    // ── 게임 엔티티 렌더 (플레이어 중심 기준)
+    // ── 게임 엔티티 렌더
     EnemyManager.draw(player);
     WeaponSystem.draw(player);
     drawParticles();
 
-    // 플레이어 (화면 중앙 고정 — transform 후에도 (cx,cy)는 (cx,cy)에 렌더됨)
+    // 플레이어 (화면 중앙 고정)
     player.draw(cx, cy);
 
     ctx.restore();
 
-    // 보스 HP 바 (화면 하단 UI — zoom 미적용 공간)
+    // 유성 렌더 (화면 좌표 기반, zoom 미적용)
+    if (stageInfo.hazard === 'METEORS') {
+      for (const m of StageManager.getMeteors()) {
+        if (!m.active) continue;
+        Renderer.drawMeteor(m.sx, m.sy, m.radius, m.vx, m.vy);
+      }
+    }
+
+    // 보스 HP 바 (화면 하단 UI)
     const boss = EnemyManager.getBoss();
     if (boss) {
       Renderer.drawBossHpBar(boss.type, boss.hp, boss.maxHp);
     }
 
-    // 시너지 HUD — 활성 시너지·슬롯 표시 (우측 상단)
+    // 시너지 HUD
     if (state === STATE.PLAYING || state === STATE.PAUSED || state === STATE.BUILDING) {
       _drawSynergyHUD(ctx);
     }
 
-    // BUILDING: 조립 UI — 줌 미적용 (순수 UI 오버레이)
+    // 스테이지 HUD (좌측 하단)
+    _drawStageHUD(ctx);
+
+    // BUILDING: 조립 UI
     if (state === STATE.BUILDING) {
       TetrisGrid.drawOnCanvas(
         ctx, cx, cy,
@@ -617,10 +742,170 @@ const Game = (() => {
       );
     }
 
-    // 인벤토리 패널 (PLAYING/PAUSED 상태에서 I키로 토글)
+    // CRAFTING: 무기 조합창
+    if (state === STATE.CRAFTING) {
+      _drawCraftingUI(ctx);
+    }
+
+    // STAGE_CLEAR: 스테이지 클리어 연출
+    if (state === STATE.STAGE_CLEAR) {
+      _drawStageClearOverlay(ctx);
+    }
+
+    // 인벤토리 패널
     if (inventoryOpen && (state === STATE.PLAYING || state === STATE.PAUSED)) {
       TetrisGrid.drawInventory(ctx, Renderer.getWidth(), Renderer.getHeight());
     }
+  }
+
+  /** 스테이지 HUD — 좌측 하단에 스테이지 번호와 환경 위험 배지 표시 */
+  function _drawStageHUD(ctx) {
+    const stage = StageManager.getStage();
+    if (!stage) return;
+    const W = Renderer.getWidth(), H = Renderer.getHeight();
+    const x = 14, y = H - 14;
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 12px monospace';
+
+    const HAZARD_COLORS = { NONE:'#64748b', METEORS:'#f97316', CRYO:'#38bdf8', HEAT:'#ef4444', RADIATION:'#4ade80' };
+    const HAZARD_ICONS  = { NONE:'', METEORS:'☄ 유성대', CRYO:'❄ 극저온', HEAT:'🔥 고열', RADIATION:'☢ 방사선' };
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`Stage ${stage.id}: ${stage.name}`, x, y - 14);
+    if (stage.hazard !== 'NONE') {
+      ctx.fillStyle = HAZARD_COLORS[stage.hazard] ?? '#94a3b8';
+      ctx.fillText(HAZARD_ICONS[stage.hazard] ?? stage.hazard, x, y);
+    }
+    ctx.restore();
+  }
+
+  /** 스테이지 클리어 연출 — 화면 중앙 오버레이 */
+  function _drawStageClearOverlay(ctx) {
+    const W = Renderer.getWidth(), H = Renderer.getHeight();
+    const stage = StageManager.getStage();
+    const nextStageNum = StageManager.getStageNumber() + 1;
+
+    ctx.save();
+    // 어두운 반투명 오버레이
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W / 2, cy = H / 2;
+    ctx.textAlign = 'center';
+
+    // 클리어 텍스트
+    ctx.font = 'bold 48px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('STAGE CLEAR', cx, cy - 60);
+
+    ctx.font = '22px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(stage.nameFull ?? `Stage ${stage.id}`, cx, cy - 20);
+
+    ctx.font = '16px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#86efac';
+    const cfg = window.GameConfig ?? {};
+    ctx.fillText(`Scrap +${cfg.STAGE_CLEAR_SCRAP ?? 80}  /  Module +${cfg.STAGE_CLEAR_MODULES ?? 2}`, cx, cy + 18);
+
+    if (!StageManager.isLastStage()) {
+      const nextDef = StageManager.getStageDefs()[StageManager.getStageNumber()]; // 0-based next
+      if (nextDef) {
+        ctx.font = '14px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(`다음 스테이지 → ${nextDef.name}`, cx, cy + 50);
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(nextDef.desc, cx, cy + 72);
+      }
+    } else {
+      ctx.font = '18px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText('모든 스테이지 완주!', cx, cy + 50);
+    }
+
+    // 자동 전환 타이머
+    const ratio = Math.max(0, _stageClearTimer / STAGE_CLEAR_SHOW);
+    ctx.fillStyle = 'rgba(251,191,36,0.3)';
+    ctx.fillRect(cx - 100, cy + 95, 200 * (1 - ratio), 6);
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 100, cy + 95, 200, 6);
+
+    ctx.restore();
+  }
+
+  /** 무기 조합창 UI — 캔버스 기반 */
+  function _drawCraftingUI(ctx) {
+    const W = Renderer.getWidth(), H = Renderer.getHeight();
+    const boxW = 520, boxH = 380;
+    const bx = (W - boxW) / 2, by = (H - boxH) / 2;
+
+    ctx.save();
+    // 배경
+    ctx.fillStyle = 'rgba(2,6,23,0.92)';
+    ctx.fillRect(bx, by, boxW, boxH);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx, by, boxW, boxH);
+
+    // 제목
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 18px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText('⚗ 무기 조합창', bx + boxW / 2, by + 30);
+
+    ctx.font = '11px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('W/S: 선택 변경   Enter/클릭: 조합 실행   ESC/Space: 닫기', bx + boxW / 2, by + 48);
+
+    if (_craftList.length === 0) {
+      ctx.font = '14px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('조합 가능한 무기 조합이 없습니다.', bx + boxW / 2, by + boxH / 2);
+      ctx.font = '12px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText('2개 이상의 무기를 장착하고 조합 레시피가 필요합니다.', bx + boxW / 2, by + boxH / 2 + 22);
+    } else {
+      const itemH = 60;
+      const listY = by + 65;
+      const visibleCount = Math.min(_craftList.length, 4);
+      const startIdx = Math.max(0, _craftSelectIdx - 1);
+
+      for (let vi = 0; vi < visibleCount; vi++) {
+        const idx = startIdx + vi;
+        if (idx >= _craftList.length) break;
+        const recipe = _craftList[idx];
+        const ry = listY + vi * (itemH + 4);
+        const selected = idx === _craftSelectIdx;
+
+        // 행 배경
+        ctx.fillStyle = selected ? 'rgba(251,191,36,0.12)' : 'rgba(15,23,42,0.7)';
+        ctx.fillRect(bx + 12, ry, boxW - 24, itemH);
+        if (selected) {
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(bx + 12, ry, boxW - 24, itemH);
+        }
+
+        // 조합 정보
+        ctx.textAlign = 'left';
+        ctx.font = `bold 13px "Segoe UI", sans-serif`;
+        ctx.fillStyle = selected ? '#fbbf24' : '#e2e8f0';
+        ctx.fillText(`${recipe.keyA}  +  ${recipe.keyB}  →  ${recipe.name}`, bx + 20, ry + 20);
+
+        ctx.font = '11px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(recipe.desc, bx + 20, ry + 38);
+
+        // 결과 아이콘
+        ctx.textAlign = 'right';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillStyle = '#4ade80';
+        ctx.fillText('[Enter]', bx + boxW - 20, ry + 28);
+      }
+    }
+
+    ctx.restore();
   }
 
   // ────────────────────────────── 엔트리 포인트 ──────────────────────────────

@@ -26,6 +26,7 @@ const InputHandler = (() => {
     selectPrev: false,   // W 키 — 조립 UI에서 이전 모듈 선택 (consumeSelectPrev()으로 소비)
     selectNext: false,   // S 키 — 조립 UI에서 다음 모듈 선택 (consumeSelectNext()으로 소비)
     scrap: false,        // X 키 — 조립 UI에서 모듈 장착해제/파괴 (consumeScrap()으로 소비)
+    openCrafting: false, // C 키 — 무기 조합창 열기 (consumeOpenCrafting()으로 소비)
   };
 
   // 키 코드 → state 필드 매핑
@@ -52,6 +53,7 @@ const InputHandler = (() => {
     if (e.code === 'KeyW' || e.code === 'ArrowUp')   state.selectPrev = true;
     if (e.code === 'KeyS' || e.code === 'ArrowDown') state.selectNext = true;
     if (e.code === 'KeyX') state.scrap = true;
+    if (e.code === 'KeyC') state.openCrafting = true;
   }
 
   function onMouseDown() {
@@ -159,7 +161,14 @@ const InputHandler = (() => {
     return v;
   }
 
-  return { init, state, consumePause, consumeClick, consumeSkip, consumeOpenAssembly, consumeRotate, consumeExpand, consumeInventory, consumeMouseReleased, consumeSelectPrev, consumeSelectNext, consumeScrap };
+  /** C키 무기 조합창 열기 플래그 소비 */
+  function consumeOpenCrafting() {
+    const v = state.openCrafting;
+    state.openCrafting = false;
+    return v;
+  }
+
+  return { init, state, consumePause, consumeClick, consumeSkip, consumeOpenAssembly, consumeRotate, consumeExpand, consumeInventory, consumeMouseReleased, consumeSelectPrev, consumeSelectNext, consumeScrap, consumeOpenCrafting };
 })();
 
 // ES Module 방식으로 전역 접근 허용

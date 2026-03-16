@@ -64,11 +64,11 @@ const EnemyManager = (() => {
     APEX:       { tier:10, radiusMult:2.00, hpMult:15.0, speedMult:1.20, damageMult:4.0, xpMult:12.0, weight:1, behavior:'dash',     minWave:30, weak:['KINETIC'],           resist:['LASER']      },
 
     // ── 5종 보스 (tier:11, weight:0 → _randomType에서 제외, isBoss:true)
-    OVERLORD:     { tier:11, radiusMult:3.8, hpMult:60,  speedMult:0.50, damageMult:3.0, xpMult:30,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['FIRE'],     resist:['KINETIC']  },
-    HIVEMOTHER:   { tier:11, radiusMult:4.2, hpMult:80,  speedMult:0.30, damageMult:2.5, xpMult:40,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['FIRE'],     resist:['ELECTRIC'] },
-    DREADNOUGHT:  { tier:11, radiusMult:4.0, hpMult:100, speedMult:0.40, damageMult:2.8, xpMult:50,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['ELECTRIC'], resist:['FIRE']     },
-    SPECTER_LORD: { tier:11, radiusMult:3.2, hpMult:70,  speedMult:1.20, damageMult:2.2, xpMult:45,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['LASER'],    resist:['ELECTRIC'] },
-    COLOSSUS:     { tier:11, radiusMult:5.0, hpMult:150, speedMult:0.20, damageMult:4.0, xpMult:60,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['LASER'],    resist:['KINETIC']  },
+    OVERLORD:     { tier:11, radiusMult:3.8, hpMult:60,  speedMult:0.50, damageMult:3.0, xpMult:30,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['FIRE','NUKE'],          resist:['KINETIC']           },
+    HIVEMOTHER:   { tier:11, radiusMult:4.2, hpMult:80,  speedMult:0.30, damageMult:2.5, xpMult:40,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['FIRE'],                 resist:['ELECTRIC','NUKE']   },
+    DREADNOUGHT:  { tier:11, radiusMult:4.0, hpMult:100, speedMult:0.40, damageMult:2.8, xpMult:50,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['ELECTRIC','NUKE'],       resist:['FIRE']              },
+    SPECTER_LORD: { tier:11, radiusMult:3.2, hpMult:70,  speedMult:1.20, damageMult:2.2, xpMult:45,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['LASER','NUKE'],         resist:['ELECTRIC']          },
+    COLOSSUS:     { tier:11, radiusMult:5.0, hpMult:150, speedMult:0.20, damageMult:4.0, xpMult:60,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['LASER'],                resist:['KINETIC','NUKE']    },
   };
 
   const TYPE_KEYS  = Object.keys(ENEMY_TYPES);
@@ -711,6 +711,15 @@ const EnemyManager = (() => {
   function getBoss()  { return bossEnemy && bossEnemy.active ? bossEnemy : null; }
   function getStats() { return { waveNumber, totalKills, waveKills, waveKillTarget, restTimer, isResting }; }
 
+  /**
+   * 현재 웨이브가 보스 웨이브이고 보스가 처치되었는지 확인
+   * Game.js에서 스테이지 클리어 감지에 사용
+   * @returns {boolean}
+   */
+  function isStageClear() {
+    return (waveNumber % 5 === 0) && (bossEnemy === null);
+  }
+
   function reset(ww, wh) {
     worldW = ww; worldH = wh;
     for (const e of enemies)     e.active=false;
@@ -724,7 +733,7 @@ const EnemyManager = (() => {
     bossEnemy=null;
   }
 
-  return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset, setZoom, getBoss };
+  return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset, setZoom, getBoss, isStageClear };
 })();
 
 window.EnemyManager = EnemyManager;

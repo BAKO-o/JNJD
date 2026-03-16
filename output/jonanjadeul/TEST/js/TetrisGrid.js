@@ -76,33 +76,48 @@ const TetrisGrid = (() => {
     TITAN_HULL:      { tier:'LEGENDARY', name:'타이탄 장갑',     cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:-1},{gx:0,gy:2}],   color:'#0f172a', desc:'HP +300',                       bonus:{hp:300} },
 
     // ─── 무기 (COMMON) ───
-    WPN_GATLING:     { tier:'COMMON',    name:'개틀링포',        cells:[{gx:0,gy:0}],                                          color:'#dc2626', desc:'빠른 3방향 연사',               bonus:{weapon:'WPN_GATLING',    weaponAttr:'KINETIC'} },
-    WPN_FLAK:        { tier:'COMMON',    name:'플랙포',          cells:[{gx:0,gy:0}],                                          color:'#ca8a04', desc:'8방향 근거리 폭발',              bonus:{weapon:'WPN_FLAK',       weaponAttr:'KINETIC'} },
-    WPN_LASER:       { tier:'COMMON',    name:'레이저포',        cells:[{gx:0,gy:0}],                                          color:'#2563eb', desc:'초고속 단일 연사',               bonus:{weapon:'WPN_LASER',      weaponAttr:'LASER'} },
+    WPN_GATLING:     { tier:'COMMON',    weaponType:'FIREARM',       name:'개틀링포',        cells:[{gx:0,gy:0}],                                          color:'#dc2626', desc:'빠른 3방향 연사',               bonus:{weapon:'WPN_GATLING',    weaponAttr:'KINETIC'} },
+    WPN_FLAK:        { tier:'COMMON',    weaponType:'CONVENTIONAL',  name:'플랙포',          cells:[{gx:0,gy:0}],                                          color:'#ca8a04', desc:'8방향 근거리 폭발',              bonus:{weapon:'WPN_FLAK',       weaponAttr:'KINETIC'} },
+    WPN_LASER:       { tier:'COMMON',    weaponType:'ENERGY',        name:'레이저포',        cells:[{gx:0,gy:0}],                                          color:'#2563eb', desc:'초고속 단일 연사',               bonus:{weapon:'WPN_LASER',      weaponAttr:'LASER'} },
 
     // ─── 무기 (RARE) ───
-    WPN_SPREAD:      { tier:'RARE',      name:'산탄포',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#ea580c', desc:'5발 부채꼴 발사',               bonus:{weapon:'WPN_SPREAD',     weaponAttr:'KINETIC'} },
-    WPN_MISSILE:     { tier:'RARE',      name:'유도탄',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#0891b2', desc:'호밍 미사일 발사',               bonus:{weapon:'WPN_MISSILE',    weaponAttr:'FIRE'} },
-    WPN_ORBIT:       { tier:'RARE',      name:'궤도포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#059669', desc:'3개 공전 탄',                   bonus:{weapon:'WPN_ORBIT',      weaponAttr:'ELECTRIC'} },
-    WPN_MINE:        { tier:'RARE',      name:'기뢰',            cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#7f1d1d', desc:'정지 기뢰 설치',                bonus:{weapon:'WPN_MINE',       weaponAttr:'KINETIC'} },
+    WPN_SPREAD:      { tier:'RARE',      weaponType:'FIREARM',       name:'산탄포',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#ea580c', desc:'5발 부채꼴 발사',               bonus:{weapon:'WPN_SPREAD',     weaponAttr:'KINETIC'} },
+    WPN_MISSILE:     { tier:'RARE',      weaponType:'FIREARM',       name:'유도탄',          cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#0891b2', desc:'호밍 미사일 발사',               bonus:{weapon:'WPN_MISSILE',    weaponAttr:'FIRE'} },
+    WPN_ORBIT:       { tier:'RARE',      weaponType:'ENERGY',        name:'궤도포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#059669', desc:'3개 공전 탄',                   bonus:{weapon:'WPN_ORBIT',      weaponAttr:'ELECTRIC'} },
+    WPN_MINE:        { tier:'RARE',      weaponType:'CONVENTIONAL',  name:'기뢰',            cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#7f1d1d', desc:'정지 기뢰 설치',                bonus:{weapon:'WPN_MINE',       weaponAttr:'KINETIC'} },
 
     // ─── 무기 (EPIC) ───
-    WPN_SNIPER:      { tier:'EPIC',      name:'저격포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#7c3aed', desc:'고데미지 단발 저격',            bonus:{weapon:'WPN_SNIPER',     weaponAttr:'LASER'} },
-    WPN_CHAIN:       { tier:'EPIC',      name:'연쇄탄',          cells:[{gx:0,gy:0}],                                          color:'#9d174d', desc:'연쇄 충격파 3회',              bonus:{weapon:'WPN_CHAIN',      weaponAttr:'ELECTRIC'} },
-    WPN_NOVA:        { tier:'EPIC',      name:'노바포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#6d28d9', desc:'전방향 12발 폭발',              bonus:{weapon:'WPN_NOVA',       weaponAttr:'FIRE'} },
-    WPN_PLASMA:      { tier:'EPIC',      name:'플라즈마포',      cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#c026d3', desc:'7발 광역 플라즈마',             bonus:{weapon:'WPN_PLASMA',     weaponAttr:'FIRE'} },
-    WPN_RAILGUN:     { tier:'EPIC',      name:'레일건',          cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:2}],                 color:'#0369a1', desc:'초고데미지 관통탄',             bonus:{weapon:'WPN_RAILGUN',    weaponAttr:'KINETIC'} },
+    WPN_SNIPER:      { tier:'EPIC',      weaponType:'ENERGY',        name:'저격포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#7c3aed', desc:'고데미지 단발 저격',            bonus:{weapon:'WPN_SNIPER',     weaponAttr:'LASER'} },
+    WPN_CHAIN:       { tier:'EPIC',      weaponType:'ENERGY',        name:'연쇄탄',          cells:[{gx:0,gy:0}],                                          color:'#9d174d', desc:'연쇄 충격파 3회',              bonus:{weapon:'WPN_CHAIN',      weaponAttr:'ELECTRIC'} },
+    WPN_NOVA:        { tier:'EPIC',      weaponType:'ENERGY',        name:'노바포',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#6d28d9', desc:'전방향 12발 폭발',              bonus:{weapon:'WPN_NOVA',       weaponAttr:'FIRE'} },
+    WPN_PLASMA:      { tier:'EPIC',      weaponType:'ENERGY',        name:'플라즈마포',      cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#c026d3', desc:'7발 광역 플라즈마',             bonus:{weapon:'WPN_PLASMA',     weaponAttr:'FIRE'} },
+    WPN_RAILGUN:     { tier:'EPIC',      weaponType:'CONVENTIONAL',  name:'레일건',          cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:2}],                 color:'#0369a1', desc:'초고데미지 관통탄',             bonus:{weapon:'WPN_RAILGUN',    weaponAttr:'KINETIC'} },
 
     // ─── 무기 (LEGENDARY) ───
-    WPN_TYPHOON:     { tier:'LEGENDARY', name:'태풍포',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#0c4a6e', desc:'8방향 고속 연사',               bonus:{weapon:'WPN_TYPHOON',    weaponAttr:'KINETIC'} },
-    WPN_ANNIHILATOR: { tier:'LEGENDARY', name:'소멸자',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:2,gy:0}],                 color:'#450a0a', desc:'5연쇄 고데미지 충격파',         bonus:{weapon:'WPN_ANNIHILATOR',weaponAttr:'ELECTRIC'} },
-    WPN_OMEGA:       { tier:'LEGENDARY', name:'오메가포',        cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:1,gy:0},{gx:1,gy:1}],    color:'#312e81', desc:'24발 전방향 포격',             bonus:{weapon:'WPN_OMEGA',      weaponAttr:'FIRE'} },
+    WPN_TYPHOON:     { tier:'LEGENDARY', weaponType:'FIREARM',       name:'태풍포',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#0c4a6e', desc:'8방향 고속 연사',               bonus:{weapon:'WPN_TYPHOON',    weaponAttr:'KINETIC'} },
+    WPN_ANNIHILATOR: { tier:'LEGENDARY', weaponType:'ENERGY',        name:'소멸자',          cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:2,gy:0}],                 color:'#450a0a', desc:'5연쇄 고데미지 충격파',         bonus:{weapon:'WPN_ANNIHILATOR',weaponAttr:'ELECTRIC'} },
+    WPN_OMEGA:       { tier:'LEGENDARY', weaponType:'ENERGY',        name:'오메가포',        cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:1,gy:0},{gx:1,gy:1}],    color:'#312e81', desc:'24발 전방향 포격',             bonus:{weapon:'WPN_OMEGA',      weaponAttr:'FIRE'} },
+
+    // ─── NUKE 기본 무기 (EPIC/LEGENDARY) ───
+    WPN_NUKE_SHELL:  { tier:'EPIC',      weaponType:'CONVENTIONAL',  name:'핵탄두',          cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:1,gy:0}],                 color:'#4ade80', desc:'느린 호밍 핵 투사체 (광역 r=100)', bonus:{weapon:'WPN_NUKE_SHELL',  weaponAttr:'NUKE'} },
+    WPN_RADIATOR_BASE:{ tier:'RARE',     weaponType:'ENERGY',        name:'방사체',          cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#86efac', desc:'5개 궤도 방사 탄',               bonus:{weapon:'WPN_RADIATOR_BASE',weaponAttr:'NUKE'} },
+
+    // ─── 조합 결과 무기 (LEGENDARY) ─ 드랍 불가, craftCombine으로만 획득 ───
+    WPN_ION_BLAST:        { tier:'LEGENDARY', weaponType:'ENERGY',       name:'이온 방전포',   cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#c4b5fd', desc:'8발 이온 폭발 방전 [조합 전용]',  bonus:{weapon:'WPN_ION_BLAST',        weaponAttr:'LASER'} },
+    WPN_EXPLOSIVE_MISSILE:{ tier:'LEGENDARY', weaponType:'FIREARM',      name:'폭발 미사일',   cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:2,gy:0}],                 color:'#f97316', desc:'광역 폭발 유도탄 [조합 전용]',     bonus:{weapon:'WPN_EXPLOSIVE_MISSILE',weaponAttr:'FIRE'} },
+    WPN_MINIGUN:          { tier:'LEGENDARY', weaponType:'FIREARM',      name:'미니건',        cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#fca5a5', desc:'초고속 5연사 기관포 [조합 전용]',  bonus:{weapon:'WPN_MINIGUN',          weaponAttr:'KINETIC'} },
+    WPN_ION_CANNON:       { tier:'LEGENDARY', weaponType:'ENERGY',       name:'이온 캐논',     cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:0,gy:2}],                 color:'#818cf8', desc:'고데미지 이온 관통 빔 [조합 전용]', bonus:{weapon:'WPN_ION_CANNON',       weaponAttr:'ELECTRIC'} },
+    WPN_INCENDIARY:       { tier:'LEGENDARY', weaponType:'FIREARM',      name:'소이 폭탄',     cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#ef4444', desc:'8방향 확산 소이탄 [조합 전용]',    bonus:{weapon:'WPN_INCENDIARY',       weaponAttr:'FIRE'} },
+    WPN_NUKE_LAUNCHER:    { tier:'LEGENDARY', weaponType:'CONVENTIONAL', name:'핵 발사기',     cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1},{gx:1,gy:1}],    color:'#4ade80', desc:'대범위 핵 투사체 [조합 전용]',     bonus:{weapon:'WPN_NUKE_LAUNCHER',    weaponAttr:'NUKE'} },
+    WPN_RADIATOR:         { tier:'LEGENDARY', weaponType:'ENERGY',       name:'방사기',        cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#86efac', desc:'5개 대형 궤도 방사 [조합 전용]',   bonus:{weapon:'WPN_RADIATOR',         weaponAttr:'NUKE'} },
+    WPN_GAMMA_RAY:        { tier:'LEGENDARY', weaponType:'ENERGY',       name:'감마선포',      cells:[{gx:0,gy:0},{gx:0,gy:1},{gx:1,gy:0},{gx:1,gy:1}],    color:'#bef264', desc:'관통 감마선 빔 [조합 전용]',       bonus:{weapon:'WPN_GAMMA_RAY',        weaponAttr:'LASER'} },
 
     // ─── 속성 강화 (RARE) — 단일 속성 +1, 1셀 ───
     FIRE_CORE:       { tier:'RARE',      name:'화염 코어',       cells:[{gx:0,gy:0},{gx:0,gy:1}],                              color:'#b91c1c', desc:'🔥 FIRE +1 (화염 시너지 강화)', bonus:{weaponAttr:'FIRE'} },
     ELECTRIC_COIL:   { tier:'RARE',      name:'전기 코일',       cells:[{gx:0,gy:0},{gx:1,gy:0}],                              color:'#a16207', desc:'⚡ ELECTRIC +1 (전기 시너지 강화)', bonus:{weaponAttr:'ELECTRIC'} },
     LASER_PRISM:     { tier:'RARE',      name:'레이저 프리즘',   cells:[{gx:0,gy:0},{gx:0,gy:-1}],                             color:'#5b21b6', desc:'💜 LASER +1 (레이저 시너지 강화)', bonus:{weaponAttr:'LASER'} },
     KINETIC_MASS:    { tier:'RARE',      name:'질량 코어',       cells:[{gx:0,gy:0},{gx:-1,gy:0}],                             color:'#1f2937', desc:'🔩 KINETIC +1 (동역학 시너지 강화)', bonus:{weaponAttr:'KINETIC'} },
+    NUKE_CORE:       { tier:'EPIC',      name:'핵 코어',         cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#166534', desc:'☢ NUKE +1 (핵 시너지 강화)', bonus:{weaponAttr:'NUKE'} },
 
     // ─── 속성 강화 (EPIC) — 두 속성 +1씩, 2~3셀 ───
     PLASMA_CONDUIT:  { tier:'EPIC',      name:'플라즈마 도관',   cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:0,gy:1}],                 color:'#c026d3', desc:'🔥⚡ FIRE+ELECTRIC +1씩 (플라즈마 방전 강화)', bonus:{weaponAttrs:['FIRE','ELECTRIC']} },
@@ -114,6 +129,12 @@ const TetrisGrid = (() => {
   };
 
   const MODULE_KEYS = Object.keys(MODULE_DEFS);
+  // 조합으로만 획득 가능한 무기 키 (드랍 풀에서 제외)
+  const CRAFT_ONLY_KEYS = new Set([
+    'WPN_ION_BLAST','WPN_EXPLOSIVE_MISSILE','WPN_MINIGUN','WPN_ION_CANNON',
+    'WPN_INCENDIARY','WPN_NUKE_LAUNCHER','WPN_RADIATOR','WPN_GAMMA_RAY',
+  ]);
+  const DROPPABLE_MODULE_KEYS = MODULE_KEYS.filter(k => !CRAFT_ONLY_KEYS.has(k));
 
   // ────────────────── 초기화 ──────────────────
 
@@ -182,7 +203,7 @@ const TetrisGrid = (() => {
 
   /** 티어 가중치 기반 랜덤 모듈 키 선택 */
   function _weightedRandomKey() {
-    const keys = MODULE_KEYS;
+    const keys = DROPPABLE_MODULE_KEYS;
     let total = 0;
     for (const k of keys) total += TIER_WEIGHTS[MODULE_DEFS[k].tier] ?? 30;
     let r = Math.random() * total;
@@ -1729,6 +1750,67 @@ const TetrisGrid = (() => {
   /** 그리드 Map 읽기 전용 반환 (Player.getHitPolygons() 에서 모듈 셀 좌표 참조용) */
   function getGrid() { return grid; }
 
+  /** MODULE_DEFS 읽기 전용 반환 (WeaponCombine.js에서 weaponType/attr 참조용) */
+  function getModuleDefs() { return MODULE_DEFS; }
+
+  /**
+   * 현재 장착된 무기 모듈 중 조합 가능한 쌍 목록 반환
+   * @returns {{ keyA:string, keyB:string, result:string, name:string, desc:string }[]}
+   */
+  function getCraftableWeapons() {
+    const wpnMods = placedModules.filter(m => {
+      const def = MODULE_DEFS[m.type];
+      return def && def.bonus && def.bonus.weapon;
+    });
+    const results = [];
+    const seen = new Set();
+    for (let i = 0; i < wpnMods.length; i++) {
+      for (let j = i + 1; j < wpnMods.length; j++) {
+        const a = wpnMods[i], b = wpnMods[j];
+        const pairKey = [a.type, b.type].sort().join('|');
+        if (seen.has(pairKey)) continue;
+        const recipe = WeaponCombine.findRecipe(a.type, b.type);
+        if (recipe) {
+          results.push({
+            keyA: a.type,
+            keyB: b.type,
+            anchorGxA: a.anchorGx, anchorGyA: a.anchorGy,
+            anchorGxB: b.anchorGx, anchorGyB: b.anchorGy,
+            ...recipe,
+          });
+          seen.add(pairKey);
+        }
+      }
+    }
+    return results;
+  }
+
+  /**
+   * 무기 조합 실행 — 두 무기 해제 후 조합 결과를 큐에 추가
+   * @param {number} anchorGxA - 무기 A 앵커 그리드 X
+   * @param {number} anchorGyA
+   * @param {number} anchorGxB - 무기 B 앵커 그리드 X
+   * @param {number} anchorGyB
+   * @param {string} resultKey - 결과 모듈 키
+   * @param {object} player
+   * @returns {boolean} 성공 여부
+   */
+  function craftCombine(anchorGxA, anchorGyA, anchorGxB, anchorGyB, resultKey, player) {
+    const okA = unequipModule(anchorGxA, anchorGyA, player);
+    const okB = unequipModule(anchorGxB, anchorGyB, player);
+    if (!okA || !okB) return false;
+
+    // 해제로 큐에 들어간 원본 두 무기를 제거
+    const idxA = moduleQueue.indexOf(anchorGxA === anchorGxB && anchorGyA === anchorGyB ? resultKey : undefined);
+    // 큐에서 원본 두 무기 타입 제거 (각각 첫 번째 매칭)
+    // unequipModule이 queue.unshift로 추가하므로 0,1 번 인덱스에 있음
+    moduleQueue.splice(0, 2);
+
+    // 결과 무기 큐에 추가
+    queueModule(resultKey);
+    return true;
+  }
+
   // ── 공개 API
   return {
     init,
@@ -1767,6 +1849,10 @@ const TetrisGrid = (() => {
     // 장착 해제 & 파괴
     unequipModule,
     scrapPending,
+    // 조합 시스템
+    getModuleDefs,
+    getCraftableWeapons,
+    craftCombine,
   };
 
 })();
