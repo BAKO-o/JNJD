@@ -662,6 +662,11 @@ const WeaponSystem = (() => {
   /** 현재 무기 스탯 읽기 (Game.js 업그레이드 계산용) */
   function getWeaponStat(key) { return weapon[key]; }
 
+  /** 현재 활성 투사체 배열 반환 — StageManager 소행성 충돌 판정용 */
+  function getActiveProjectiles() {
+    return projectiles.filter(p => p.active);
+  }
+
   /** 피격 이벤트 소비 — Game.js에서 폭발 이펙트 생성 시 사용 */
   function consumeHitEvents() {
     const ev = _hitEvents.slice();
@@ -669,7 +674,7 @@ const WeaponSystem = (() => {
     return ev;
   }
 
-  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, removeSecondary, reset, setZoom, setCooldownMult, consumeHitEvents, SECONDARY_DEFS };
+  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, removeSecondary, reset, setZoom, setCooldownMult, consumeHitEvents, getActiveProjectiles, SECONDARY_DEFS };
 })();
 
 window.WeaponSystem = WeaponSystem;

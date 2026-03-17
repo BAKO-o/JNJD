@@ -1155,37 +1155,85 @@ const Renderer = (() => {
    * @param {number} vx - 속도 벡터 (방향각 계산용)
    * @param {number} vy
    */
-  function drawMeteor(sx, sy, radius, vx, vy) {
+  /**
+   * 소행성 그리기 — 크기별 다른 색상 & 꼬리 길이
+   * @param {number} sx
+   * @param {number} sy
+   * @param {number} radius
+   * @param {number} vx - 이동 속도 X (꼬리 방향 계산용)
+   * @param {number} vy
+   * @param {string} [size='SMALL'] - 'SMALL'|'MEDIUM'|'LARGE'
+   */
+  function drawMeteor(sx, sy, radius, vx, vy, size = 'SMALL') {
     const angle = Math.atan2(vy, vx);
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(angle);
-    // 꼬리
-    const tailLen = radius * 3.5;
+
+    // 크기별 색상 설정
+    const colors = {
+      SMALL:  { body: '#7c3908', rim: '#fb923c', glow: 'rgba(251,146,60,', tail: 'rgba(251,146,60,' },
+      MEDIUM: { body: '#5c2a0a', rim: '#ef4444', glow: 'rgba(239,68,68,',  tail: 'rgba(239,68,68,' },
+      LARGE:  { body: '#3b1a06', rim: '#dc2626', glow: 'rgba(220,38,38,',  tail: 'rgba(220,38,38,' },
+    };
+    const c = colors[size] || colors.SMALL;
+
+    // 꼬리 (이동 반대 방향으로 뻗음)
+    const tailLen = radius * (size === 'LARGE' ? 5.5 : size === 'MEDIUM' ? 4.5 : 3.5);
+    const tailW   = radius * 0.55;
     const grad = ctx.createLinearGradient(-tailLen, 0, 0, 0);
-    grad.addColorStop(0, 'rgba(251,146,60,0)');
-    grad.addColorStop(1, 'rgba(251,146,60,0.55)');
+    grad.addColorStop(0, c.tail + '0)');
+    grad.addColorStop(0.6, c.tail + '0.25)');
+    grad.addColorStop(1,   c.tail + '0.6)');
     ctx.beginPath();
-    ctx.moveTo(-tailLen, -radius * 0.4);
-    ctx.lineTo(0, -radius * 0.5);
-    ctx.lineTo(0,  radius * 0.5);
-    ctx.lineTo(-tailLen,  radius * 0.4);
+    ctx.moveTo(-tailLen, -tailW * 0.3);
+    ctx.lineTo(-radius * 0.7, -tailW);
+    ctx.lineTo(0, -tailW * 0.55);
+    ctx.lineTo(0,  tailW * 0.55);
+    ctx.lineTo(-radius * 0.7,  tailW);
+    ctx.lineTo(-tailLen,  tailW * 0.3);
     ctx.closePath();
     ctx.fillStyle = grad;
     ctx.fill();
+
+    // 외부 글로우
+    const glowGrad = ctx.createRadialGradient(0, 0, radius * 0.6, 0, 0, radius * 1.35);
+    glowGrad.addColorStop(0, c.glow + '0.3)');
+    glowGrad.addColorStop(1, c.glow + '0)');
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 1.35, 0, Math.PI * 2);
+    ctx.fillStyle = glowGrad;
+    ctx.fill();
+
     // 본체
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#78350f';
+    ctx.fillStyle = c.body;
     ctx.fill();
-    ctx.strokeStyle = '#f97316';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = c.rim;
+    ctx.lineWidth = size === 'LARGE' ? 2 : 1.5;
     ctx.stroke();
-    // 내부 하이라이트
+
+    // 표면 크레이터 느낌 (중간 크기 이상)
+    if (size !== 'SMALL') {
+      ctx.beginPath();
+      ctx.arc(-radius * 0.3, -radius * 0.25, radius * 0.28, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fill();
+      if (size === 'LARGE') {
+        ctx.beginPath();
+        ctx.arc(radius * 0.25, radius * 0.2, radius * 0.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.fill();
+      }
+    }
+
+    // 하이라이트
     ctx.beginPath();
-    ctx.arc(-radius * 0.25, -radius * 0.25, radius * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(251,191,36,0.35)';
+    ctx.arc(-radius * 0.28, -radius * 0.28, radius * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,220,150,0.22)';
     ctx.fill();
+
     ctx.restore();
   }
 

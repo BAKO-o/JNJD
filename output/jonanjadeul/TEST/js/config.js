@@ -21,6 +21,6 @@ window.GameConfig = {
   STAGE_CLEAR_MODULES:    2,      // 스테이지 클리어 시 모듈 드랍 수
 
   // ── 유성 스폰 간격
-  METEOR_SPAWN_MIN:       4.0,    // 최소 스폰 간격 (s)
-  METEOR_SPAWN_MAX:       8.0,    // 최대 스폰 간격 (s)
+  METEOR_SPAWN_MIN:       0.40,   // 최소 스폰 간격 (s) — v1.2.3: 밀도 10배 증가
+  METEOR_SPAWN_MAX:       0.65,   // 최대 스폰 간격 (s)
 };
