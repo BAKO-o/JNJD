@@ -138,19 +138,19 @@ const StageManager = (() => {
     if (hazard === 'METEORS') {
       _meteorTimer -= dt;
       if (_meteorTimer <= 0) {
-        // 한 번에 2개 스폰 (밀도 증가)
-        _spawnMeteor(screenCenter);
-        _spawnMeteor(screenCenter);
+        // 한 번에 1개 스폰 (밀도 절반)
+        _spawnMeteor(player);
         _meteorTimer = _randMeteorInterval();
       }
       _updateMeteors(dt, player);
-      if (projectiles && player && screenCenter) {
-        _checkProjectileHits(player, screenCenter, projectiles);
-      }
+      if (projectiles) _checkProjectileHits(projectiles);
     }
   }
 
-  function _spawnMeteor(screenCenter) {
+  /**
+   * 소행성 스폰 — 월드 좌표 기반, 플레이어 기준 화면 상단/좌측 바깥에서 생성
+   */
+  function _spawnMeteor(player) {
     const W = window.Renderer ? Renderer.getWidth()  : 1920;
     const H = window.Renderer ? Renderer.getHeight() : 1080;
 
@@ -167,81 +167,71 @@ const StageManager = (() => {
     const sdef = METEOR_SIZES[size];
     const radius = sdef.radiusMin + Math.random() * (sdef.radiusMax - sdef.radiusMin);
 
-    // 스폰 위치: 위쪽 또는 왼쪽 화면 가장자리 바깥
-    let sx, sy;
-    const side = Math.random() < 0.55 ? 0 : 1; // 55% 위, 45% 왼쪽
+    // 스폰: 플레이어 월드 좌표 기준, 화면 상단 또는 좌측 바깥
+    const margin = radius + 20;
+    const px = player ? player.x : 0;
+    const py = player ? player.y : 0;
+    let x, y;
+    const side = Math.random() < 0.55 ? 0 : 1; // 0=위, 1=왼쪽
     if (side === 0) {
-      sx = -radius + Math.random() * (W + radius * 2);
-      sy = -radius - 10;
+      x = px - W * 0.5 + Math.random() * W;
+      y = py - H * 0.5 - margin;
     } else {
-      sx = -radius - 10;
-      sy = -radius + Math.random() * (H + radius * 2);
+      x = px - W * 0.5 - margin;
+      y = py - H * 0.5 + Math.random() * H;
     }
 
-    _meteors.push({ sx, sy, vx, vy, radius, damage: sdef.damage, active: true, age: 0, size, hp: sdef.hp });
+    _meteors.push({ x, y, vx, vy, radius, damage: sdef.damage, active: true, age: 0, size, hp: sdef.hp });
   }
 
+  /**
+   * 소행성 이동 업데이트 — 월드 좌표로 이동, 플레이어와 충돌 판정
+   */
   function _updateMeteors(dt, player) {
     const W = window.Renderer ? Renderer.getWidth()  : 1920;
     const H = window.Renderer ? Renderer.getHeight() : 1080;
     for (let i = _meteors.length - 1; i >= 0; i--) {
       const m = _meteors[i];
       if (!m.active) { _meteors.splice(i, 1); continue; }
-      m.sx += m.vx * dt;
-      m.sy += m.vy * dt;
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
       m.age += dt;
-      // 화면 밖으로 나가면 제거 (오른쪽·아래쪽으로 나감)
-      if (m.sx > W + 120 || m.sy > H + 120 || m.sx < -200 || m.sy < -200 || m.age > 14) {
-        _meteors.splice(i, 1); continue;
-      }
-      // 플레이어 충돌 (화면 중앙 = 플레이어 위치)
+      // 플레이어 기준 너무 멀리 벗어나면 제거
       if (player) {
-        const pcx = window.Renderer ? Renderer.getWidth()  / 2 : 960;
-        const pcy = window.Renderer ? Renderer.getHeight() / 2 : 540;
-        const dx = m.sx - pcx, dy = m.sy - pcy;
+        const dx = m.x - player.x, dy = m.y - player.y;
+        if (Math.abs(dx) > W + 200 || Math.abs(dy) > H + 200 || m.age > 18) {
+          _meteors.splice(i, 1); continue;
+        }
+        // 플레이어 충돌 — 월드 좌표 직접 비교
         if (Math.hypot(dx, dy) < m.radius + player.hitboxRadius * 0.6) {
           player.takeDamage(m.damage);
-          _meteorHitEvents.push({ wx: player.x, wy: player.y, radius: m.radius, size: m.size });
+          _meteorHitEvents.push({ wx: m.x, wy: m.y, radius: m.radius, size: m.size });
           m.active = false;
         }
+      } else if (m.age > 18) {
+        _meteors.splice(i, 1);
       }
     }
   }
 
   /**
-   * 투사체 vs 소행성 충돌 판정
-   * 투사체는 월드 좌표, 소행성은 화면 좌표 — screenCenter로 변환
+   * 투사체 vs 소행성 충돌 판정 — 둘 다 월드 좌표이므로 직접 비교
    */
-  function _checkProjectileHits(player, screenCenter, projectiles) {
+  function _checkProjectileHits(projectiles) {
     for (const proj of projectiles) {
       if (!proj.active) continue;
-      // 월드 → 화면 좌표 (wraparound 처리)
-      let dx = proj.x - player.x;
-      let dy = proj.y - player.y;
-      if (_worldW > 0) {
-        if (dx >  _worldW * 0.5) dx -= _worldW;
-        if (dx < -_worldW * 0.5) dx += _worldW;
-        if (dy >  _worldH * 0.5) dy -= _worldH;
-        if (dy < -_worldH * 0.5) dy += _worldH;
-      }
-      const psx = screenCenter.cx + dx;
-      const psy = screenCenter.cy + dy;
-
       for (let i = _meteors.length - 1; i >= 0; i--) {
         const m = _meteors[i];
         if (!m.active) continue;
-        const mdx = psx - m.sx, mdy = psy - m.sy;
-        if (Math.hypot(mdx, mdy) < proj.radius + m.radius) {
+        const dx = proj.x - m.x, dy = proj.y - m.y;
+        if (Math.hypot(dx, dy) < proj.radius + m.radius) {
           m.hp--;
           if (m.hp <= 0) {
             m.active = false;
-            // 피격 이벤트 (월드 좌표 변환)
-            const wx = player.x + (m.sx - screenCenter.cx);
-            const wy = player.y + (m.sy - screenCenter.cy);
-            _meteorHitEvents.push({ wx, wy, radius: m.radius, size: m.size });
+            _meteorHitEvents.push({ wx: m.x, wy: m.y, radius: m.radius, size: m.size });
             _splitMeteor(m);
           }
-          proj.active = false; // 투사체 소멸
+          proj.active = false;
           break;
         }
       }
@@ -249,24 +239,23 @@ const StageManager = (() => {
   }
 
   /**
-   * 소행성 분열: LARGE → 2×MEDIUM, MEDIUM → 2×SMALL
+   * 소행성 분열: LARGE → 2×MEDIUM, MEDIUM → 2×SMALL — 월드 좌표 기반
    */
   function _splitMeteor(m) {
     if (m.size === 'SMALL') return;
     const childSize = m.size === 'LARGE' ? 'MEDIUM' : 'SMALL';
     const sdef = METEOR_SIZES[childSize];
-    const baseVx = m.vx, baseVy = m.vy;
-    // 수직 방향으로 ±편차
-    const perpX = -baseVy / Math.hypot(baseVx, baseVy) * 40;
-    const perpY =  baseVx / Math.hypot(baseVx, baseVy) * 40;
+    const speed = Math.hypot(m.vx, m.vy);
+    const perpX = -m.vy / speed * 40;
+    const perpY =  m.vx / speed * 40;
     for (let i = 0; i < 2; i++) {
       const sign = i === 0 ? 1 : -1;
       const r = sdef.radiusMin + Math.random() * (sdef.radiusMax - sdef.radiusMin);
       _meteors.push({
-        sx: m.sx + perpX * sign * 0.5,
-        sy: m.sy + perpY * sign * 0.5,
-        vx: baseVx + perpX * sign * 0.35 + (Math.random() - 0.5) * 30,
-        vy: baseVy + perpY * sign * 0.35 + (Math.random() - 0.5) * 30,
+        x: m.x + perpX * sign * 0.5,
+        y: m.y + perpY * sign * 0.5,
+        vx: m.vx + perpX * sign * 0.35 + (Math.random() - 0.5) * 30,
+        vy: m.vy + perpY * sign * 0.35 + (Math.random() - 0.5) * 30,
         radius: r,
         damage: sdef.damage,
         active: true,

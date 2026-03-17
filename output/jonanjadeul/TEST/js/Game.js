@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v1.2.3'; // 소행성대 전면 개편: 3단계 크기, 분열, 투사체 파괴, 방향 수정
+const VERSION = 'v1.2.4'; // 소행성 월드 좌표 전환 — 플레이어 이동에 독립적인 자체 궤도
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -812,11 +812,13 @@ const Game = (() => {
 
     ctx.restore();
 
-    // 유성 렌더 (화면 좌표 기반, zoom 미적용)
+    // 유성 렌더 — 월드 좌표 → 화면 좌표 변환 (적과 동일한 방식)
     if (stageInfo.hazard === 'METEORS') {
       for (const m of StageManager.getMeteors()) {
         if (!m.active) continue;
-        Renderer.drawMeteor(m.sx, m.sy, m.radius, m.vx, m.vy, m.size);
+        const msx = cx + (m.x - player.x);
+        const msy = cy + (m.y - player.y);
+        Renderer.drawMeteor(msx, msy, m.radius, m.vx, m.vy, m.size);
       }
     }
 
