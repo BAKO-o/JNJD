@@ -9,7 +9,7 @@
 
 'use strict';
 
-const VERSION = 'v1.2.2'; // 원형 함선, 미사일 포탄, 스테이지 연쇄클리어 버그 수정
+const VERSION = 'v1.2.3'; // 소행성대 전면 개편: 3단계 크기, 분열, 투사체 파괴, 방향 수정
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -506,11 +506,17 @@ const Game = (() => {
 
     // 스테이지 매니저 업데이트 (환경 피해, 유성)
     const { cx: scCx, cy: scCy } = screenCenter();
-    StageManager.update(dt, player, { cx: scCx, cy: scCy });
+    StageManager.update(dt, player, { cx: scCx, cy: scCy }, WeaponSystem.getActiveProjectiles());
 
     // 피격 이벤트 → 폭발 이펙트 생성
     for (const ev of WeaponSystem.consumeHitEvents()) {
       spawnExplosion(ev.wx, ev.wy, ev.color, ev.type, ev.splashR, ev.attr);
+    }
+
+    // 소행성 피격/충돌 이벤트 → 폭발 이펙트
+    for (const ev of StageManager.consumeMeteorHitEvents()) {
+      const col = ev.size === 'LARGE' ? '#92400e' : ev.size === 'MEDIUM' ? '#b45309' : '#d97706';
+      spawnExplosion(ev.wx, ev.wy, col, 'auto', ev.radius * 1.8, 'KINETIC');
     }
 
     // 파티클 & 별 스크롤
@@ -810,7 +816,7 @@ const Game = (() => {
     if (stageInfo.hazard === 'METEORS') {
       for (const m of StageManager.getMeteors()) {
         if (!m.active) continue;
-        Renderer.drawMeteor(m.sx, m.sy, m.radius, m.vx, m.vy);
+        Renderer.drawMeteor(m.sx, m.sy, m.radius, m.vx, m.vy, m.size);
       }
     }
 
