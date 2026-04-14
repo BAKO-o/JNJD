@@ -6,7 +6,7 @@
 ---
 
 ## 목차
-0. [Dashboard](#0-executive-dashboard) · 1. [Retro](#1-회고--retro-스타일) · 2. [Eng](#2-엔지니어링-리뷰--plan-eng-review-스타일) · 3. Product *(TBD)* · 4. QA *(TBD)* · 5. 권고 *(TBD)* · A·B·C *(TBD)*
+0. [Dashboard](#0-executive-dashboard) · 1. [Retro](#1-회고--retro-스타일) · 2. [Eng](#2-엔지니어링-리뷰--plan-eng-review-스타일) · 3. [Product](#3-프로덕트-리뷰--plan-ceo-review-스타일) · 4. QA *(TBD)* · 5. 권고 *(TBD)* · A·B·C *(TBD)*
 
 ---
 
@@ -16,18 +16,7 @@
 JNJD는 **4일(2026-03-13~16)만에 v0.9.2→v1.2.2 폭발 개발** 후 **28일 정지**. Phase 1~4 100% + 계획 외 200% 확장. 그러나 TetrisGrid.js 1,860 LOC 단일 파일, CLAUDE.md 완전 무효(이전 개미 게임 지시문), 테스트 0개. 다음 과제: **"기능 추가 중단, 문서·구조 복구"**.
 
 ### Scorecard (1-10)
-| 축 | 점수 |
-|---|---|
-| Velocity | 9 |
-| Feature completeness | 8 |
-| Architecture | 4 |
-| Code organization | 3 |
-| Test coverage | 0 |
-| Documentation | 2 |
-| Product vision | 7 |
-| Process / workflow | 3 |
-| Player retention hook | 3 |
-| **🎯 종합** | **4.7 / 10** |
+Velocity 9 · Feature 8 · Architecture 4 · Code org 3 · Tests 0 · Docs 2 · Vision 7 · Process 3 · Retention 3 → **🎯 4.7 / 10**
 
 ### 시급 3대 액션
 1. **CLAUDE.md 전면 재작성** (2h / CC 15m)
@@ -39,9 +28,7 @@ JNJD는 **4일(2026-03-13~16)만에 v0.9.2→v1.2.2 폭발 개발** 후 **28일 
 ## 1. 회고 — /retro 스타일
 
 ### 1.1 속도 지표
-- 활동: 2026-03-13 03:22 → 03-16 22:23 UTC = **~91시간**
-- 41 커밋, 12 JS 파일, **~6,583 LOC**, **~1,645 LOC/day**
-- v0.9.2 → v1.2.2
+- 활동: 91시간 / 4일. 41 커밋, 12 JS 파일, ~6,583 LOC, ~1,645 LOC/day
 - **🚨 정지: ~28일**
 
 ### 1.2 Phase 완료 상태
@@ -49,135 +36,141 @@ JNJD는 **4일(2026-03-13~16)만에 v0.9.2→v1.2.2 폭발 개발** 후 **28일 
 |---|---|---|---|
 | 1. 엔진 | WASD·회전·Wraparound | ✅ + 별 시차 | 완전 |
 | 2. 전투 | 웨이브·자동타겟·60FPS | ✅ + 킬 목표 | 완전 |
-| 3. 조립 | 3종 부품 | ✅ **30종**·4티어·인벤토리 | **200%** |
-| 4. 시너지 | 5속성 | ✅ + NUKE·무기조합·약점 | **300%** |
-
-**계획 외 추가:** 보스 5종, 4티어 모듈, 스크랩, 방향성 장갑, 5스테이지+환경위험, UFO 비주얼
+| 3. 조립 | 3종 부품 | ✅ **30종**·4티어 | **200%** |
+| 4. 시너지 | 5속성 | ✅ + NUKE·무기조합 | **300%** |
 
 ### 1.3 Well
-1. 외부 라이브러리·에셋 0개 (제약 엄수)
-2. Object Pooling 일관
-3. 커밋 메시지 품질
-4. SemVer 엄수
-5. 비주얼 의지 (UFO·폭발 이펙트)
-6. 반응적 밸런싱
+외부 라이브러리·에셋 0개 · Object Pooling · 커밋 메시지 품질 · SemVer · 비주얼 의지 · 반응적 밸런싱
 
 ### 1.4 Improve
-1. **🚨 28일 정지** — 번아웃 신호
-2. 단일 파일 쏠림 (TetrisGrid 1,860 LOC)
-3. **🚨 CLAUDE.md 무효화**
-4. 브랜치 전략 부재 (PR 3건만)
-5. 결정 로그 부재
-6. FPS 실측 부재
-7. 버전 위치 불일치
+🚨 28일 정지 · 단일 파일 쏠림 · 🚨 CLAUDE.md 무효 · 브랜치 전략 부재 · 결정 로그 부재 · FPS 실측 부재 · 버전 위치 불일치
 
 ### 1.5 Hotspot
 TetrisGrid 15+ · Game 15+ · Renderer 10+ · EnemyManager 8+ · index.html 8+
-→ **분할 ROI 매우 높음.** Per-author: Claude ~35 / BAKO-o ~5 (solo + AI).
+Per-author: Claude ~35 / BAKO-o ~5 (solo + AI).
 
 ---
 
 ## 2. 엔지니어링 리뷰 — /plan-eng-review 스타일
 
-### 2.1 아키텍처 평가
+### 2.1 아키텍처
+Game.js god-object 조짐. TetrisGrid 11개 책임 혼재. Renderer OCP 위반. Player→TetrisGrid 역의존.
 
-```
-index.html
-    │
-    ▼
-┌─────────┐
-│  Game   │ ◄── god-object 조짐
-└────┬────┘
-     ├─► InputHandler (독립)
-     ├─► Player (TetrisGrid 역의존)
-     ├─► Collision (유틸)
-     ├─► EnemyManager
-     ├─► WeaponSystem
-     ├─► TetrisGrid ◄── 거대 블랙박스 (11개 책임)
-     ├─► Renderer (중앙집중, OCP 위반)
-     ├─► StageManager
-     ├─► SynergySystem
-     └─► WeaponCombine
-```
-
-### 2.2 파일 크기 Red Flag
-| 파일 | LOC | KB | 심각도 |
-|---|---|---|---|
-| **TetrisGrid.js** | **1,860** | **81** | **P0** |
-| Renderer.js | 1,222 | 43 | P1 |
-| Game.js | 1,015 | 35 | P1 |
-| EnemyManager.js | 751 | 33 | P2 |
-| WeaponSystem.js | 675 | 29 | P2 |
-| index.html | — | 24 | P2 |
-| 나머지 7파일 | <800 | <8 | OK |
+### 2.2 파일 크기
+| 파일 | LOC | 심각도 |
+|---|---|---|
+| **TetrisGrid.js** | **1,860** | **P0** |
+| Renderer.js | 1,222 | P1 |
+| Game.js | 1,015 | P1 |
+| EnemyManager.js | 751 | P2 |
+| WeaponSystem.js | 675 | P2 |
 
 ### 2.3 TetrisGrid.js 6-모듈 분할
-| 새 파일 | LOC | 책임 |
-|---|---|---|
-| ModuleRegistry.js | ~400 | 30종 모듈 + 4티어 드랍 (데이터) |
-| PlacementEngine.js | ~350 | grid, validSlots, 슬롯 확장 (상태) |
-| DragDrop.js | ~250 | 드래그 상태머신 (상태) |
-| HitboxCalc.js | ~200 | recalcHitbox, 방향성 장갑 (파생) |
-| Inventory.js | ~200 | 슬롯 경제, scrapPending (상태) |
-| BuildUI.js | ~400 | BUILDING 렌더+입력 (프레젠테이션) |
-| TetrisGrid.js | ~60 | facade |
+ModuleRegistry(400) + PlacementEngine(350) + DragDrop(250) + HitboxCalc(200) + Inventory(200) + BuildUI(400) + facade(60). **평균 ~260 LOC/파일 (7배 감소)**. CC 45분.
 
-**이득:** 평균 ~260 LOC/파일 (7배 감소), OCP 준수, 드래그 버그 격리 테스트 가능.
+### 2.4 성능
+- 적용됨: Object Pool, frustum culling, wraparound ghost
+- 🚨 측정 0개 — DoD "60FPS" 검증 수단 없음
+- 핫스팟 후보: `_separateEnemies` O(n²), 선형 pool 스캔, 9-copy ghost
+- 권고: F3 FPS 오버레이 (CC 15m)
 
-### 2.4 성능 고려사항
-
-**현재 적용된 최적화:**
-- Object Pooling: 적 300/500·투사체 500·보스 150
-- Frustum culling: `_zoom` 보정된 cullX/cullY 마진 적용 (v0.6.1 버그수정으로 확보)
-- Wraparound ghost: 9-copy offset 루프 (정석 구현)
-
-**측정된 성능 지표: 0개**
-- DEVELOPMENT_PLAN.md §4는 "60FPS (300적 + 500투사체 동시)" DoD를 명시.
-- 실제 FPS 카운터·프로파일링·메모리 측정 **전무**.
-- "잘 돌아간다"로 종결된 관찰 기반 자기 검증.
-
-**우려되는 핫스팟:**
-1. **EnemyManager `_separateEnemies` O(n²)** — 매 프레임 활성 적 간 원-원 분리 패스. n=300에서 45,000 비교/프레임. 소규모엔 OK, 웨이브 후반(MAX=500)에선 잠재 병목.
-2. **Pool 선형 스캔** — `for (const e of pool) if (!e.active) continue` 패턴. active-list 별도 관리 시 N→active 수로 감소.
-3. **9-copy ghost render** — 모든 엔티티에 대해 9번 draw 호출 가능. 화면 크기 근처에서만 발생하나, 컬링 조건이 draw 전이 아닌 draw 내부에 있으면 setTransform 오버헤드 발생.
-4. **Renderer.js 단일 거대 switch/분기** — 30+종 draw 함수 디스패치를 매 프레임 수백 회. JIT에는 무리 없으나 프로파일링 없이 확신 불가.
-5. **ctx.save/restore 중첩** — zoom 적용·ghost offset·개별 entity 회전 등 중첩 가능. 핫패스 감소 기회 있음.
-
-**권고:**
-- F3 토글로 FPS·frame time·활성 엔티티 수·pool 사용률 오버레이 (CC 15분 작업).
-- `performance.now()` 기반 프레임 budget 측정. 16.67ms 초과 프레임 로깅.
-- Chrome DevTools Performance 레코딩으로 웨이브 10 이후 실측. 실측 없이 최적화 금지 (premature optimization 회피).
-
-### 2.5 기술 부채 리스트
-
-우선순위별로 정리. 각 항목에 "현재 피해"와 "방치 시 복리 이자" 표기.
-
-| # | 부채 | 현재 피해 | 방치 시 이자 | 심각도 |
-|---|---|---|---|---|
-| D1 | **CLAUDE.md 완전 무효** — 이전 개미 게임 지시문 | 다음 AI 세션이 colony.js 등 없는 파일 수정 시도 | AI 세션당 오해 누적, 수동 수정 반복 | **P0** |
-| D2 | **TetrisGrid.js 1,860 LOC** | 신규 모듈 추가 시 파일 스크롤·충돌·컨텍스트 초과 | 버그 픽스 난이도 지수 증가, 마지막엔 rewrite 불가피 | **P0** |
-| D3 | **테스트 0개** | 리팩토링 후 "잘 되는지" 확인 불가 | 회귀 누적, 스테이지 연쇄 클리어 같은 버그 재발 | **P0** |
-| D4 | **config.js 빈 껍데기 (1KB)** | 밸런스 수치가 6,500 LOC에 흩어져 있음 | 밸런스 패치마다 grep 탐색, 의도 표현력 상실 | P1 |
-| D5 | **Game.js 1,015 LOC god-object** | 새 상태 추가 시 Game.js 수정 필연 | 상태머신 복잡도 증가로 전환 버그 증가 | P1 |
-| D6 | **Renderer.js OCP 위반** | 신규 적·무기마다 Renderer 수정 | entity 추가의 비용 고정, 분산 리팩토링 필요 | P1 |
-| D7 | **DEVELOPMENT_PLAN.md v1.0 이전 기준** | v1.1~v1.2의 추가 기능이 문서화 없음 | 다음 개발자 온보딩 비용, 의도 상실 | P1 |
-| D8 | **버전 상수 위치 불일치** | CLAUDE.md의 `main.js` 참조 무효 | 버전 표기 누락·중복 위험 | P1 |
-| D9 | **package.json 없음** | npm 스크립트 없음, 도구 부트스트랩 불가 | Vitest·ESLint·Prettier 도입 장벽 | P1 |
-| D10 | **PR 워크플로 부재** | 41 커밋 중 PR은 3건 | 코드 리뷰 기회 상실, main 오염 위험 | P2 |
-| D11 | **GitHub Issues 0건** | 사용자 피드백 채널 없음 | 실제 플레이어 버그 리포트 경로 부재 | P2 |
-| D12 | **FPS 측정 도구 없음** | DoD 검증 불가 | 성능 회귀 무감지, 최적화 근거 부재 | P2 |
-| D13 | **index.html 24KB 인라인** | 튜토리얼·HUD 마크업 혼재 | HTML 리팩토링 시 전체 스크롤 필요 | P2 |
-| D14 | **Player.js → TetrisGrid.getGrid() 역의존** | 순환 의존 전조 | 분할 리팩토링 시 걸림돌 | P2 |
-
-**부채 총량 추정:** P0 3건 + P1 6건 + P2 5건 = 14건. CC+gstack 기준 누적 해소 공수 ~8시간. 인간팀 기준 ~3주.
+### 2.5 기술 부채
+P0 3건 (CLAUDE.md · TetrisGrid.js · 테스트 0), P1 6건 (config.js · Game.js · Renderer · DEVELOPMENT_PLAN · 버전 · package.json), P2 5건 (PR 워크플로 · Issues · FPS · index.html · 역의존). 누적 해소 CC ~8시간 / human ~3주.
 
 ---
 
-## 3. 프로덕트 리뷰 *(TBD)*
+## 3. 프로덕트 리뷰 — /plan-ceo-review 스타일
+
+gstack `/plan-ceo-review`의 인지 패턴 — Premise Challenge · 10-star Definition · Focus-as-Subtraction · Temporal Depth.
+
+### 3.1 Premise Challenge — "Vampire Survivors + Tetris" 장르 믹스
+
+**현재 전제:** "Vampire Survivors의 자동 전투 + Tetris의 부품 조립"이라는 장르 믹스가 차별화 포인트다.
+
+**도전 질문:**
+- **두 장르의 핵심 중독 요소는?**
+  - Vampire Survivors: ① 웨이브 생존 긴장감 ② 메타 프로그레션(언락·캐릭터) ③ 빌드 실험
+  - Tetris: ① 공간 퍼즐 의사결정 ② 실시간 압박 ③ 무한 스코어 도전
+- **JNJD는 둘 다의 중독 요소를 갖추었는가?**
+  - ✅ 웨이브 생존 · ✅ 빌드 실험(30종×4티어×시너지) · ✅ 공간 퍼즐(모듈 배치)
+  - ❌ 메타 프로그레션 · ❌ 무한 스코어 도전 · ❌ 실시간 압박 (조립은 일시정지)
+
+**관찰:** 장르 믹스의 "섭취" 부분은 훌륭하나, **리텐션 훅은 하나도 복제되지 않음**. 5 스테이지 클리어 후 다시 켤 이유가 구조적으로 부재.
+
+**EUREKA 후보:** 일반적으로 "메타 프로그레션이 있어야 리텐션"이 통념이나, **Tetris는 메타 프로그레션 없이도 40년간 리텐션**. JNJD가 Tetris 쪽을 선택하려면 **세션 내 즉각적 의사결정 밀도**가 핵심. 현재는 "잠깐 멈추고 조립" 구조라 Tetris 스타일 압박이 없음. → 조립을 실시간 중첩 모드로 바꾸거나(리스크 높음), 스코어 도전 모드를 추가하는 방향 중 택일 필요.
+
+### 3.2 10-star 경험 정의
+
+"1회 플레이 후에도 다시 켜고 싶은 게임"이 되려면:
+
+| # | 요소 | 현재 | 중요도 |
+|---|---|---|---|
+| 1 | **메타 프로그레션** (영구 언락: 시작 모듈·시너지·함선) | ❌ | 최상 |
+| 2 | **Run Summary 화면** (달성한 시너지·DPS·처치 수·모듈) | ❌ | 최상 |
+| 3 | **Build variety** (모듈 다양성) | ✅ 30종 · 8레시피 | — |
+| 4 | **하이스코어 / localStorage 기록** | ❌ | 상 |
+| 5 | **Daily seed / Run** (동일 조건 리더보드) | ❌ | 중 |
+| 6 | **Endless 모드 / NG+** | ❌ | 중 |
+| 7 | **Aesthetic coherence** (단일 art direction) | 부분 | 중 |
+| 8 | **Audio** (WebAudio 절차적 SFX) | ❌ | 상 |
+| 9 | **Save / Resume** (런 중단·재개) | ❌ | 중 |
+| 10 | **Accessibility** (색맹·자막·자동 일시정지) | ❌ | 중 |
+| 11 | **Controller support** (Gamepad API) | ❌ | 하 |
+| 12 | **Narrative thread** (제목 "잔해의 귀환" 회수) | ❌ | 하 |
+
+**달성:** 1/12 (Build variety만). **10-star 갭: 매우 큼.**
+
+### 3.3 현재 vs 10-star 갭 분석
+
+**가장 저비용 고임팩트 추가 (Boil the Lake 원칙):**
+
+1. **Run Summary 화면** — 이미 수집된 데이터(모듈·킬·시너지·DPS)를 종료 시 Canvas로 렌더. **CC 20분**. 플레이어가 "이번 런에 무엇을 했는지" 자각하게 하여 반복 플레이 동기 제공.
+2. **localStorage 하이스코어** — 웨이브 도달·킬 수·스크랩 누적 기록. **CC 10분**. "지난 번보다 멀리" 동기.
+3. **WebAudio SFX 8종** — 발사·피격·레벨업·스테이지 클리어·조립 슬롯·폭발·보스 경고·게임오버. 절차적 생성(OscillatorNode), 외부 에셋 0개 제약 유지. **CC 45분**.
+4. **스테이지 간 3줄 내레이션** — "잔해의 귀환" 제목 회수. 네 연구원(송·건·학·종) 캐릭터 활용. **CC 20분**.
+
+**총 CC 공수 ~1.5시간 → 4개 축 확보.** Human 팀 기준 1주일 작업과 등가.
+
+### 3.4 Focus-as-Subtraction (제거 후보)
+
+"추가"보다 "제거"가 게임 디자인에서 더 어렵다 (Garry Tan `/plan-ceo-review` 원칙).
+
+**제거 검토 후보:**
+
+- **30종 모듈 → 핵심 15종** — 한 런에서 플레이어가 실제로 경험하는 모듈은 5~10종. 30종은 선택 피로만 증가시킬 가능성. **각 모듈을 더 차별화하게** 만드는 것이 상위 목표라면 수량 축소가 필요.
+- **환경 위험 4종 중 2종 재검토** — 운석·냉각·과열·방사선. 감각 구별(색·사운드·파티클)이 불충분하면 "또 다른 패널티"로 체감. 사운드가 없는 현재, 시각 구별이 필수.
+- **25종 적 중 유사 거동 축소** — DRONE/RUSHER/SWARM 등 일부는 속도·HP만 다른 "티어 변형". 거동 자체가 유의미하게 다른 것만 남기고 나머지는 축소.
+- **무기 조합 8레시피 → 5레시피** — 사용률 데이터 없이는 판단 어려우나, 원 무기 15종 × 조합 = 선택지 포화 상태. 플레이어는 2~3 레시피만 반복 사용할 가능성.
+
+**원칙:** "적을수록 더 좋다"가 아니라, **적은 수가 각각 더 깊이 있게** 되어야 함. "30종 있어요!"보다 "15종인데 각각 기억에 남아요!"가 상위.
+
+### 3.5 Temporal Depth — 6개월 후
+
+**현재 궤적 (do nothing):**
+- 28일 정지 → 3개월 후: 창고 상태
+- 6개월 후: 제품 아이덴티티 소실, GitHub 저장소만 남음
+
+**이상형 (인디 타이틀 런칭):**
+- 6개월 후: itch.io에 "5분 런 × 50런 컨텐츠" 무료 인디 타이틀 공개. 10-50 리뷰, 작은 디스코드 커뮤니티.
+- 필요 경로:
+  - (a) P0 부채 해소 (1주) → 개발 재개 장벽 제거
+  - (b) 10-star 갭 메우기 (1개월) → Run Summary + 하이스코어 + 사운드
+  - (c) 메타 프로그레션 (2~4주) → 리플레이 훅
+  - (d) itch.io 페이지 + 배포 (1주) → 공개 채널
+
+**현실적 궤적 (30일 집중):**
+- P0 3건 + Run Summary + 사운드 + 메타 프로그레션 최소 세트 = CC 기준 ~10시간. Human 기준 ~6주.
+- 30일에 v1.3 → v1.5 배포 → itch.io 공개 → v2.0 메타 프로그레션 업데이트. **시간이 부족한 것이 아니라 우선순위가 문제.**
+
+**Focus question:** 다음 28일 동안 딱 **하나의 기능만** 추가할 수 있다면?
+→ **Run Summary + localStorage 하이스코어**. 이유: 현재 게임의 가장 큰 약점인 "종료 후 다시 켤 이유"를 최저 비용으로 해결. 다른 기능은 그 다음.
+
+---
+
 ## 4. QA 평가 *(TBD)*
 ## 5. 개선 권고 *(TBD)*
 ## 부록 A·B·C *(TBD)*
 
 ---
 
-*점진 작성 중. 각 섹션 별도 커밋.*
+*점진 작성 중.*
