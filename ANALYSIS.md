@@ -12,7 +12,7 @@
 
 0. [Executive Dashboard](#0-executive-dashboard)
 1. [회고 — /retro 스타일](#1-회고--retro-스타일)
-2. [엔지니어링 리뷰 — /plan-eng-review 스타일](#2-엔지니어링-리뷰--plan-eng-review-스타일) *(TBD)*
+2. [엔지니어링 리뷰 — /plan-eng-review 스타일](#2-엔지니어링-리뷰--plan-eng-review-스타일)
 3. [프로덕트 리뷰 — /plan-ceo-review 스타일](#3-프로덕트-리뷰--plan-ceo-review-스타일) *(TBD)*
 4. [QA 평가 — /qa 스타일](#4-qa-평가--qa-스타일) *(TBD)*
 5. [개선 권고 (Prioritized)](#5-개선-권고-prioritized) *(TBD)*
@@ -32,24 +32,24 @@ JNJD(AP3: 잔해의 귀환)는 **2026-03-13 ~ 2026-03-16 단 4일 동안 v0.9.2�
 
 | 축 | 점수 | 근거 |
 |---|---|---|
-| **Velocity** (개발 속도) | **9** | 4일간 40 커밋, ~1,645 LOC/day — 인간팀 기준 2~3개월치 |
-| **Feature completeness** (기능 완성도) | **8** | Phase 1~4 100% + 계획 외 200% 추가 |
-| **Architecture** (아키텍처) | **4** | Game.js god-object 조짐, 단일 파일 1,860 LOC |
-| **Code organization** (코드 구성) | **3** | TetrisGrid.js 단일 IIFE에 11개 책임 혼재 |
-| **Test coverage** (테스트 커버리지) | **0** | 테스트 파일 0개, 프레임워크 없음 |
-| **Documentation** (문서화) | **2** | CLAUDE.md 완전 무효, DEVELOPMENT_PLAN는 v1.0 이전 기준 |
-| **Product vision** (제품 비전) | **7** | 장르 믹스 명확, 10-star 갭은 큼 |
-| **Process / workflow** (프로세스) | **3** | 대부분 main 직접 커밋, Issues 0개 |
-| **Player retention hook** (리플레이성) | **3** | 메타 프로그레션·세이브·하이스코어 부재 |
-| **🎯 종합** | **4.7 / 10** | "빠른 프로토타입 완료, 프로덕션 정리 필요" 단계 |
+| **Velocity** (개발 속도) | **9** | 4일간 40 커밋, ~1,645 LOC/day |
+| **Feature completeness** | **8** | Phase 1~4 100% + 계획 외 200% 추가 |
+| **Architecture** | **4** | Game.js god-object 조짐, 단일 파일 1,860 LOC |
+| **Code organization** | **3** | TetrisGrid.js 단일 IIFE에 11개 책임 혼재 |
+| **Test coverage** | **0** | 테스트 파일 0개, 프레임워크 없음 |
+| **Documentation** | **2** | CLAUDE.md 완전 무효 |
+| **Product vision** | **7** | 장르 믹스 명확, 10-star 갭은 큼 |
+| **Process / workflow** | **3** | main 직접 커밋, Issues 0개 |
+| **Player retention hook** | **3** | 메타 프로그레션·세이브·하이스코어 부재 |
+| **🎯 종합** | **4.7 / 10** | "프로토타입 완료, 프로덕션 정리 필요" |
 
 ### 가장 시급한 3가지 액션
 
-| # | 액션 | Why | 공수 (human / CC+gstack) |
+| # | 액션 | Why | 공수 (human / CC) |
 |---|---|---|---|
-| **1** | **CLAUDE.md 전면 재작성** — 이전 개미 게임 지시문(colony.js, main.js, 식민지 경제, 개미 FSM) 완전 제거 후 현 우주 슈터 구조 반영 | AI 세션이 잘못된 맥락으로 작업하여 오류 유발 가능 | 2h / 15m |
-| **2** | **TetrisGrid.js 6-모듈 분할** (ModuleRegistry · PlacementEngine · DragDrop · HitboxCalc · Inventory · BuildUI) | 유지보수 불가 수준 · 다음 기능 추가의 병목 | 1d / 45m |
-| **3** | **최소 스모크 테스트 3개 + Vitest 세팅** | 회귀 방지 기반 부재 · v1.2.2의 "스테이지 연쇄 클리어 버그" 같은 재발 사전 차단 | 4h / 20m |
+| **1** | **CLAUDE.md 전면 재작성** | AI 세션 오작동 방지 | 2h / 15m |
+| **2** | **TetrisGrid.js 6-모듈 분할** | 유지보수 병목 해소 | 1d / 45m |
+| **3** | **최소 스모크 테스트 3개 + Vitest 세팅** | 회귀 방지 기반 | 4h / 20m |
 
 ---
 
@@ -59,86 +59,130 @@ gstack `/retro` 스킬이 제시하는 "per-contributor breakdown, hotspot 분�
 
 ### 1.1 개발 속도 지표
 
-**활동 창:**
-- 시작: 2026-03-13 03:22 UTC (초기 커밋 "setting")
-- 실질 개발 시작: 2026-03-13 03:22 UTC (Phase 1+2 프로토타입)
-- 종료: 2026-03-16 22:23 UTC (v1.2.2)
-- **총 활동 시간: 약 91시간 (4일)**
+**활동 창:** 2026-03-13 03:22 UTC → 2026-03-16 22:23 UTC = **약 91시간 (4일)**
 
-**산출량:**
-| 지표 | 값 | 비고 |
-|---|---|---|
-| 전체 커밋 | 41 (meaningful 40 + "4") | 하루 평균 ~10 커밋 |
-| JS 파일 | 12개 | 원 계획 8개 + 신규 4개 (StageManager, SynergySystem, WeaponCombine, config) |
-| 총 LOC | **~6,583** | `jonanjadeul/js/` 기준 |
-| 평균 속도 | ~1,645 LOC/day | 인간팀 대비 ~30배 압축 |
-| 버전 롤업 | v0.9.2 → v1.2.2 | 메이저 1회, 마이너 2회, 패치 다수 |
+| 지표 | 값 |
+|---|---|
+| 전체 커밋 | 41 (meaningful 40) |
+| JS 파일 | 12개 (원 계획 8 + 신규 4) |
+| 총 LOC | ~6,583 |
+| 평균 속도 | ~1,645 LOC/day (인간팀 대비 ~30배 압축) |
+| 버전 롤업 | v0.9.2 → v1.2.2 |
 
-**정지 기간:**
-- 최종 커밋 (v1.2.2): 2026-03-16
-- 본 분석 작성일: 2026-04-13
-- **🚨 경과: 약 28일 개발 정지**
+**🚨 정지 기간:** 최종 커밋(2026-03-16) 이후 **약 28일** (본 분석일 기준)
 
 ### 1.2 Phase 완료 상태 (DEVELOPMENT_PLAN.md DoD 대비)
 
-| Phase | 원 DoD | 현재 상태 | 평가 |
+| Phase | 원 DoD | 현재 | 평가 |
 |---|---|---|---|
-| **1. 엔진 코어** | WASD 이동, 마우스 회전, Wraparound, 콘솔 에러 없음 | ✅ 전부 구현 + 별 시차 스크롤 추가 | **완전 달성** |
-| **2. 전투 시스템** | 웨이브 스폰, 자동 타겟, 투사체 풀 500, 60FPS | ✅ 전부 구현 + 킬 목표 시스템 + 휴식 시간 | **완전 달성** |
-| **3. 테트리스 조립** | 3종 부품, 드래그&드롭, Hitbox 재계산 | ✅ **30종 부품** + 4티어 + 회전 + 인벤토리 UI | **200% 초과 달성** |
-| **4. 시너지 시스템** | 5속성, 조합, 시너지/상쇄 | ✅ 전부 + **NUKE 속성** + **무기 조합(8 레시피)** + **적 약점/저항** | **300% 초과 달성** |
+| 1. 엔진 코어 | WASD·회전·Wraparound | ✅ + 별 시차 스크롤 | 완전 달성 |
+| 2. 전투 | 웨이브·자동타겟·60FPS | ✅ + 킬 목표·휴식 시간 | 완전 달성 |
+| 3. 조립 | 3종 부품·드래그&드롭 | ✅ **30종**·4티어·회전·인벤토리 | **200% 초과** |
+| 4. 시너지 | 5속성·조합 | ✅ + NUKE·무기조합 8레시피·약점/저항 | **300% 초과** |
 
-**계획에 없던 추가 시스템:**
-- 보스 시스템 (v0.8.0): 5종 보스 + HP 50% 페이즈 전환
-- 모듈 등급 (v0.9.2): COMMON/RARE/EPIC/LEGENDARY 4티어
-- 스크랩 자원 (v0.9.0): 함체 슬롯 확장 경제
-- 장갑판 방향성 HP (v0.9.4): 피격 방향 기반 모듈 파괴
-- 스테이지 시스템 (v1.2.0): 5스테이지 + 환경 위험(운석·냉각·과열·방사선)
-- 비주얼 개편 (v1.2.1): UFO 디스크 함선, 포탑, 추진체, 폭발 이펙트
+**계획에 없던 추가:** 보스 5종(v0.8), 모듈 4티어(v0.9.2), 스크랩(v0.9), 방향성 장갑(v0.9.4), 5스테이지+환경위험(v1.2), UFO 비주얼(v1.2.1)
 
-→ Phase 1~4는 완료 이후 **자발적 scope expansion**이 일어남. gstack의 "Boil the Lake" 원칙과 일치하는 행동이었으나, **어떤 시점에 정지했는지에 대한 회고가 부재**.
+### 1.3 What went well
 
-### 1.3 What went well (잘된 점)
+1. **기술 제약 엄수** — 외부 라이브러리 0개, 에셋 0개 (DEVELOPMENT_PLAN.md §5 규칙 1,4 완벽 준수)
+2. **Object Pooling 일관** — 적 300·투사체 500·보스 150 풀
+3. **커밋 메시지 품질** — 한국어 요약 + 세부 bullet + 버전 태그
+4. **점진적 버전 번호** — v0.9.x 패치 후 v1.0.0 승격 규칙
+5. **시각 디자인 의지** — UFO 디스크·포탑·폭발 이펙트 (에셋 없이)
+6. **반응적 밸런싱** — v0.6.1 자동 줌, v0.9.1 저티어 면역, v0.9.4 HP 재설계
 
-1. **기술 제약의 엄수** — `DEVELOPMENT_PLAN.md` §5의 5개 규칙(No Frameworks, Object Pooling, Modularity, No External Assets, Comments) 중 1·4는 완벽 준수. 외부 라이브러리 0개, 에셋 0개로 끝까지 Canvas 기본 API만 사용. (로딩 < 1초 목표 달성)
-2. **Object Pooling 일관 적용** — EnemyManager 300/500 풀, WeaponSystem 투사체 풀, 보스 전용 풀 150. GC 최소화 설계 일관.
-3. **커밋 메시지 품질** — 한국어 요약 한 줄 + 세부 bullet + 버전 태그 구조. `v1.2.2: 원형 함선, 미사일 포탄 형태, 스테이지 연쇄 클리어 버그 수정` 같은 메시지는 히스토리 탐색을 크게 쉽게 해줌.
-4. **점진적 버전 번호** — v0.9.x 패치 시리즈 후 v1.0.0 메이저 승격 규칙. SemVer를 인디 프로젝트 치고는 엄격히 적용.
-5. **시각 디자인 의지** — v1.2.1의 UFO 디스크 함선·포탑·추진체 불꽃·폭발 플래시 등 비주얼에 공을 들임. "에셋 없이도 Canvas로 인상적인 비주얼 가능"을 증명.
-6. **반복 플레이테스트 기반 밸런스** — v0.6.1의 "기체 크기 자동 줌", v0.9.1의 "저티어 피해 면역", v0.9.4의 "HP 업그레이드 제거" 등 체감 기반 반응적 밸런싱이 이어짐.
+### 1.4 What needs improvement
 
-### 1.4 What needs improvement (개선 필요)
-
-1. **🚨 28일 완전 정지** — `/retro` 관점에서 "falling behind" 또는 번아웃 신호. Scope가 급격히 커진 후 관성을 잃었을 가능성. 왜 정지했는지에 대한 로그·메모 부재.
-2. **단일 파일 쏠림 현상** — TetrisGrid.js에 모든 조립 관련 로직을 쌓아올린 결과, 1,860 LOC 단일 IIFE가 됨. "한 번에 많이 쏟아붓는" 패턴의 전형적 부작용.
-3. **문서와 코드의 이탈** — CLAUDE.md는 이전 개미 게임 지시문이 그대로 남아있음. `colony.js`, `main.js`, `식민지 경제`, `개미 상태머신` 등 현 코드에 **존재하지 않는** 파일·개념을 지시 중. → 다음 AI 세션이 이 문서를 읽으면 오작동.
-4. **브랜치·PR 전략 부재** — 41 커밋 중 대부분이 main 직접 커밋. PR은 #1, #2, #3 3건뿐이고, 제목은 전부 `claude/archive-game-new-project-LZWNT`로 **"기존을 아카이브하고 새 프로젝트 시작"이라는 의미가 되어야 하나, 실제로는 같은 브랜치를 계속 사용**. 프로젝트 의도와 브랜치 이름 간 불일치.
-5. **결정 로그(Decision log) 부재** — v0.9.4의 "HP 업그레이드 제거 및 대체"는 근본 설계를 바꾼 결정이나, 왜 바꿨는지(밸런스? 플레이테스트 피드백?) 기록 없음.
-6. **FPS·성능 측정 도구 부재** — DoD에 "60FPS (300적 + 500투사체)"가 명시되어 있으나 실측·프로파일링 없음. "잘 돌아간다"로 종결.
-7. **버전 표시 규칙 혼란** — `CLAUDE.md`는 "`main.js` 3번째 줄의 `VERSION` 상수"를 명시하나, 현 코드에 `main.js`는 존재하지 않음. 실제 버전은 `Game.js`의 `VERSION` 상수로 보임 → 문서/코드 불일치.
+1. **🚨 28일 완전 정지** — 번아웃 또는 관성 상실 신호, 로그 부재
+2. **단일 파일 쏠림** — TetrisGrid.js 1,860 LOC 단일 IIFE
+3. **🚨 CLAUDE.md 무효화** — `colony.js`, `main.js`, "식민지 경제" 등 현 코드에 없는 것을 지시
+4. **브랜치 전략 부재** — 41 커밋 중 PR은 3건, 브랜치명(`claude/archive-game-new-project-LZWNT`)과 실제 개발 의도 불일치
+5. **결정 로그 부재** — v0.9.4 "HP 업그레이드 제거"의 사유 미기록
+6. **FPS 측정 부재** — "60FPS (300적 + 500투사체)" DoD 실측 없음
+7. **버전 위치 불일치** — CLAUDE.md는 `main.js` 참조하나 해당 파일 없음
 
 ### 1.5 Hotspot 분석
 
-커밋 메시지를 훑은 결과, 수정 빈도 상위 3파일:
-
-| 파일 | 추정 수정 횟수 | 이유 |
+| 파일 | 추정 수정 | 이유 |
 |---|---|---|
-| **TetrisGrid.js** | ~15회 이상 | 조립 시스템이 거의 모든 버전에서 변경됨 |
-| **Game.js** | ~15회 이상 | 오케스트레이터라 모든 기능 추가 시 건드림 |
-| **Renderer.js** | ~10회 이상 | 신규 적·보스·무기·이펙트마다 draw 추가 |
-| **EnemyManager.js** | ~8회 이상 | 25종 적·5종 보스·분열·환경 위험 전부 |
-| **index.html** | ~8회 이상 | HUD·튜토리얼·도움말 UI 추가 |
+| TetrisGrid.js | 15+ | 조립 시스템이 거의 모든 버전에서 변경 |
+| Game.js | 15+ | 오케스트레이터라 모든 기능이 건드림 |
+| Renderer.js | 10+ | 신규 적·보스·이펙트마다 draw 추가 |
+| EnemyManager.js | 8+ | 25종 적·5종 보스·환경 위험 |
+| index.html | 8+ | HUD·튜토리얼·도움말 UI |
 
-→ **결합도 경고**: 이 상위 3파일이 전체 수정의 대다수를 차지한다는 것은 **다음 기능 추가 시에도 동일 파일들이 충돌**할 가능성이 높다는 뜻. 분할 리팩토링의 ROI가 매우 높음.
+→ **결합도 경고:** 이 3파일에 수정이 집중 = 다음 기능 추가 시 재충돌 고위험. 분할 ROI 매우 높음.
 
-**Per-author breakdown:**
-- Claude (AI): ~35 커밋 — 실제 코어 개발
-- BAKO-o (인간): ~5 커밋 — 초기 setting, PR 머지 바운더리
-- 전형적인 **solo + AI force-multiplier** 패턴 (gstack `REPO_MODE=solo`와 일치)
+**Per-author:** Claude ~35 커밋 (코어), BAKO-o ~5 커밋 (setting·머지). 전형적 **solo + AI force-multiplier** (gstack `REPO_MODE=solo` 패턴).
 
 ---
 
 ## 2. 엔지니어링 리뷰 — /plan-eng-review 스타일
+
+gstack `/plan-eng-review`의 prime directives: zero silent failures, 의존성 명료화, DRY 공격적 적용, 테스트 커버리지 비협상.
+
+### 2.1 아키텍처 평가
+
+**의존성 그래프:**
+
+```
+index.html
+    │
+    ▼
+┌─────────┐
+│  Game   │ ◄── 모든 모듈 조율자 (god-object 조짐)
+└────┬────┘
+     │
+     ├─► InputHandler       (독립, 건강)
+     ├─► Player             (TetrisGrid.getGrid() 역의존)
+     ├─► Collision          (유틸, 건강)
+     ├─► EnemyManager       (Player, Collision 의존)
+     ├─► WeaponSystem       (Enemy, Player, WeaponCombine, Synergy 의존)
+     ├─► TetrisGrid    ◄─── 거대 블랙박스 (hitbox + UI + 입력 + 렌더 모두 담당)
+     ├─► Renderer           (모든 entity draw; 1,222 LOC)
+     ├─► StageManager       (Enemy/Weapon에 스폰 파라미터 주입)
+     ├─► SynergySystem      (Weapon이 쿼리)
+     └─► WeaponCombine      (Weapon에 레시피 제공)
+```
+
+**문제점:**
+
+- **Game.js (1,015 LOC)** — 원 설계의 "오케스트레이터" 역할을 넘어 상태 관리·루프·HUD 조율·메뉴 전환까지 떠맡음. 전형적 god-object 진행.
+- **TetrisGrid.js** — 최소 **11개 책임** 혼재: 모듈 정의 테이블·배치 상태·드래그&드롭·4티어 드랍·슬롯 확장·pending 큐·zoom 보정·hitbox 재계산·validSlots 계산·BUILDING 렌더·BUILDING 입력.
+- **Renderer.js (1,222 LOC)** — 모든 draw 로직을 중앙집중. entity 자신의 draw()로 분산시키지 않아 신규 적 추가마다 Renderer.js 수정 필요(OCP 위반).
+- **Player → TetrisGrid 역의존** — Player.getHitPolygons()가 TetrisGrid.getGrid()를 호출 → 순환 의존의 전조.
+
+### 2.2 파일 크기 Red Flag 랭킹
+
+| 파일 | LOC | KB | 심각도 | 분할 권고 |
+|---|---|---|---|---|
+| **TetrisGrid.js** | **1,860** | **81** | **P0** | 6모듈 분할 (§2.3) |
+| Renderer.js | 1,222 | 43 | P1 | entity.draw()로 분산 |
+| Game.js | 1,015 | 35 | P1 | 상태머신 `states/` 분리 |
+| EnemyManager.js | 751 | 33 | P2 | `enemies/types.js` 데이터 분리 |
+| WeaponSystem.js | 675 | 29 | P2 | `weapons/types.js` 데이터 분리 |
+| index.html | — | 24 | P2 | 튜토리얼 HTML `templates/` 추출 |
+| StageManager.js | — | 7.5 | OK | — |
+| Player.js | — | 7.5 | OK | — |
+| InputHandler.js | — | 6 | OK | — |
+| SynergySystem.js | — | 5.6 | OK | — |
+| WeaponCombine.js | — | 5.2 | OK | — |
+| Collision.js | — | 3.8 | OK | — |
+| config.js | — | 1 | 빈 껍데기 | **확장** — 밸런스 수치 집중 |
+
+**관찰:**
+- 300 LOC 미만 5파일은 건강. 500 LOC 초과 5파일이 수정 hotspot과 **완전히 일치** (§1.5 표와 교차 확인).
+- config.js는 26 LOC에 환경 피해 수치 4개뿐. 원 CLAUDE.md는 "게임 수치는 config.js에서 관리"라고 했으나 실제로는 각 파일에 하드코딩.
+
+### 2.3 TetrisGrid.js 6-모듈 분할 제안
+
+*(다음 커밋에서 작성)*
+
+### 2.4 성능 고려사항
+
+*(다음 커밋에서 작성)*
+
+### 2.5 기술 부채 리스트
 
 *(다음 커밋에서 작성)*
 
