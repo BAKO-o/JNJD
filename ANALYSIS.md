@@ -1,231 +1,52 @@
-# JNJD 프로젝트 진척 분석 (gstack 방법론 기반)
+# JNJD 진척 분석 (gstack 방법론)
 
-> **작성일**: 2026-04-13 / **대상**: v1.2.2 / **브랜치**: `claude/analyze-jnjd-progress-jlu2J`
-> **방법론**: [gstack](https://github.com/BAKO-o/gstack) 5개 렌즈
+> **작성일**: 2026-04-13 · **대상**: v1.2.2 · **브랜치**: `claude/analyze-jnjd-progress-jlu2J`
+> **방법론**: [gstack](https://github.com/BAKO-o/gstack) 5-렌즈 (`/retro`·`/plan-eng-review`·`/plan-ceo-review`·`/qa`·권고)
 
----
-
-## 목차
-0. Dashboard · 1. Retro · 2. Eng · 3. Product · 4. QA · 5. 권고 · A · B · C
+이 문서는 **인덱스**입니다. 각 섹션은 `analysis/` 하위의 모듈 파일로 분리되어 있습니다. (CLAUDE.md 모범 사례의 "모듈식 관리" 원칙 적용)
 
 ---
 
-## 0. Dashboard
+## TL;DR
 
-**TL;DR** — 4일간 v0.9.2→v1.2.2 폭발 개발 후 28일 정지. Phase 1~4 100% + 200% 확장. TetrisGrid 1,860 LOC, CLAUDE.md 무효, 테스트 0.
+4일간 v0.9.2 → v1.2.2 폭발 개발 후 **28일 정지**. Phase 1~4 100% + 계획 외 200% 확장. 그러나 TetrisGrid.js 1,860 LOC 단일 파일, CLAUDE.md 100% 무효(이전 개미 게임), 테스트 0개.
 
-**Scorecard (1-10)** — Velocity 9·Feature 8·Arch 4·Code 3·Tests 0·Docs 2·Vision 7·Process 3·Retention 3 → **🎯 4.7/10**
+## Scorecard
 
-**시급 3대** — (1) CLAUDE.md 재작성 (2) TetrisGrid 6-분할 (3) Vitest 스모크
-
----
-
-## 1. Retro
-
-- 속도: 91h/4일, 41 커밋, 6,583 LOC. 🚨 정지 28일
-- Phase: 1~4 100% + 조립 200% + 시너지 300%
-- Well: 에셋 0·Object Pool·SemVer·비주얼 의지
-- Improve: 🚨 28일 정지·단일 파일·🚨 CLAUDE.md·브랜치 전략
-- Hotspot: TetrisGrid·Game·Renderer·Enemy
-
----
-
-## 2. Engineering
-
-- 아키: Game.js god · TetrisGrid 11책임 · Renderer OCP 위반
-- 크기: TetrisGrid 1,860 (P0) · Renderer 1,222 · Game 1,015 · Enemy 751 · Weapon 675
-- 분할: TetrisGrid → 6-모듈 + facade, CC 45m
-- 성능: Object Pool·frustum 적용, FPS 측정 0
-- 부채: P0 3 / P1 6 / P2 5, CC ~8h
-
----
-
-## 3. Product
-
-- Premise: 섭취 ✅·리텐션 훅 ❌
-- 10-star: 1/12 (Build variety만)
-- 저비용: Run Summary·하이스코어·SFX·내레이션 = CC 1.5h
-- Subtraction: 30종→15·환경 4→2·조합 8→5
-- Focus Q: 다음 28일 하나만? → **Run Summary + localStorage**
-
----
-
-## 4. QA
-
-- 버그 패턴: 상태 전이 + 밸런싱
-- 테스트: 0개, package.json 없음, CI 없음
-- CLAUDE.md: `main.js`·"식민지"·`colony.js` 0% 일치
-- 프로세스: Issues 0, PR 극소수
-- **1.2/10**
-
----
-
-## 5. 권고
-
-### P0 (1~3일)
-| # | 항목 | Human | CC |
-|---|---|---|---|
-| P0-1 | CLAUDE.md 재작성 | 2h | 15m |
-| P0-2 | TetrisGrid 6-분할 | 1d | 45m |
-| P0-3 | Vitest 스모크 3 | 4h | 20m |
-| P0-4 | 버전 상수 통일 | 30m | 5m |
-
-### P1 (1~2주)
-| # | 항목 | Human | CC |
-|---|---|---|---|
-| P1-1 | config.js 실사용 | 4h | 15m |
-| P1-2 | Game.js 분해 | 2d | 1h |
-| P1-3 | Renderer OCP | 1d | 45m |
-| P1-4 | F3 FPS 오버레이 | 2h | 15m |
-| P1-5 | package.json | 1h | 10m |
-| P1-6 | DEV_PLAN 갱신 | 2h | 20m |
-
-### P2 (1개월)
-Issues·PR/CI·CSS 분리·역의존·CHANGELOG
-
-### P3 (분기)
-Run Summary·하이스코어·SFX·메타·itch.io
-
-**압축: Human ~5주 → CC ~10h (~30x)**
-
----
-
-## 부록 A — 지표 원자료
-
-### A.1 git log 요약
-
-| 날짜 UTC | 버전 | 주요 |
-|---|---|---|
-| 03-16 13:23 | v1.2.2 | 스테이지 chain fix |
-| 03-16 12:08 | v1.2.1 | 웨이브 fix |
-| 03-16 10:45 | v1.2.0 | 환경 위험 4종 |
-| 03-16 08:20 | v1.1.x | 5 스테이지 |
-| 03-16 02:15 | v1.1.0 | 무기 조합 |
-| 03-15 22:40 | v1.0.3 | NUKE |
-| 03-15 18:10 | v1.0.1 | 시너지 재설계 |
-| 03-15 14:00 | v1.0.0 | Phase4 DoD |
-| 03-14 23:35 | v0.9.4 | HP 제거 |
-| 03-14 14:20 | v0.9.3 | 30종 모듈 |
-| 03-13 22:10 | v0.9.2 | 적 군집 perf |
-| 03-13 03:22 | v0.9.0 | 초기화 |
-| *이후* | — | 🚨 **~28일 정지** |
-
-### A.2 파일별 LOC
-
-| 파일 | LOC |
+| 축 | 점수 |
 |---|---|
-| TetrisGrid.js | 1,860 |
-| Renderer.js | 1,222 |
-| Game.js | 1,015 |
-| EnemyManager.js | 751 |
-| WeaponSystem.js | 675 |
-| 기타 7파일 | ~1,060 |
-| **합계** | **~6,583** |
+| Velocity | 9 |
+| Feature | 8 |
+| Architecture | 4 |
+| Code organization | 3 |
+| Tests | 0 |
+| Docs | 2 |
+| Vision | 7 |
+| Process | 3 |
+| Retention | 3 |
+| **Overall** | **🎯 4.7 / 10** |
 
-### A.3 속도
-82h(UTC) · 41 커밋 · ~10/일 · ~1,645 LOC/일
+## 시급 3대 액션 (P0)
+
+1. **CLAUDE.md 전면 재작성** (human 2h / CC 15m)
+2. **TetrisGrid.js 6-모듈 분할** (human 1d / CC 45m)
+3. **Vitest + 스모크 테스트 3개** (human 4h / CC 20m)
 
 ---
 
-## 부록 B — 책임 맵
+## 모듈 파일
 
-| 파일 | 책임 수 | 상태 |
+| # | 파일 | 내용 |
 |---|---|---|
-| TetrisGrid.js | 11 | 🚨 god |
-| Game.js | 8 | 🚨 |
-| Renderer.js | 7 | ⚠️ |
-| EnemyManager.js | 6 | ⚠️ |
-| WeaponSystem.js | 5 | ⚠️ |
-| StageManager·Player·Input·Synergy·WeaponCombine·Collision | 1~4 | ✅ |
-| config.js | 0 | ⚪ 빈 |
-
-**해석:** 상위 3파일에 26책임 집중. 책임 수 = 커밋 빈도 = 버그 이력. 3축 완벽 일치.
-
----
-
-## 부록 C — v1.3 ~ v2.0 로드맵
-
-### v1.3 — "부채 청소" (1~2주)
-**목표:** P0 완수. 신기능 동결.
-- CLAUDE.md 재작성 (이전 개미 게임 지시문 완전 제거)
-- TetrisGrid.js 6-모듈 분할
-- Vitest + 스모크 3개 (loadGame·spawnWave·placeModule)
-- 버전 상수 단일 소스 (`js/version.js`)
-- **DoD:** 모든 P0 닫힘, TetrisGrid.js < 400 LOC/파일
-
-### v1.4 — "리텐션 훅" (2~3주)
-**목표:** "다시 켤 이유" 확보.
-- Run Summary 화면 (달성 시너지·킬·DPS·모듈 조합)
-- localStorage 하이스코어 (웨이브·킬·스크랩)
-- F3 FPS 오버레이 (frame time histogram)
-- **DoD:** 런 종료 후 요약 화면 · 최고 기록 표기
-
-### v1.5 — "감각" (2~3주)
-**목표:** 외부 에셋 0 제약 유지 + 오감 강화.
-- WebAudio 절차적 SFX 8종 (Oscillator·Noise 기반)
-- 게임패드 지원 (Gamepad API)
-- 색맹 팔레트 옵션
-- **DoD:** 음소거/볼륨 옵션 · Xbox 패드 전 조작 가능
-
-### v1.6 — "배포 준비" (1~2주)
-**목표:** 공개 가능 상태.
-- itch.io 페이지 작성 (4 스크린샷 + GIF 1개 + 60단어 설명)
-- README 스크린샷 + 플레이 방법
-- GitHub Pages 배포 워크플로
-- **DoD:** `https://bako-o.itch.io/jnjd` 접근 가능
-
-### v2.0 — "메타 프로그레션" (4~6주)
-**목표:** 리플레이 게임으로 전환.
-- 영구 언락: 시작 모듈 풀·시너지 보너스·함선 스킨
-- 업적 시스템 (12~20개, localStorage 기반)
-- Daily Seed 모드 (날짜 시드 RNG, 24시간 리더보드 구조만)
-- 네 연구원 캐릭터별 플레이 (시작 스탯 차이)
-- 스테이지 간 내레이션 — "잔해의 귀환" 제목 회수
-- **DoD:** 5런 후 언락된 무언가 가시적 · 첫 스테이지 외 시작 옵션 존재
-
-### 전체 타임라인
-
-```
-v1.3 ────────── 부채 청소       (~2주)
-  └── v1.4 ─── 리텐션 훅        (+3주)
-       └── v1.5 ─ 감각          (+3주)
-            └── v1.6 ─ 배포     (+2주)
-                 └── v2.0       (+5주)
-                     ═══════════════════
-                     총 ~15주 (human)
-                     CC 압축 시 ~20h
-```
-
-### 우선순위 원칙
-
-1. **기능 동결 → 부채 청소 → 기능 재개** — v1.3은 새 기능 없음
-2. **"Run Summary 먼저"** — 유일한 리텐션 훅 조기 확보
-3. **외부 에셋 0 제약 유지** — JNJD의 정체성
-4. **매 버전 DoD 엄격 적용** — "완료" 정의 없이는 또 28일 정지 위험
-
-### Kill-criteria (선택지)
-
-이 로드맵 중 **명확한 킬 기준:**
-- v1.4 배포 후 4주간 플레이어 본인도 재플레이 안 함 → **리텐션 훅 실패** → v2.0 메타 프로그레션 무의미 → 프로젝트 아카이브 고려
-- v1.3 TetrisGrid 분할 후에도 새 버그 발생률 변화 없음 → **아키텍처 가설 실패** → 근본 재검토
-
-명확한 실패 기준 없이 이어가는 것이 28일 정지의 본질적 원인일 수 있음. **매 버전마다 "이걸로 뭘 증명할 것인가"를 먼저 쓰고 작업 시작할 것.**
+| 1 | [analysis/01-retro.md](analysis/01-retro.md) | 회고 — 속도·Phase·Well/Improve·Hotspot |
+| 2 | [analysis/02-engineering.md](analysis/02-engineering.md) | 엔지니어링 — 아키·파일 크기·TetrisGrid 분할·성능·부채 |
+| 3 | [analysis/03-product.md](analysis/03-product.md) | 프로덕트 — Premise·10-star·Subtraction·Temporal |
+| 4 | [analysis/04-qa.md](analysis/04-qa.md) | QA — 버그·테스트 갭·문서 QA·프로세스 |
+| 5 | [analysis/05-recommendations.md](analysis/05-recommendations.md) | 권고 P0~P3 (20건) |
+| A | [analysis/appendix-a-metrics.md](analysis/appendix-a-metrics.md) | 지표 원자료 (git log·LOC·타임라인) |
+| B | [analysis/appendix-b-responsibilities.md](analysis/appendix-b-responsibilities.md) | 파일별 책임 맵 |
+| C | [analysis/appendix-c-roadmap.md](analysis/appendix-c-roadmap.md) | v1.3~v2.0 로드맵 |
 
 ---
 
-## 맺음말
-
-본 분석은 **JNJD v1.2.2 시점의 스냅샷**이며, gstack 방법론을 외부 관찰자 관점에서 적용한 결과입니다. 28일간의 정지 이유를 단정하지 않습니다 — 계획된 휴지기인지, 번아웃인지, 다른 프로젝트로의 전환인지는 본 분석 범위 밖입니다.
-
-**핵심 메시지:** JNJD는 **"재능 있는 폭발적 개발"** 과 **"구조적 정리 부족"** 이 동시에 드러난 저장소입니다. 4.7/10 스코어는 낮은 평가가 아니라 **"프로토타입에서 제품으로 넘어가는 임계점에 서 있다"** 는 신호로 해석해야 합니다.
-
-다음 세션이 열리면:
-1. 먼저 **CLAUDE.md** 를 고치고
-2. 다음 **TetrisGrid.js** 를 분할하고
-3. 그 다음 **Run Summary** 를 붙이십시오.
-
-이 순서만 지키면 v2.0 itch.io 공개는 충분히 달성 가능한 궤적입니다.
-
----
-
-*— gstack 5-렌즈 분석 완료. 작성: 2026-04-13 / 커밋 분할 완성: 2026-04-14.*
+*— gstack 5-렌즈 분석. 이 인덱스는 200줄 이내를 유지합니다.*
