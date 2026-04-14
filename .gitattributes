@@ -1,0 +1,44 @@
+# JNJD — git line-ending / 바이너리 규칙
+#
+# 목적: Windows/Mac/Linux 혼합 작업 시 CRLF↔LF 차이가 "모든 파일 수정됨" 처럼
+# 보이는 것을 방지. 모든 텍스트는 repo 내부적으로 LF, checkout 도 LF 고정.
+#
+# 생성 배경: 2026-04-14 P0-4b 마이그레이션 중 working tree(CRLF) 와
+# HEAD(LF) 간 불일치로 인해 265+ 파일이 modified 로 찍히는 현상 발견.
+
+# 기본: 텍스트 자동 감지 + LF 고정
+* text=auto eol=lf
+
+# 웹/스크립트/문서 (명시적 LF)
+*.html   text eol=lf
+*.css    text eol=lf
+*.js     text eol=lf
+*.mjs    text eol=lf
+*.cjs    text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.sh     text eol=lf
+
+# Windows 전용 스크립트는 CRLF 유지
+*.ps1    text eol=crlf
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+# 이미지·폰트·아카이브는 바이너리 (diff·merge·eol 변환 비활성)
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.webp   binary
+*.svg    text eol=lf
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.pdf    binary
+*.zip    binary
+*.gz     binary
+*.tar    binary
