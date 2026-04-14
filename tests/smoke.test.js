@@ -18,7 +18,7 @@ describe('JNJD 스모크 테스트', () => {
    * 1. 배포 핵심 파일 존재 검증
    *    누락 시 즉시 실패 → 배포 빌드에서 파일 삭제 사고 방지
    */
-  it('jonanjadeul/js 하위 13개 핵심 JS 파일이 모두 존재한다', () => {
+  it('jonanjadeul/js 하위 핵심 JS 파일 + tetris/ 서브모듈이 모두 존재한다', () => {
     const required = [
       'Game.js',
       'Renderer.js',
@@ -33,6 +33,8 @@ describe('JNJD 스모크 테스트', () => {
       'Collision.js',
       'config.js',
       'version.js',
+      // P0-2 stage 1+: tetris/ 하위 분할 모듈 (누적 추가 예정)
+      'tetris/defs.js',
     ];
     const missing = required.filter(f => !existsSync(resolve(JS_DIR, f)));
     expect(missing, `누락된 파일: ${missing.join(', ')}`).toEqual([]);
