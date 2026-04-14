@@ -1,0 +1,61 @@
+/**
+ * JNJD 스모크 테스트 (3개)
+ *
+ * 목적: 배포 무결성 + 핵심 구조 상수 보전 검증
+ *
+ * 게임 본체가 IIFE + window 전역 패턴이라 단위 테스트 부적합.
+ * TetrisGrid 6-분할(P0-2) 이후 실제 단위 테스트로 확장 예정.
+ */
+import { describe, it, expect } from 'vitest';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const ROOT = resolve(import.meta.dirname, '..');
+const JS_DIR = resolve(ROOT, 'jonanjadeul/js');
+
+describe('JNJD 스모크 테스트', () => {
+  /**
+   * 1. 배포 핵심 파일 존재 검증
+   *    누락 시 즉시 실패 → 배포 빌드에서 파일 삭제 사고 방지
+   */
+  it('jonanjadeul/js 하위 12개 핵심 JS 파일이 모두 존재한다', () => {
+    const required = [
+      'Game.js',
+      'Renderer.js',
+      'Player.js',
+      'EnemyManager.js',
+      'WeaponSystem.js',
+      'WeaponCombine.js',
+      'SynergySystem.js',
+      'TetrisGrid.js',
+      'StageManager.js',
+      'InputHandler.js',
+      'Collision.js',
+      'config.js',
+    ];
+    const missing = required.filter(f => !existsSync(resolve(JS_DIR, f)));
+    expect(missing, `누락된 파일: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  /**
+   * 2. VERSION 상수 존재 + SemVer 형식 검증
+   *    CLAUDE.md가 약속한 "Game.js 내 VERSION 상수" 계약 유지
+   */
+  it('Game.js 에 SemVer 형식의 VERSION 상수가 있다', () => {
+    const game = readFileSync(resolve(JS_DIR, 'Game.js'), 'utf8');
+    const match = game.match(/const\s+VERSION\s*=\s*['"](v\d+\.\d+\.\d+)['"]/);
+    expect(match, 'Game.js 에서 VERSION 상수를 찾지 못함').not.toBeNull();
+    expect(match[1]).toMatch(/^v\d+\.\d+\.\d+$/);
+  });
+
+  /**
+   * 3. TetrisGrid.js god-object 감지
+   *    4,000 LOC 돌파 시 실패 → 리팩터 미루기 방지용 압력 장치
+   *    (현재 ~1,860 LOC · P0-2 분할 후 이 테스트는 파일별로 세분화 예정)
+   */
+  it('TetrisGrid.js 는 god-object 상한선(4,000 LOC)을 넘지 않는다', () => {
+    const content = readFileSync(resolve(JS_DIR, 'TetrisGrid.js'), 'utf8');
+    const lines = content.split('\n').length;
+    expect(lines, `현재 ${lines} LOC — P0-2 리팩터를 서두르세요`).toBeLessThan(4000);
+  });
+});
