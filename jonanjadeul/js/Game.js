@@ -9,7 +9,8 @@
 
 'use strict';
 
-const VERSION = 'v1.2.2'; // 원형 함선, 미사일 포탄, 스테이지 연쇄클리어 버그 수정
+// 버전 상수의 단일 소스: js/version.js (window.JNJD_VERSION).
+// index.html 에서 version.js 가 이 파일보다 먼저 로드됨.
 
 // ── 맵 설정 (16배 넓어진 월드)
 const WORLD_W = 12800;
@@ -325,8 +326,8 @@ const Game = (() => {
     Renderer.init(canvas);
     InputHandler.init();
 
-    // 버전 표시
-    document.getElementById('version-display').textContent = VERSION;
+    // 버전 표시 (단일 소스: js/version.js)
+    document.getElementById('version-display').textContent = window.JNJD_VERSION;
 
     // 버튼 이벤트
     document.getElementById('btn-start').addEventListener('click', startGame);

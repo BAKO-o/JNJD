@@ -1,7 +1,7 @@
 # CLAUDE.md — JNJD 프로젝트 지침
 
 > **프로젝트**: 잔해의 귀환 (JNJD) — HTML5 Canvas 우주 슈터 + 테트리스 모듈 조립 게임
-> **현재 버전**: v1.2.2 (2026-03-16)
+> **현재 버전**: v1.2.3 (2026-04-14, P0-4b 마이그레이션)
 > **스택**: Vanilla JavaScript (프레임워크·라이브러리·외부 에셋 0개)
 > **이 문서는 200줄 이내 유지**. 세부 지침은 `rules/`·`GUIDE.md` 참조.
 
@@ -36,18 +36,20 @@
 
 ## 2. 핵심 규칙
 
-### 2.1 버전 상수 위치
+### 2.1 버전 상수 위치 (P0-4b 이후)
 
-**정확한 위치**: `jonanjadeul/js/Game.js` **12번째 줄**
+**단일 소스**: `jonanjadeul/js/version.js` — `window.JNJD_VERSION`
 
 ```js
-const VERSION = 'v1.2.2'; // 코멘트에 요약
+window.JNJD_VERSION = 'v1.2.3'; // 코멘트에 요약
 ```
+
+`index.html` 이 `version.js` 를 다른 모든 스크립트보다 먼저 로드한다. 다른 파일은 `window.JNJD_VERSION` 을 참조한다 (`Game.js` 의 `document.getElementById('version-display').textContent = window.JNJD_VERSION` 참조). **`const VERSION` 같은 레거시 상수를 다시 만들지 말 것** — 스모크 테스트가 실패시킨다.
 
 유의미한 변경 시 SemVer로 갱신:
 - `MAJOR`: 게임 규칙 변경 (예: 조립 시스템 교체)
 - `MINOR`: 신기능 (예: 무기 조합 추가)
-- `PATCH`: 버그 수정·밸런싱
+- `PATCH`: 버그 수정·밸런싱·구조 정리
 
 ### 2.2 커밋 메시지 형식
 
@@ -107,10 +109,10 @@ START → PLAYING ↔ PAUSED
 
 현재 **28일 정지** 상태. 재개 시 권장 순서:
 
-1. **P0-1** — 본 CLAUDE.md 재작성 ✅ (이 커밋)
-2. **P0-2** — `TetrisGrid.js` 6-모듈 분할 (`tetris/` 하위 디렉토리)
-3. **P0-3** — Vitest + 스모크 테스트 3개 (`package.json` 생성 필요)
-4. **P0-4** — 버전 상수 단일 소스 (`js/version.js` 분리 제안)
+1. **P0-1** — CLAUDE.md 재작성 ✅
+2. **P0-2** — `TetrisGrid.js` 6-모듈 분할 (`tetris/` 하위 디렉토리) — **진행 중**
+3. **P0-3** — Vitest + 스모크 테스트 3개 ✅
+4. **P0-4** — 버전 상수 단일 소스 (`js/version.js`) ✅ (P0-4a 추출 + P0-4b 마이그레이션 완료)
 
 상세: [`ANALYSIS.md`](ANALYSIS.md) / [`analysis/05-recommendations.md`](analysis/05-recommendations.md)
 

@@ -13,7 +13,7 @@
  */
 'use strict';
 
-window.JNJD_VERSION = 'v1.2.2'; // 원형 함선, 미사일 포탄, 스테이지 연쇄클리어 버그 수정
+window.JNJD_VERSION = 'v1.2.3'; // P0-4b: VERSION 상수 단일 소스 마이그레이션 완료
 
-// 레거시 호환: Game.js line 12의 `const VERSION` 이 아직 존재하는 동안 이중 참조 허용.
-// v1.3에서 Game.js 가 이 전역을 읽도록 마이그레이션 예정.
+// Game.js 는 이 전역(window.JNJD_VERSION)을 단일 소스로 사용한다.
+// 새 버전 배포 시 이 파일 한 줄만 수정하면 됨.
