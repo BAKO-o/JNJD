@@ -109,6 +109,48 @@ window.TetrisDefs = (() => {
     RESONANCE_CORE:  { tier:'LEGENDARY', name:'공명 코어',       cells:[{gx:0,gy:0},{gx:1,gy:0},{gx:-1,gy:0},{gx:0,gy:1}],   color:'#5b21b6', desc:'🔥💜⚡ FIRE+LASER+ELECTRIC +1씩 (다중 시너지)', bonus:{weaponAttrs:['FIRE','LASER','ELECTRIC']} },
   };
 
+  // ──────────────────────────────────────────────────────────────
+  // Shape classification (Phase B Proposal 1 — v1.4.0)
+  //
+  // cells 배열의 기하를 보고 아래 5종 중 하나로 분류한다:
+  //   DOT   — 1셀
+  //   LINE  — 2셀 이상 일직선 (2-line, I3, I4 포함)
+  //   L     — 3셀 꺾임 (연결 가정 · 비직선)
+  //   BLOCK — 4셀 2×2 정사각
+  //   OTHER — 그 외 (T자, 커스텀 4셀 등) → shape 시너지 비대상
+  //
+  // SynergySystem 의 shape 시너지 테이블은 LINE/L/BLOCK 3종만 다룬다.
+  // DOT 와 OTHER 는 분류만 부여하고 시너지 버프는 붙지 않는다.
+  // MODULE_DEFS 는 정적 데이터이므로 init 타임에 1회만 계산해 삽입한다.
+  // ──────────────────────────────────────────────────────────────
+  function classifyShape(cells) {
+    const n = cells.length;
+    if (n === 1) return 'DOT';
+
+    const sameRow = cells.every(c => c.gy === cells[0].gy);
+    const sameCol = cells.every(c => c.gx === cells[0].gx);
+    if (sameRow || sameCol) return 'LINE'; // 2셀 직선 / I3 / I4
+
+    if (n === 4) {
+      const xs = [...new Set(cells.map(c => c.gx))].sort((a, b) => a - b);
+      const ys = [...new Set(cells.map(c => c.gy))].sort((a, b) => a - b);
+      if (xs.length === 2 && ys.length === 2 &&
+          xs[1] - xs[0] === 1 && ys[1] - ys[0] === 1) {
+        return 'BLOCK';
+      }
+    }
+
+    // 3셀 비직선 → L자 (MODULE_DEFS 는 항상 4-연결이라 가정)
+    if (n === 3) return 'L';
+
+    return 'OTHER';
+  }
+
+  // 모든 MODULE_DEFS 엔트리에 shape 필드를 1회 주입
+  for (const key of Object.keys(MODULE_DEFS)) {
+    MODULE_DEFS[key].shape = classifyShape(MODULE_DEFS[key].cells);
+  }
+
   const MODULE_KEYS = Object.keys(MODULE_DEFS);
 
   // 조합으로만 획득 가능한 무기 키 (드랍 풀에서 제외)
@@ -124,6 +166,7 @@ window.TetrisDefs = (() => {
     TIER_WEIGHTS, TIER_LABELS, TIER_COLORS,
     SCRAP_VALUES,
     MODULE_DEFS, MODULE_KEYS, CRAFT_ONLY_KEYS, DROPPABLE_MODULE_KEYS,
+    classifyShape, // Phase B: 테스트·추가 모듈 등록용 헬퍼 노출
   };
 
 })();

@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { createContext, runInContext } from 'node:vm';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const JS_DIR = resolve(ROOT, 'jonanjadeul/js');
@@ -82,5 +83,39 @@ describe('JNJD 스모크 테스트', () => {
     const content = readFileSync(resolve(JS_DIR, relPath), 'utf8');
     const lines = content.split('\n').length;
     expect(lines, `${relPath}: ${lines} LOC — 상한선(${cap}) 초과. 분할을 고려하세요`).toBeLessThan(cap);
+  });
+
+  /**
+   * 4. Phase B Proposal 1 — Shape Synergy 인프라
+   *    defs.js 실행 후 MODULE_DEFS 모든 엔트리에 `shape` 필드가 주입되며,
+   *    대표 모듈 5종이 기대대로 DOT/LINE/L/BLOCK/OTHER 로 분류되는지 확인.
+   *    (LINE/L/BLOCK 셋만 shape 시너지 대상, DOT/OTHER 는 비대상)
+   */
+  it('MODULE_DEFS 모든 엔트리에 shape 필드 주입 + 대표 5종 분류 일치', () => {
+    const defsJs = readFileSync(resolve(JS_DIR, 'tetris/defs.js'), 'utf8');
+    const sandbox = { window: {} };
+    createContext(sandbox);
+    runInContext(defsJs, sandbox);
+    const defs = sandbox.window.TetrisDefs;
+    expect(defs, 'window.TetrisDefs 가 정의되지 않음').toBeDefined();
+
+    // 모든 엔트리에 shape 주입
+    for (const key of defs.MODULE_KEYS) {
+      const shape = defs.MODULE_DEFS[key].shape;
+      expect(
+        ['DOT', 'LINE', 'L', 'BLOCK', 'OTHER'].includes(shape),
+        `${key}: shape='${shape}' — 알 수 없는 분류`,
+      ).toBe(true);
+    }
+
+    // 대표 분류 샘플
+    expect(defs.MODULE_DEFS.HULL_1.shape).toBe('DOT');             // 1셀
+    expect(defs.MODULE_DEFS.THRUSTER.shape).toBe('LINE');          // 2셀 직선
+    expect(defs.MODULE_DEFS.WPN_RAILGUN.shape).toBe('LINE');       // 3셀 I자
+    expect(defs.MODULE_DEFS.WPN_TYPHOON.shape).toBe('L');          // 3셀 L자
+    expect(defs.MODULE_DEFS.REINFORCED_HULL.shape).toBe('BLOCK');  // 2×2
+    expect(defs.MODULE_DEFS.WPN_OMEGA.shape).toBe('BLOCK');        // 2×2 무기
+    expect(defs.MODULE_DEFS.TITAN_HULL.shape).toBe('LINE');        // 수직 I4
+    expect(defs.MODULE_DEFS.RESONANCE_CORE.shape).toBe('OTHER');   // 4셀 T자
   });
 });
