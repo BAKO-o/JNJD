@@ -103,6 +103,7 @@ const WeaponSystem = (() => {
       chainCount:   0,        // 남은 체인 횟수
       pierceLeft:   0,        // 관통 횟수 (레일건 등, 0이면 첫 충돌시 소멸)
       isCrit:       false,    // Phase B-3a — ELECTRIC:L 크리 성공 여부 (HUD/이펙트용)
+      stunDuration: 0,        // Phase B-3b-1 — ELECTRIC:BLOCK 활성 시 피격 적에게 적용될 기절 초
     };
   }
 
@@ -441,6 +442,7 @@ const WeaponSystem = (() => {
    *   ELECTRIC:LINE → chainCount  += 1      (연쇄+1, chain3/chain5 와 누적)
    *   FIRE:L        → splashR     *= 1.3    (splashR>0 인 탄만: 포탄·지뢰·핵탄두)
    *   ELECTRIC:L    → 25% 확률로 damage*=2  (탄 단위 크리티컬 — isCrit 플래그)
+   *   ELECTRIC:BLOCK→ stunDuration = 0.8    (Phase B-3b-1 — 피격 시 EMP 펄스로 일반 적 기절)
    *
    * 데미지 배율(SynergySystem.getDamageMult)은 이미 탄 생성 시 곱해져 있음.
    * 여기서는 "그 외" 비수치 훅 + 탄 단위 스토캐스틱 크리만 처리.
@@ -464,12 +466,15 @@ const WeaponSystem = (() => {
     } else {
       p.isCrit = false;
     }
+    // Phase B-3b-1: ELECTRIC:BLOCK 활성 시 이 탄은 피격 적(보스 제외)을 0.8s 기절.
+    // 풀에서 재사용되는 탄이므로 매 발사 시 명시적으로 0 리셋 후 세팅.
+    p.stunDuration = counts['ELECTRIC:BLOCK'] ? 0.8 : 0;
   }
 
   /**
    * 체인 탄 연쇄 데미지 헬퍼
    */
-  function _chainHit(x, y, damage, remaining, activeEnemies, exclude, attr) {
+  function _chainHit(x, y, damage, remaining, activeEnemies, exclude, attr, stunDur) {
     const CHAIN_R = 220;
     let nearest = null;
     let minDSq = CHAIN_R * CHAIN_R;
@@ -480,7 +485,10 @@ const WeaponSystem = (() => {
     }
     if (!nearest) return;
     EnemyManager.damageEnemy(nearest, damage, attr);
-    if (remaining > 0) _chainHit(nearest.x, nearest.y, damage, remaining - 1, activeEnemies, nearest, attr);
+    // Phase B-3b-1: 체인 탄도 EMP 펄스를 옮김 (연쇄 특성상 광역 CC 역할).
+    // stunEnemy 는 보스 면역 + 기존 timer 보다 큰 값만 반영 → 무한연장 없음.
+    if (stunDur > 0) EnemyManager.stunEnemy(nearest, stunDur);
+    if (remaining > 0) _chainHit(nearest.x, nearest.y, damage, remaining - 1, activeEnemies, nearest, attr, stunDur);
   }
 
   /**
@@ -540,6 +548,8 @@ const WeaponSystem = (() => {
               const sc = SynergySystem.getShapeCounts ? SynergySystem.getShapeCounts() : null;
               if (sc && sc['ELECTRIC:L'] && Math.random() < 0.25) dmg *= 2.0;
               EnemyManager.damageEnemy(e, dmg, sec.attr);
+              // Phase B-3b-1: orbit/radiator 도 ELECTRIC:BLOCK 이면 접촉 시 EMP 펄스.
+              if (sc && sc['ELECTRIC:BLOCK']) EnemyManager.stunEnemy(e, 0.8);
               sec.orbitTimers[i] = 0.5;
               break;
             }
@@ -611,6 +621,7 @@ const WeaponSystem = (() => {
             worldW, worldH
           )) {
             EnemyManager.damageEnemy(e, p.damage, p.attr);
+            if (p.stunDuration > 0) EnemyManager.stunEnemy(e, p.stunDuration); // Phase B-3b-1
             hit = true;
           }
         }
@@ -631,8 +642,9 @@ const WeaponSystem = (() => {
           if (hit) {
             _hitEvents.push({ wx: p.x, wy: p.y, color: p.color, splashR: p.splashR, attr: p.attr, type: 'auto' });
             EnemyManager.damageEnemy(e, p.damage, p.attr);
+            if (p.stunDuration > 0) EnemyManager.stunEnemy(e, p.stunDuration); // Phase B-3b-1
             if (p.chainCount > 0) {
-              _chainHit(e.x, e.y, p.damage, p.chainCount - 1, activeEnemies, e, p.attr);
+              _chainHit(e.x, e.y, p.damage, p.chainCount - 1, activeEnemies, e, p.attr, p.stunDuration);
             }
             if (p.pierceLeft > 0) {
               p.pierceLeft--;  // 관통: 계속 진행

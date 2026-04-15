@@ -1,6 +1,6 @@
 {
   "name": "jnjd",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "JNJD (잔해의 귀환) — HTML5 Canvas 우주 슈터 + 테트리스 모듈 조립 게임",
   "private": true,
   "type": "module",

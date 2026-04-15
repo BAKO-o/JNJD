@@ -1,7 +1,7 @@
 # CLAUDE.md — JNJD 프로젝트 지침
 
 > **프로젝트**: 잔해의 귀환 (JNJD) — HTML5 Canvas 우주 슈터 + 테트리스 모듈 조립 게임
-> **현재 버전**: v1.5.0 (2026-04-15, Phase B-3a Shape Synergy 비수치 훅 4종)
+> **현재 버전**: v1.6.0 (2026-04-15, Phase B-3b-1 EMP 펄스 — ELECTRIC:BLOCK)
 > **스택**: Vanilla JavaScript (프레임워크·라이브러리·외부 에셋 0개)
 > **이 문서는 200줄 이내 유지**. 세부 지침은 `rules/`·`GUIDE.md` 참조.
 
@@ -133,7 +133,8 @@ state-as-parameter 패턴으로 render 측에서는 상태를 매 호출 수신�
 | **B-1** | ✅ v1.4.0 | `MODULE_DEFS[*].shape` 자동 주입 (DOT/LINE/L/BLOCK/OTHER 5분류) — `tetris/defs.js` 의 `classifyShape()` |
 | **B-2** | ✅ v1.4.0 | `SynergySystem.addShapeAttr/removeShapeAttr` + `SHAPE_SYNERGY_TABLE` (9조합, 3속성 × 3모양) — damage 배율만 적용. |
 | **B-3a** | ✅ v1.5.0 | `WeaponSystem._applyShapeHooks` — 탄 단위 비수치 훅 4종: LASER:LINE 관통+2 · ELECTRIC:LINE 연쇄+1 · FIRE:L 폭발 반경 ×1.3 · ELECTRIC:L 크리 25%×2.0. 17개 발사 지점 + orbit/radiator crit 분기. |
-| **B-3b** | 🔜 | 상태 필드가 필요한 훅: ELECTRIC:BLOCK EMP 펄스(적 stunned) · FIRE:BLOCK 피격 반사 DoT · LASER:L 피격 반사. |
+| **B-3b-1** | ✅ v1.6.0 | ELECTRIC:BLOCK → EMP 펄스. 적 `stunTimer` 필드 + `EnemyManager.stunEnemy(e, dur)` + update 루프 AI 스킵 분기. 탄에 `stunDuration=0.8s` 전파 → cannon/auto/chain/orbit 4경로에서 피격 시 `stunEnemy`. **보스 면역**, 기존 timer 보다 큰 값만 반영(무한연장 방지). |
+| **B-3b-2** | 🔜 | 피격 경로 훅: FIRE:BLOCK 반사 DoT · LASER:L 피격 반사. `Player.takeDamage` / `TetrisGrid.hitShip` 통합 필요. |
 | **B-4** | 🔜 | 플레이테스트 밸런싱. |
 
 9조합 = FIRE/ELECTRIC/LASER × LINE/L/BLOCK. KINETIC/NUKE 및 DOT/OTHER 는 shape

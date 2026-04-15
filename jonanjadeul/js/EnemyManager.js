@@ -125,6 +125,8 @@ const EnemyManager = (() => {
       contactCooldown:0, xpValue:0, type:'DRONE', isSplit:false,
       zigzagPhase:0, dashTimer:0, dashCooldown:0, shadeAlpha:1.0,
       tier:1, // 티어 (반경 배율·피해 면역 판정에 사용)
+      // Phase B-3b-1: EMP 펄스(ELECTRIC:BLOCK)에 의한 기절 잔여 시간(초). 0 이면 정상 상태.
+      stunTimer: 0,
       // 보스 전용 필드
       isBoss:false, attackTimer:0, attackPhase:0, bossRotOffset:0, summonTimer:0,
     };
@@ -213,6 +215,7 @@ const EnemyManager = (() => {
     e.xpValue  = Math.floor(20 * def.xpMult * scale);
     e.zigzagPhase = 0; e.dashTimer = 0; e.dashCooldown = 1.0 + Math.random() * 0.8;
     e.shadeAlpha  = 1.0;
+    e.stunTimer   = 0;  // Phase B-3b-1: 풀에서 재사용되는 적의 기절 잔여 초기화
     e.isBoss = false; e.attackTimer = 0; e.attackPhase = 0;
     e.bossRotOffset = 0; e.summonTimer = 0;
   }
@@ -244,6 +247,7 @@ const EnemyManager = (() => {
     e.zigzagPhase   = 0;
     e.dashTimer     = 0; e.dashCooldown = 2.0;
     e.shadeAlpha    = 1.0;
+    e.stunTimer     = 0;  // Phase B-3b-1: 보스는 stunEnemy 에서 무시되지만 방어적 초기화
 
     bossEnemy = e;
   }
@@ -501,7 +505,13 @@ const EnemyManager = (() => {
       const { dx, dy } = Collision.wrappedDelta(e.x, e.y, player.x, player.y, worldW, worldH);
       const dist = Math.hypot(dx, dy);
 
-      if (e.isBoss) {
+      // Phase B-3b-1: 기절 상태 — AI 스킵 (vx/vy 0 고정, 위치 적분만 수행)
+      // 보스는 stunEnemy 에서 이미 걸러지지만(stunTimer 가 설정되지 않음) 방어적으로 isBoss 검사.
+      if (!e.isBoss && e.stunTimer > 0) {
+        e.stunTimer -= dt;
+        e.vx = 0; e.vy = 0;
+        // 위치는 e.x += e.vx*dt 로 바뀌지 않음. 접촉 쿨다운만 자연스럽게 감소하도록 뒤 블록으로 폴스루.
+      } else if (e.isBoss) {
         _updateBoss(e, dt, player, dist, dx, dy);
       } else {
         if (dist > 0) {
@@ -645,6 +655,20 @@ const EnemyManager = (() => {
     return false;
   }
 
+  /**
+   * Phase B-3b-1: EMP 펄스로 일반 적을 기절시킨다.
+   * - 보스는 면역 (게임 밸런스: 2인칭 스토리 축인 보스전 트리비얼화 방지)
+   * - 기존 stunTimer 보다 큰 duration 만 반영 (덮어쓰기 X → 짧은 뒤잇는 펄스로 무한연장 방지)
+   * @param {object} enemy - 활성 적
+   * @param {number} duration - 초 단위 기절 시간
+   */
+  function stunEnemy(enemy, duration) {
+    if (!enemy || !enemy.active) return;
+    if (enemy.isBoss) return;            // 보스 면역
+    if (!(duration > 0)) return;
+    if (enemy.stunTimer < duration) enemy.stunTimer = duration;
+  }
+
   function draw(player) {
     const W = Renderer.getWidth(), H = Renderer.getHeight();
     const cullX = Math.ceil(W / _zoom / 2);
@@ -745,7 +769,7 @@ const EnemyManager = (() => {
     bossEnemy=null; _stageClearConsumed=false;
   }
 
-  return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset, setZoom, getBoss, isStageClear, consumeStageClear };
+  return { init, update, draw, damageEnemy, stunEnemy, getActiveEnemies, getStats, reset, setZoom, getBoss, isStageClear, consumeStageClear };
 })();
 
 window.EnemyManager = EnemyManager;

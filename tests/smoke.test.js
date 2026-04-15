@@ -225,11 +225,25 @@ describe('JNJD 스모크 테스트', () => {
 
     // ── shape 시너지 비활성 → 아무 훅도 적용되지 않음
     S.reset();
-    const pNone = { active: true, damage: 1, pierceLeft: 0, chainCount: 0, splashR: 50, isCrit: false };
+    const pNone = { active: true, damage: 1, pierceLeft: 0, chainCount: 0, splashR: 50, isCrit: false, stunDuration: 0 };
     W._applyShapeHooks(pNone);
     expect(pNone.pierceLeft).toBe(0);
     expect(pNone.chainCount).toBe(0);
     expect(pNone.splashR).toBe(50);
+    expect(pNone.stunDuration).toBe(0);
+
+    // ── Phase B-3b-1: ELECTRIC:BLOCK → stunDuration = 0.8 (탄 단위 EMP 펄스)
+    S.reset();
+    S.addShapeAttr('ELECTRIC', 'BLOCK');
+    const pStun = { active: true, damage: 1, pierceLeft: 0, chainCount: 0, splashR: 0, isCrit: false, stunDuration: 0 };
+    W._applyShapeHooks(pStun);
+    expect(pStun.stunDuration).toBeCloseTo(0.8, 5);
+
+    // ── Phase B-3b-1 해제: ELECTRIC:BLOCK 카운트 0 → stunDuration 도 0 으로 리셋 (풀 재사용 보호)
+    S.removeShapeAttr('ELECTRIC', 'BLOCK');
+    const pStunOff = { active: true, damage: 1, pierceLeft: 0, chainCount: 0, splashR: 0, isCrit: false, stunDuration: 0.8 };
+    W._applyShapeHooks(pStunOff);
+    expect(pStunOff.stunDuration).toBe(0);
   });
 
   /**
@@ -241,5 +255,52 @@ describe('JNJD 스모크 테스트', () => {
     const wpn = readFileSync(resolve(JS_DIR, 'WeaponSystem.js'), 'utf8');
     const calls = wpn.match(/_applyShapeHooks\s*\(\s*p\s*\)\s*;/g) || [];
     expect(calls.length, `_applyShapeHooks 호출: ${calls.length} (기대: ≥17)`).toBeGreaterThanOrEqual(17);
+  });
+
+  /**
+   * 8. Phase B-3b-1 — EnemyManager.stunEnemy 계약
+   *    - 일반 적: stunTimer 는 max(prev, duration) (짧은 펄스로 축소되지 않음)
+   *    - 보스 면역 · 비활성 / 잘못된 duration → noop
+   *    EnemyManager IIFE 는 top-level 에 외부 전역 참조가 없어 vm 에서 바로 실행 가능.
+   */
+  it('EnemyManager.stunEnemy 가 보스 면역·덮어쓰기 규칙을 지킨다', () => {
+    const js = readFileSync(resolve(JS_DIR, 'EnemyManager.js'), 'utf8');
+    const sandbox = { window: {}, console, Math, Date, Object };
+    createContext(sandbox);
+    runInContext(js, sandbox);
+    const EM = sandbox.window.EnemyManager;
+    expect(EM && EM.stunEnemy, 'stunEnemy 미노출').toBeTruthy();
+
+    const e = { active: true, isBoss: false, stunTimer: 0 };
+    EM.stunEnemy(e, 0.8);
+    expect(e.stunTimer).toBeCloseTo(0.8, 5);
+    EM.stunEnemy(e, 0.3);           // 더 짧은 펄스는 축소하지 않음
+    expect(e.stunTimer).toBeCloseTo(0.8, 5);
+    EM.stunEnemy(e, 1.5);           // 더 긴 펄스는 갱신
+    expect(e.stunTimer).toBeCloseTo(1.5, 5);
+
+    const boss = { active: true, isBoss: true, stunTimer: 0 };
+    EM.stunEnemy(boss, 0.8);
+    expect(boss.stunTimer).toBe(0);
+
+    const inactive = { active: false, isBoss: false, stunTimer: 0 };
+    EM.stunEnemy(inactive, 1.0);
+    expect(inactive.stunTimer).toBe(0);
+
+    const e2 = { active: true, isBoss: false, stunTimer: 0 };
+    EM.stunEnemy(e2, 0);
+    EM.stunEnemy(e2, -1);
+    EM.stunEnemy(null, 0.8);
+    expect(e2.stunTimer).toBe(0);
+  });
+
+  /**
+   * 9. Phase B-3b-1 — WeaponSystem 의 stunEnemy 호출 커버리지
+   *    regression guard: cannon / auto / chain / orbit 4경로 모두 연결돼야 한다.
+   */
+  it('WeaponSystem 이 최소 4곳에서 EnemyManager.stunEnemy 를 호출한다', () => {
+    const wpn = readFileSync(resolve(JS_DIR, 'WeaponSystem.js'), 'utf8');
+    const calls = wpn.match(/EnemyManager\.stunEnemy\s*\(/g) || [];
+    expect(calls.length, `EnemyManager.stunEnemy 호출: ${calls.length} (기대: ≥4 — cannon/auto/chain/orbit)`).toBeGreaterThanOrEqual(4);
   });
 });

@@ -60,7 +60,8 @@ const SYNERGY_TABLE = {
 //   B-3a (v1.5.0): WeaponSystem 에서 바로 가능한 4종 훅 (탄 단위)
 //     FIRE:L → splashR ×1.3 · ELECTRIC:LINE → chainCount +1
 //     ELECTRIC:L → 25% 크리 ×2.0 · LASER:LINE → pierceLeft +2
-//   B-3b (예정): EMP 펄스 / 피격 반사 / 반사 DoT — 적/플레이어 상태 필드 추가 필요
+//   B-3b-1 (v1.6.0): ELECTRIC:BLOCK → EMP 펄스 (피격 적 0.8s 기절, 보스 면역)
+//   B-3b-2 (예정): 피격 반사 / 반사 DoT — 플레이어 피격 경로 통합 필요
 // ──────────────────────────────────────────────────────────────
 const SHAPE_SYNERGY_TABLE = {
   'FIRE:LINE':     { mult: 1.15, name: '화염 사선',   color: '#ef4444', desc: '데미지 +15%' },
@@ -68,7 +69,7 @@ const SHAPE_SYNERGY_TABLE = {
   'FIRE:BLOCK':    { mult: 1.18, name: '화염 방벽',   color: '#fb923c', desc: '데미지 +18% (반사 DoT 는 B-3b)' },
   'ELECTRIC:LINE': { mult: 1.15, name: '전기 송전선', color: '#facc15', desc: '데미지 +15% · 연쇄 +1' },
   'ELECTRIC:L':    { mult: 1.20, name: '전기 절곡',   color: '#eab308', desc: '데미지 +20% · 크리 25% ×2.0' },
-  'ELECTRIC:BLOCK':{ mult: 1.22, name: '전기 축전지', color: '#fde047', desc: '데미지 +22% (EMP 펄스는 B-3b)' },
+  'ELECTRIC:BLOCK':{ mult: 1.22, name: '전기 축전지', color: '#fde047', desc: '데미지 +22% · 피격 적 0.8s EMP 기절' },
   'LASER:LINE':    { mult: 1.18, name: '레이저 편광', color: '#a78bfa', desc: '데미지 +18% · 관통 +2' },
   'LASER:L':       { mult: 1.15, name: '레이저 굴절', color: '#c084fc', desc: '데미지 +15% (반사는 B-3b)' },
   'LASER:BLOCK':   { mult: 1.30, name: '레이저 집광', color: '#d8b4fe', desc: '데미지 +30% (단일 타겟 집중)' },

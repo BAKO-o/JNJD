@@ -13,7 +13,7 @@
  */
 'use strict';
 
-window.JNJD_VERSION = 'v1.5.0'; // Phase B-3a: Shape Synergy 비수치 훅 4종 (pierce+2 / chain+1 / splash×1.3 / crit 25%×2.0)
+window.JNJD_VERSION = 'v1.6.0'; // Phase B-3b-1: ELECTRIC:BLOCK → EMP 펄스 (피격 적 0.8s 기절, 보스 면역, cannon/auto/chain/orbit 4경로)
 
 // Game.js 는 이 전역(window.JNJD_VERSION)을 단일 소스로 사용한다.
 // 새 버전 배포 시 이 파일 한 줄만 수정하면 됨.
