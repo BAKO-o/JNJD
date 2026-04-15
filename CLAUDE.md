@@ -1,7 +1,7 @@
 # CLAUDE.md — JNJD 프로젝트 지침
 
 > **프로젝트**: 잔해의 귀환 (JNJD) — HTML5 Canvas 우주 슈터 + 테트리스 모듈 조립 게임
-> **현재 버전**: v1.2.3 (2026-04-14, P0-4b 마이그레이션)
+> **현재 버전**: v1.3.0 (2026-04-15, P0-2 TetrisGrid 분할 완료)
 > **스택**: Vanilla JavaScript (프레임워크·라이브러리·외부 에셋 0개)
 > **이 문서는 200줄 이내 유지**. 세부 지침은 `rules/`·`GUIDE.md` 참조.
 
@@ -41,7 +41,7 @@
 **단일 소스**: `jonanjadeul/js/version.js` — `window.JNJD_VERSION`
 
 ```js
-window.JNJD_VERSION = 'v1.2.3'; // 코멘트에 요약
+window.JNJD_VERSION = 'v1.3.0'; // 코멘트에 요약
 ```
 
 `index.html` 이 `version.js` 를 다른 모든 스크립트보다 먼저 로드한다. 다른 파일은 `window.JNJD_VERSION` 을 참조한다 (`Game.js` 의 `document.getElementById('version-display').textContent = window.JNJD_VERSION` 참조). **`const VERSION` 같은 레거시 상수를 다시 만들지 말 것** — 스모크 테스트가 실패시킨다.
@@ -105,14 +105,21 @@ START → PLAYING ↔ PAUSED
 
 네 연구원: **송**(전술)·**건**(공학)·**학**(과학)·**종**(군사). `UPGRADE_POOL` 에서 랜덤 3개 제시.
 
-## 4. 기술 부채 (2026-04-13 기준)
-
-현재 **28일 정지** 상태. 재개 시 권장 순서:
+## 4. 기술 부채 (2026-04-15 기준)
 
 1. **P0-1** — CLAUDE.md 재작성 ✅
-2. **P0-2** — `TetrisGrid.js` 6-모듈 분할 (`tetris/` 하위 디렉토리) — **진행 중**
-3. **P0-3** — Vitest + 스모크 테스트 3개 ✅
+2. **P0-2** — `TetrisGrid.js` → `tetris/` 서브모듈 분할 ✅ (v1.3.0, 1,860 → 762 LOC, −59.0%)
+3. **P0-3** — Vitest + 스모크 테스트 (파일 존재 / 버전 SemVer / 파일별 LOC 캡 4종) ✅
 4. **P0-4** — 버전 상수 단일 소스 (`js/version.js`) ✅ (P0-4a 추출 + P0-4b 마이그레이션 완료)
+
+**분할 결과** (stage 1~6 누적):
+- `TetrisGrid.js` — 762 LOC · 게임플레이 로직 + state + render.js facade wrapper
+- `tetris/defs.js` — 129 LOC · 상수·카탈로그 (P0-2 stage 1)
+- `tetris/icons.js` — 293 LOC · 아이콘 드로잉 헬퍼 5종 (P0-2 stage 2)
+- `tetris/render.js` — 806 LOC · 인벤토리·패널·조립 오버레이 드로잉 5종 (stage 3~6)
+
+Phase B 이후 검토: state.js 분리(pending/zoom 등 내부 가변 상태를 별도 모듈로). 현재는
+state-as-parameter 패턴으로 render 측에서는 상태를 매 호출 수신하므로 긴급도 낮음.
 
 상세: [`ANALYSIS.md`](ANALYSIS.md) / [`analysis/05-recommendations.md`](analysis/05-recommendations.md)
 

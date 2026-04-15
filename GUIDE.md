@@ -1,5 +1,5 @@
 # GUIDE.md — AP3: 잔해의 귀환 개발자 가이드
-> 버전: v1.2.2
+> 버전: v1.3.0
 > 최종 갱신: 2026-03-16
 
 ---
@@ -293,6 +293,7 @@ Game.render()
 
 | 날짜 | 버전 | 내용 |
 |---|---|---|
+| 2026-04-15 | v1.3.0 | **P0-2 완료**: `TetrisGrid.js` god-object(1,860 LOC) → `tetris/` 하위 3개 모듈 + TetrisGrid facade 분할 (stage 1~6, −59.0%). `tetris/defs.js` (129 LOC, 상수·카탈로그)·`tetris/icons.js` (293 LOC, 드로잉 헬퍼 5종)·`tetris/render.js` (806 LOC, 드로잉 함수 5종: `drawShipModules`·`drawOnCanvas`·`drawInstalledPanel`·`drawModulePanel`·`drawInventory`). 렌더 모듈은 state-as-parameter 패턴 채택 — 호출 시마다 state 번들을 전달받아 내부에 가변 상태를 보관하지 않음. `TetrisGrid.js` 는 762 LOC facade 로 축소되어 game loop·mutation·facade wrapper 만 유지. `index.html` 스크립트 로드 순서: `version.js → defs → icons → render → TetrisGrid`. 스모크 테스트를 파일별 LOC 캡(4개 파일)으로 확장. 공개 API·게임플레이 변경 없음. smoke 3→6 green. 커밋 체인: e1521d1 (s1) · a35c856 (s2) · 3e7fa52 (s3) · ef4908e (s4) · d09827c (s5) · e8d5d07 (s6) |
 | 2026-04-14 | v1.2.3 | P0-4b 완료: 버전 상수 단일 소스 마이그레이션. `index.html` 에 `js/version.js` 로드 태그 추가(config.js 보다 앞). `Game.js:12` 의 `const VERSION` 제거, `version-display` 갱신 로직이 `window.JNJD_VERSION` 참조. `version.js` 주석에서 레거시 호환 문구 삭제. `tests/smoke.test.js` 2번 케이스를 `version.js` 내 `window.JNJD_VERSION` 존재 + `Game.js` 내 `const VERSION` 잔여 없음 검증으로 재작성. CLAUDE.md §2.1 갱신. `package.json` version bump. 스모크 3/3 green. 선행 커밋으로 `.gitattributes` 추가 (CRLF↔LF 불일치 해소) |
 | 2026-03-16 | v1.2.1 | 플레이어 함선 비주얼 전면 개편: Renderer.drawPlayer → 원형 UFO 디스크 디자인(타원 본체·반투명 돔·상하 해치 패널), 포탑(마우스 방향 회전), 추진체 불꽃(이동 방향 반대쪽 분출·3중 젯). Player.draw에 vx/vy 전달, getHitPolygons 8각형 근사로 변경. drawProjectile·drawCannonball 방향각 파라미터 추가(길쭉한 총알/포탄 모양). drawExplosionFlash 신규(팽창 플래시+핵심+링). WeaponSystem _hitEvents+consumeHitEvents() 추가(피격 이벤트 전달). Game.js spawnExplosion 신규(타입/속성별 플래시+불꽃 파편+연기 구름: cannon·NUKE·FIRE·ELECTRIC·LASER·KINETIC 분기). 피격 이벤트→폭발 이펙트 실시간 연결 |
 | 2026-03-16 | v1.2.0 | 스테이지 시스템(5스테이지 순환, 보스 처치=클리어, 스크랩+80/모듈+2 보상), 환경 위험(METEORS·CRYO·HEAT·RADIATION), StageManager.js 신규, WeaponCombine.js 신규(8 레시피), NUKE 속성 추가(SynergySystem 5 시너지 + EnemyManager 보스 weak/resist 갱신), 무기 타입(FIREARM/ENERGY/CONVENTIONAL) 분류 + weaponType 필드, 조합 전용 무기 8종(WPN_ION_BLAST 등) + NUKE 기본 무기 2종(WPN_NUKE_SHELL·WPN_RADIATOR_BASE), WeaponSystem setCooldownMult·multi5·nova8·nuke_shell·radiator fire 타입 추가, Player.armorHazardMult + takeDamageEnv 추가, Game.js STATE.STAGE_CLEAR·STATE.CRAFTING 추가·_drawCraftingUI·_drawStageClearOverlay·_drawStageHUD 신규, config.js 신규, InputHandler C키 추가, 튜토리얼 스테이지·무기조합 탭 신규 |

@@ -13,7 +13,7 @@
  */
 'use strict';
 
-window.JNJD_VERSION = 'v1.2.3'; // P0-4b: VERSION 상수 단일 소스 마이그레이션 완료
+window.JNJD_VERSION = 'v1.3.0'; // P0-2: TetrisGrid.js → tetris/ 서브모듈 분할 (−59.0% LOC)
 
 // Game.js 는 이 전역(window.JNJD_VERSION)을 단일 소스로 사용한다.
 // 새 버전 배포 시 이 파일 한 줄만 수정하면 됨.

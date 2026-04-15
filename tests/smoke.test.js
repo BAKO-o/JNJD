@@ -61,13 +61,26 @@ describe('JNJD 스모크 테스트', () => {
   });
 
   /**
-   * 3. TetrisGrid.js god-object 감지
-   *    4,000 LOC 돌파 시 실패 → 리팩터 미루기 방지용 압력 장치
-   *    (현재 ~1,860 LOC · P0-2 분할 후 이 테스트는 파일별로 세분화 예정)
+   * 3. 파일별 LOC 상한 (god-object 재출현 방지용 압력 장치)
+   *
+   *    P0-2 완료 후 TetrisGrid.js + tetris/* 분할로 단일 4,000 LOC 캡은 의미가
+   *    줄었다. 각 모듈에 "현재 + 여유" 수준의 개별 상한을 두어, 특정 파일이
+   *    다시 god-object 로 부풀지 못하게 한다.
+   *
+   *    기준 (2026-04-15 stage 6 종료 시점):
+   *    - TetrisGrid.js   : 762  LOC → cap 1,500 (facade + 게임플레이 로직)
+   *    - tetris/defs.js  : 129  LOC → cap 400
+   *    - tetris/icons.js : 293  LOC → cap 800
+   *    - tetris/render.js: 806  LOC → cap 1,600
    */
-  it('TetrisGrid.js 는 god-object 상한선(4,000 LOC)을 넘지 않는다', () => {
-    const content = readFileSync(resolve(JS_DIR, 'TetrisGrid.js'), 'utf8');
+  it.each([
+    ['TetrisGrid.js',    1500],
+    ['tetris/defs.js',   400],
+    ['tetris/icons.js',  800],
+    ['tetris/render.js', 1600],
+  ])('%s 는 상한선 %i LOC 를 넘지 않는다', (relPath, cap) => {
+    const content = readFileSync(resolve(JS_DIR, relPath), 'utf8');
     const lines = content.split('\n').length;
-    expect(lines, `현재 ${lines} LOC — P0-2 리팩터를 서두르세요`).toBeLessThan(4000);
+    expect(lines, `${relPath}: ${lines} LOC — 상한선(${cap}) 초과. 분할을 고려하세요`).toBeLessThan(cap);
   });
 });
