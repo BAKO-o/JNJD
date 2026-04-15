@@ -247,7 +247,7 @@ const TetrisGrid = (() => {
       maxHp: hullHp,    // 최대 내구도
     });
 
-    _applyBonus(pending.bonus, player);
+    _applyBonus(pending.bonus, player, pending.type);
     recalcHitbox(player);
 
     // 큐에서 해당 항목 제거 후 다음 pending 재구성
@@ -389,7 +389,7 @@ const TetrisGrid = (() => {
   // SCRAP_VALUES 는 tetris/defs.js 로 이동 (P0-2 stage 1)
 
   /** 보너스 적용 (hp는 코어HP에 영향 없음 — 모듈 자체 내구도로 처리) */
-  function _applyBonus(bonus, player) {
+  function _applyBonus(bonus, player, moduleType) {
     // bonus.hp: 장갑판 내구도로 사용; 플레이어 HP에는 가산하지 않음
     if (bonus.speed)        player.speedMult  += bonus.speed;
     if (bonus.damage)       player.damageMult += bonus.damage;
@@ -400,10 +400,17 @@ const TetrisGrid = (() => {
     if (bonus.weapon)       WeaponSystem.addSecondary(bonus.weapon, bonus.weaponAttr ?? null);
     if (bonus.weaponAttr)   SynergySystem.addWeaponAttr(bonus.weaponAttr);
     if (bonus.weaponAttrs)  bonus.weaponAttrs.forEach(a => SynergySystem.addWeaponAttr(a));
+
+    // Phase B: shape 시너지 — 해당 모듈의 shape 에 (attr, shape) 쌍 등록
+    if (moduleType && MODULE_DEFS[moduleType]) {
+      const shape = MODULE_DEFS[moduleType].shape;
+      if (bonus.weaponAttr)   SynergySystem.addShapeAttr(bonus.weaponAttr, shape);
+      if (bonus.weaponAttrs)  bonus.weaponAttrs.forEach(a => SynergySystem.addShapeAttr(a, shape));
+    }
   }
 
   /** 보너스 역적용 — unequipModule 시 호출 */
-  function _removeBonus(bonus, player) {
+  function _removeBonus(bonus, player, moduleType) {
     if (bonus.speed)        player.speedMult  = Math.max(1.0, player.speedMult  - bonus.speed);
     if (bonus.damage)       player.damageMult = Math.max(1.0, player.damageMult - bonus.damage);
     if (bonus.cooldownMult) {
@@ -414,6 +421,13 @@ const TetrisGrid = (() => {
     if (bonus.weapon)       WeaponSystem.removeSecondary(bonus.weapon);
     if (bonus.weaponAttr)   SynergySystem.removeWeaponAttr(bonus.weaponAttr);
     if (bonus.weaponAttrs)  bonus.weaponAttrs.forEach(a => SynergySystem.removeWeaponAttr(a));
+
+    // Phase B: shape 시너지도 역적용
+    if (moduleType && MODULE_DEFS[moduleType]) {
+      const shape = MODULE_DEFS[moduleType].shape;
+      if (bonus.weaponAttr)   SynergySystem.removeShapeAttr(bonus.weaponAttr, shape);
+      if (bonus.weaponAttrs)  bonus.weaponAttrs.forEach(a => SynergySystem.removeShapeAttr(a, shape));
+    }
   }
 
   /**
@@ -436,7 +450,7 @@ const TetrisGrid = (() => {
     if (!def) return false;
 
     // 보너스 역적용
-    _removeBonus(def.bonus, player);
+    _removeBonus(def.bonus, player, mod.type);
 
     // 그리드 & placedModules 에서 제거
     for (const c of mod.cells) grid.delete(`${c.gx},${c.gy}`);

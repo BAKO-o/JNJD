@@ -86,6 +86,50 @@ describe('JNJD 스모크 테스트', () => {
   });
 
   /**
+   * 5. Phase B Proposal 1 — SynergySystem shape 배율 적용
+   *    SynergySystem.js 를 vm 에 실행한 뒤:
+   *    - addShapeAttr('FIRE','LINE') 단독 시 getDamageMult 가 ≈ 1.15
+   *    - addShapeAttr 2회로 FIRE:LINE + LASER:BLOCK 활성 시 ≈ 1.15 * 1.30
+   *    - removeShapeAttr 로 카운터가 0 에 도달하면 기여가 사라짐
+   *    - 알 수 없는 키(KINETIC:LINE, FIRE:OTHER 등) 는 무시
+   */
+  it('SynergySystem.addShapeAttr 가 getDamageMult 에 9개 조합만 반영한다', () => {
+    const js = readFileSync(resolve(JS_DIR, 'SynergySystem.js'), 'utf8');
+    const sandbox = { window: {} };
+    createContext(sandbox);
+    runInContext(js, sandbox);
+    const S = sandbox.window.SynergySystem;
+
+    S.reset();
+    expect(S.getDamageMult()).toBeCloseTo(1.0, 5);
+
+    S.addShapeAttr('FIRE', 'LINE');
+    expect(S.getDamageMult()).toBeCloseTo(1.15, 5);
+
+    S.addShapeAttr('LASER', 'BLOCK');
+    expect(S.getDamageMult()).toBeCloseTo(1.15 * 1.30, 5);
+
+    // 9 조합 외 값은 무시
+    S.addShapeAttr('KINETIC', 'LINE');   // KINETIC 은 shape 시너지 비대상
+    S.addShapeAttr('FIRE', 'OTHER');     // OTHER 는 shape 시너지 비대상
+    expect(S.getDamageMult()).toBeCloseTo(1.15 * 1.30, 5);
+
+    // 역적용
+    S.removeShapeAttr('FIRE', 'LINE');
+    expect(S.getDamageMult()).toBeCloseTo(1.30, 5);
+    S.removeShapeAttr('LASER', 'BLOCK');
+    expect(S.getDamageMult()).toBeCloseTo(1.0, 5);
+
+    // 활성 효과 HUD 목록
+    S.reset();
+    S.addShapeAttr('ELECTRIC', 'BLOCK');
+    const effects = S.getActiveEffects();
+    expect(effects.length).toBe(1);
+    expect(effects[0].key).toBe('ELECTRIC:BLOCK');
+    expect(effects[0].name).toBe('전기 축전지');
+  });
+
+  /**
    * 4. Phase B Proposal 1 — Shape Synergy 인프라
    *    defs.js 실행 후 MODULE_DEFS 모든 엔트리에 `shape` 필드가 주입되며,
    *    대표 모듈 5종이 기대대로 DOT/LINE/L/BLOCK/OTHER 로 분류되는지 확인.

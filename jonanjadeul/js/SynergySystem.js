@@ -49,8 +49,33 @@ const SYNERGY_TABLE = {
   'LASER+NUKE':            { mult: 1.7,  name: '감마선 포격',  color: '#bef264' },
 };
 
+// ──────────────────────────────────────────────────────────────
+// Shape Synergy (Phase B Proposal 1 — v1.4.0)
+//
+// 기존 "속성" 시너지 위에 "속성 × 모양" 축을 추가.
+// 3속성(FIRE/ELECTRIC/LASER) × 3모양(LINE/L/BLOCK) = 9 조합.
+// 각 조합은 해당 (attr, shape) 를 가진 무기 모듈이 1개 이상 장착 시 활성.
+//
+// 비수치 훅(관통·연쇄·크리·반사) 은 Phase B-3 에서 WeaponSystem 과 연동 예정.
+// 현재 단계(B-2)는 damage 배율 효과만 적용한다 — 측정 가능한 베이스라인.
+// ──────────────────────────────────────────────────────────────
+const SHAPE_SYNERGY_TABLE = {
+  'FIRE:LINE':     { mult: 1.15, name: '화염 사선',   color: '#ef4444', desc: '데미지 +15%' },
+  'FIRE:L':        { mult: 1.20, name: '화염 포위',   color: '#f97316', desc: '데미지 +20% (폭발 반경은 B-3)' },
+  'FIRE:BLOCK':    { mult: 1.18, name: '화염 방벽',   color: '#fb923c', desc: '데미지 +18% (반사 DoT 는 B-3)' },
+  'ELECTRIC:LINE': { mult: 1.15, name: '전기 송전선', color: '#facc15', desc: '데미지 +15% (연쇄+1 은 B-3)' },
+  'ELECTRIC:L':    { mult: 1.20, name: '전기 절곡',   color: '#eab308', desc: '데미지 +20% (크리티컬은 B-3)' },
+  'ELECTRIC:BLOCK':{ mult: 1.22, name: '전기 축전지', color: '#fde047', desc: '데미지 +22% (EMP 펄스는 B-3)' },
+  'LASER:LINE':    { mult: 1.18, name: '레이저 편광', color: '#a78bfa', desc: '데미지 +18% (관통+2 는 B-3)' },
+  'LASER:L':       { mult: 1.15, name: '레이저 굴절', color: '#c084fc', desc: '데미지 +15% (반사는 B-3)' },
+  'LASER:BLOCK':   { mult: 1.30, name: '레이저 집광', color: '#d8b4fe', desc: '데미지 +30% (단일 타겟 집중)' },
+};
+
 // 속성별 장착 수 (무기 모듈 장착/해제 시 갱신)
 let _counts = { FIRE: 0, LASER: 0, ELECTRIC: 0, KINETIC: 0, NUKE: 0 };
+
+// (attr, shape) 쌍 장착 수 — key: 'FIRE:LINE' 형식
+let _shapeCounts = Object.create(null);
 
 /**
  * 무기 장착 시 속성 추가
@@ -66,6 +91,35 @@ function addWeaponAttr(attr) {
  */
 function removeWeaponAttr(attr) {
   if (_counts[attr] !== undefined && _counts[attr] > 0) _counts[attr]--;
+}
+
+/**
+ * 무기 모듈 장착 시 (attr, shape) 쌍 등록.
+ * SHAPE_SYNERGY_TABLE 에 정의된 키(FIRE/ELECTRIC/LASER × LINE/L/BLOCK) 만
+ * 실제로 집계한다. 그 외 (KINETIC, NUKE, DOT, OTHER) 는 무시 — Phase B-1~2
+ * 프로토타입 범위는 9 조합으로 한정.
+ *
+ * @param {string} attr  — 'FIRE' | 'ELECTRIC' | 'LASER' | (그 외는 무시)
+ * @param {string} shape — 'LINE' | 'L' | 'BLOCK' | (그 외는 무시)
+ */
+function addShapeAttr(attr, shape) {
+  if (!attr || !shape) return;
+  const key = attr + ':' + shape;
+  if (!SHAPE_SYNERGY_TABLE[key]) return;
+  _shapeCounts[key] = (_shapeCounts[key] || 0) + 1;
+}
+
+/**
+ * 무기 모듈 해제 시 (attr, shape) 쌍 제거.
+ * @param {string} attr
+ * @param {string} shape
+ */
+function removeShapeAttr(attr, shape) {
+  if (!attr || !shape) return;
+  const key = attr + ':' + shape;
+  if (!_shapeCounts[key]) return;
+  _shapeCounts[key]--;
+  if (_shapeCounts[key] <= 0) delete _shapeCounts[key];
 }
 
 /**
@@ -95,6 +149,13 @@ function getDamageMult() {
         mult *= SYNERGY_TABLE[key].mult;
         seen.add(key);
       }
+    }
+  }
+
+  // Phase B: shape 시너지 — (attr, shape) 쌍이 1개 이상 장착 시 1회 곱함
+  for (const key in _shapeCounts) {
+    if (_shapeCounts[key] >= 1 && SHAPE_SYNERGY_TABLE[key]) {
+      mult *= SHAPE_SYNERGY_TABLE[key].mult;
     }
   }
 
@@ -128,6 +189,13 @@ function getActiveEffects() {
     }
   }
 
+  // Phase B: 활성 shape 시너지도 HUD 에 포함
+  for (const key in _shapeCounts) {
+    if (_shapeCounts[key] >= 1 && SHAPE_SYNERGY_TABLE[key]) {
+      effects.push({ key, ...SHAPE_SYNERGY_TABLE[key] });
+    }
+  }
+
   return effects;
 }
 
@@ -142,16 +210,26 @@ function getAttrCounts() {
 /** 게임 재시작 시 초기화 */
 function reset() {
   for (const attr of ATTRIBUTES) _counts[attr] = 0;
+  _shapeCounts = Object.create(null);
+}
+
+/** 디버그·HUD 용: 현재 활성 (attr:shape) 쌍 카운트 사본 반환 */
+function getShapeCounts() {
+  return { ..._shapeCounts };
 }
 
 // 전역 노출
 window.SynergySystem = {
   addWeaponAttr,
   removeWeaponAttr,
+  addShapeAttr,        // Phase B
+  removeShapeAttr,     // Phase B
   getDamageMult,
   getActiveEffects,
   getAttrCounts,
+  getShapeCounts,      // Phase B
   reset,
   ATTRIBUTES,
   ATTR_ICONS,
+  SHAPE_SYNERGY_TABLE, // Phase B (HUD/테스트 노출)
 };
