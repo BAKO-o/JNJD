@@ -15,10 +15,10 @@
 
 window.TetrisRender = (() => {
   const {
-    CELL, MODULE_DEFS, TIER_COLORS, TIER_LABELS,
+    CELL, HALF, MODULE_DEFS, TIER_COLORS, TIER_LABELS,
     HULL_SLOT_EXPAND_COST, HULL_SLOT_EXPAND_AMOUNT,
   } = window.TetrisDefs;
-  const { roundRect, drawModuleIcon } = window.TetrisIcons;
+  const { roundRect, drawModuleIcon, drawCoreIcon } = window.TetrisIcons;
 
   /**
    * 게임플레이 중 함선 위에 모듈을 그린다 (함선 회전 적용)
@@ -655,5 +655,152 @@ window.TetrisRender = (() => {
     }
   }
 
-  return { drawShipModules, drawInstalledPanel, drawModulePanel, drawInventory };
+  /**
+   * 함체 조립(오버레이) 메인 드로우 — 배치 그리드, 유효 슬롯, 호버 프리뷰,
+   * 좌/우 패널, 하단 힌트까지 모두 그린다.
+   *
+   * state: {
+   *   grid, validSlots, pending, maxHullSlots, placedModules,
+   *   moduleQueue, pendingSelectIdx,
+   *   isDragging, dragOriginAnchorGx, dragOriginAnchorGy,
+   *   canPlace,                       // (agx, agy) => boolean
+   * }
+   */
+  function drawOnCanvas(ctx, cx, cy, mouseX, mouseY, player, state) {
+    const {
+      grid, validSlots, pending, maxHullSlots, placedModules,
+      moduleQueue, pendingSelectIdx,
+      isDragging, dragOriginAnchorGx, dragOriginAnchorGy,
+      canPlace,
+    } = state;
+
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+
+    // ── 1. 어두운 반투명 오버레이
+    ctx.fillStyle = 'rgba(0, 2, 18, 0.85)';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── 2. 헤더
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font         = 'bold 20px "Segoe UI", sans-serif';
+    ctx.fillStyle    = '#93c5fd';
+    ctx.fillText('🔧 함선 모듈 조립', cx, 36);
+    ctx.font      = '12px "Segoe UI", sans-serif';
+
+    const usedSlots = grid.size - 1;
+    const isFull    = usedSlots >= maxHullSlots;
+    if (isFull) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText(`⚠ 함체 슬롯 포화 — 기존 모듈을 클릭하면 제거됩니다 (교체 후 재배치)`, cx, 62);
+    } else {
+      ctx.fillStyle = '#5577aa';
+      ctx.fillText('유효한 슬롯(파란 테두리)을 클릭해 부착 · 기존 모듈을 클릭 드래그로 이동', cx, 62);
+    }
+
+    // ── 3. 마우스→그리드 좌표
+    const hgx = Math.round((mouseX - cx) / CELL);
+    const hgy = Math.round((mouseY - cy) / CELL);
+    const isValidHover = pending && canPlace(hgx, hgy);
+
+    // ── 4. 배치된 모듈 셀
+    for (const [key, type] of grid) {
+      const [gx, gy] = key.split(',').map(Number);
+      const sx = cx + gx * CELL;
+      const sy = cy + gy * CELL;
+
+      if (type === 'CORE') {
+        drawCoreIcon(ctx, sx, sy);
+      } else {
+        const def   = MODULE_DEFS[type];
+        const color = def ? def.color : '#334455';
+        // 드래그 중이 아닐 때 hover된 모듈 강조
+        const isDragHover = !isDragging && (gx === hgx && gy === hgy);
+        ctx.fillStyle = isDragHover ? (def ? def.color + 'cc' : '#334455cc') : (def ? def.color : '#334455');
+        ctx.globalAlpha = isDragHover ? 1.0 : 0.9;
+        ctx.fillRect(sx - HALF, sy - HALF, CELL, CELL);
+        ctx.globalAlpha = 1.0;
+        // 테두리: 드래그 가능 강조(hover) / 슬롯 포화 / 일반
+        if (isDragHover) {
+          ctx.strokeStyle = 'rgba(251,191,36,0.95)';
+          ctx.lineWidth   = 2;
+        } else if (isFull) {
+          const pulse2 = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+          ctx.strokeStyle = `rgba(251,191,36,${0.5 + pulse2 * 0.5})`;
+          ctx.lineWidth   = 1.5;
+        } else {
+          ctx.strokeStyle = 'rgba(200,220,255,0.5)';
+          ctx.lineWidth   = 1;
+        }
+        ctx.strokeRect(sx - HALF, sy - HALF, CELL, CELL);
+      }
+    }
+
+    // ── 4b. 드래그 중: 원위치에 점선 테두리 표시
+    if (isDragging && pending) {
+      const pulse3 = 0.5 + 0.5 * Math.sin(Date.now() * 0.006);
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = `rgba(251,191,36,${0.45 + pulse3 * 0.45})`;
+      ctx.lineWidth   = 1.5;
+      for (const c of pending.cells) {
+        const ox = cx + (dragOriginAnchorGx + c.gx) * CELL;
+        const oy = cy + (dragOriginAnchorGy + c.gy) * CELL;
+        ctx.strokeRect(ox - HALF + 1, oy - HALF + 1, CELL - 2, CELL - 2);
+      }
+      ctx.setLineDash([]);
+    }
+
+    // ── 5. 유효 슬롯 표시
+    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.004);
+    for (const s of validSlots) {
+      const sx = cx + s.gx * CELL;
+      const sy = cy + s.gy * CELL;
+      const isHover = (s.gx === hgx && s.gy === hgy);
+      ctx.strokeStyle = isHover
+        ? `rgba(100,220,255,0.9)`
+        : `rgba(56,189,248,${0.3 + pulse * 0.4})`;
+      ctx.lineWidth = isHover ? 2 : 1.5;
+      ctx.strokeRect(sx - HALF + 1, sy - HALF + 1, CELL - 2, CELL - 2);
+    }
+
+    // ── 6. 호버 프리뷰
+    if (pending && isValidHover) {
+      ctx.globalAlpha = 0.45;
+      for (const c of pending.cells) {
+        const psx = cx + (hgx + c.gx) * CELL;
+        const psy = cy + (hgy + c.gy) * CELL;
+        ctx.fillStyle = pending.color;
+        ctx.fillRect(psx - HALF, psy - HALF, CELL, CELL);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ── 7. 좌측 패널: 현재 장착 모듈 목록
+    drawInstalledPanel(ctx, W, H, player, { grid, placedModules, maxHullSlots });
+
+    // ── 8. 우측 패널: 모듈 인벤토리 (항상 표시)
+    drawModulePanel(ctx, W, H, {
+      pending, moduleQueue, pendingSelectIdx, placedModules, isDragging,
+    });
+
+    // ── 9. 하단 힌트
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font      = '12px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#334466';
+    const scrap = player ? player.scrap : 0;
+    ctx.fillText(
+      `[W/S] 모듈 선택   [R] 회전   [Space] 닫기   [E] 슬롯 증설 (+${HULL_SLOT_EXPAND_AMOUNT}슬롯, ${HULL_SLOT_EXPAND_COST}Scrap)   [X] 그리드 위: 장착해제 / 대기모듈: 파괴+Scrap  ─  Scrap: ${scrap}`,
+      cx, H - 28
+    );
+  }
+
+  return {
+    drawShipModules,
+    drawOnCanvas,
+    drawInstalledPanel,
+    drawModulePanel,
+    drawInventory,
+  };
 })();
