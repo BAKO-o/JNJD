@@ -603,57 +603,14 @@ const TetrisGrid = (() => {
 
   /**
    * 게임플레이 중 함선 위에 모듈을 그린다 (함선 회전 적용)
-   * Player.draw()에서 Renderer.drawPlayer() 호출 전에 실행
+   * 실제 드로잉은 tetris/render.js 로 이동 (P0-2 stage 4).
    */
   function drawShipModules(ctx, cx, cy, angle) {
-    if (grid.size <= 1) return; // 코어만 있으면 스킵
-
-    // 줌 역보정: 화면상 셀 크기를 CELL 픽셀로 고정
-    // 셀 위치는 실제 줌에 맞게 스케일, 크기만 역보정
-    const z  = Math.max(0.25, _zoom);
-    const EC = CELL / z;       // 실제 화면에서 CELL 픽셀이 되도록 world-space 크기
-    const EH = EC / 2;
-    const BAR_H = 3 / z;       // HP 바 두께도 역보정
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(angle);
-
-    // 피격 플래시 셀 캐싱
-    const flashCell = lastDestroyFlash > 0 && lastDestroyedCell
-      ? `${lastDestroyedCell.gx},${lastDestroyedCell.gy}` : null;
-
-    for (const [key, type] of grid) {
-      if (type === 'CORE') continue;
-      const [gx, gy] = key.split(',').map(Number);
-      const def   = MODULE_DEFS[type];
-      const color = def ? def.color : '#334455';
-
-      // 그리드 위치 (CELL 간격 — 줌이 적용되면 올바른 화면 위치)
-      const sx = gx * CELL - EH;
-      const sy = gy * CELL - EH;
-
-      // 피격 플래시
-      const isFlash = flashCell && (key === flashCell || placedModules.some(m => m.cells.some(c=>`${c.gx},${c.gy}`===flashCell && m.cells.some(c2=>`${c2.gx},${c2.gy}`===key))));
-      ctx.fillStyle = isFlash ? `rgba(255,80,80,${Math.min(1, lastDestroyFlash * 4)})` : color;
-      ctx.fillRect(sx, sy, EC, EC);
-      ctx.strokeStyle = 'rgba(150,200,255,0.35)';
-      ctx.lineWidth   = 1 / z;
-      ctx.strokeRect(sx, sy, EC, EC);
-
-      // 장갑판 HP 바 (각 셀 하단)
-      const mod = placedModules.find(m => m.cells.some(c => c.gx === gx && c.gy === gy));
-      if (mod && mod.maxHp > 0) {
-        const ratio = Math.max(0, mod.hp / mod.maxHp);
-        const bx = sx + 1 / z, by = sy + EC - BAR_H - 1 / z;
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(bx, by, EC - 2 / z, BAR_H);
-        ctx.fillStyle = ratio > 0.5 ? '#4ade80' : ratio > 0.25 ? '#fbbf24' : '#ef4444';
-        ctx.fillRect(bx, by, (EC - 2 / z) * ratio, BAR_H);
-      }
-    }
-
-    ctx.restore();
+    window.TetrisRender.drawShipModules(ctx, cx, cy, angle, {
+      grid, placedModules,
+      zoom: _zoom,
+      lastDestroyedCell, lastDestroyFlash,
+    });
   }
 
   /**

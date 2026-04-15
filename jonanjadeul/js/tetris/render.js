@@ -14,8 +14,62 @@
 'use strict';
 
 window.TetrisRender = (() => {
-  const { MODULE_DEFS, TIER_COLORS, TIER_LABELS } = window.TetrisDefs;
+  const { CELL, MODULE_DEFS, TIER_COLORS, TIER_LABELS } = window.TetrisDefs;
   const { roundRect, drawModuleIcon } = window.TetrisIcons;
+
+  /**
+   * 게임플레이 중 함선 위에 모듈을 그린다 (함선 회전 적용)
+   * state: { grid, placedModules, zoom, lastDestroyedCell, lastDestroyFlash }
+   */
+  function drawShipModules(ctx, cx, cy, angle, state) {
+    const { grid, placedModules, zoom, lastDestroyedCell, lastDestroyFlash } = state;
+    if (grid.size <= 1) return; // 코어만 있으면 스킵
+
+    // 줌 역보정: 화면상 셀 크기를 CELL 픽셀로 고정
+    const z  = Math.max(0.25, zoom);
+    const EC = CELL / z;
+    const EH = EC / 2;
+    const BAR_H = 3 / z;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+
+    // 피격 플래시 셀 캐싱
+    const flashCell = lastDestroyFlash > 0 && lastDestroyedCell
+      ? `${lastDestroyedCell.gx},${lastDestroyedCell.gy}` : null;
+
+    for (const [key, type] of grid) {
+      if (type === 'CORE') continue;
+      const [gx, gy] = key.split(',').map(Number);
+      const def   = MODULE_DEFS[type];
+      const color = def ? def.color : '#334455';
+
+      const sx = gx * CELL - EH;
+      const sy = gy * CELL - EH;
+
+      // 피격 플래시
+      const isFlash = flashCell && (key === flashCell || placedModules.some(m => m.cells.some(c=>`${c.gx},${c.gy}`===flashCell && m.cells.some(c2=>`${c2.gx},${c2.gy}`===key))));
+      ctx.fillStyle = isFlash ? `rgba(255,80,80,${Math.min(1, lastDestroyFlash * 4)})` : color;
+      ctx.fillRect(sx, sy, EC, EC);
+      ctx.strokeStyle = 'rgba(150,200,255,0.35)';
+      ctx.lineWidth   = 1 / z;
+      ctx.strokeRect(sx, sy, EC, EC);
+
+      // 장갑판 HP 바 (각 셀 하단)
+      const mod = placedModules.find(m => m.cells.some(c => c.gx === gx && c.gy === gy));
+      if (mod && mod.maxHp > 0) {
+        const ratio = Math.max(0, mod.hp / mod.maxHp);
+        const bx = sx + 1 / z, by = sy + EC - BAR_H - 1 / z;
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(bx, by, EC - 2 / z, BAR_H);
+        ctx.fillStyle = ratio > 0.5 ? '#4ade80' : ratio > 0.25 ? '#fbbf24' : '#ef4444';
+        ctx.fillRect(bx, by, (EC - 2 / z) * ratio, BAR_H);
+      }
+    }
+
+    ctx.restore();
+  }
 
   /**
    * 인벤토리 섹션 (대기 중 / 장착 완료) 드로우
@@ -175,5 +229,5 @@ window.TetrisRender = (() => {
     drawInvSection(ctx, divX + PAD, bodyY, colW, bodyH, '장착 완료', placedTypes, true, { placedModules });
   }
 
-  return { drawInventory };
+  return { drawShipModules, drawInventory };
 })();
