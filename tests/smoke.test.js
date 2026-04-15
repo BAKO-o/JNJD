@@ -35,6 +35,7 @@ describe('JNJD 스모크 테스트', () => {
       'version.js',
       // P0-2 stage 1+: tetris/ 하위 분할 모듈 (누적 추가 예정)
       'tetris/defs.js',
+      'tetris/icons.js',
     ];
     const missing = required.filter(f => !existsSync(resolve(JS_DIR, f)));
     expect(missing, `누락된 파일: ${missing.join(', ')}`).toEqual([]);
