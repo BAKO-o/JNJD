@@ -373,4 +373,40 @@ describe('JNJD 스모크 테스트', () => {
     // hitShip 시그니처에 attacker 파라미터 존재
     expect(/function\s+hitShip\s*\([^)]*attacker[^)]*\)/.test(src), 'hitShip(attacker) 파라미터 없음').toBe(true);
   });
+
+  /**
+   * 12. Phase B-5 — SynergySystem.SHAPE_ICONS export 계약
+   *    HUD 가 사용하는 아이콘 맵이 3 shape 모두 포함해야 한다.
+   *    (LINE/L/BLOCK — DOT/OTHER 는 shape 시너지 비대상이라 아이콘도 없음)
+   */
+  it('SynergySystem.SHAPE_ICONS 에 LINE/L/BLOCK 아이콘이 모두 존재한다', () => {
+    const js = readFileSync(resolve(JS_DIR, 'SynergySystem.js'), 'utf8');
+    const sandbox = { window: {} };
+    createContext(sandbox);
+    runInContext(js, sandbox);
+    const S = sandbox.window.SynergySystem;
+    expect(S.SHAPE_ICONS, 'SHAPE_ICONS 미노출').toBeTruthy();
+    for (const sh of ['LINE', 'L', 'BLOCK']) {
+      expect(
+        typeof S.SHAPE_ICONS[sh] === 'string' && S.SHAPE_ICONS[sh].length > 0,
+        `SHAPE_ICONS.${sh} 누락 또는 비문자열`,
+      ).toBe(true);
+    }
+  });
+
+  /**
+   * 13. Phase B-5 — Game.js _drawSynergyHUD 가 shape 시각화 3요소를 모두 사용
+   *    regression guard: HUD 에서 shape 뱃지 · 모양 분포 라인이 빠지지 않도록.
+   *    (1) SHAPE_ICONS 참조 (2) getShapeCounts 호출 (3) ef.key 의 ':' 구분 분기
+   */
+  it('Game.js _drawSynergyHUD 가 SHAPE_ICONS / getShapeCounts / key split(":") 를 모두 사용한다', () => {
+    const src = readFileSync(resolve(JS_DIR, 'Game.js'), 'utf8');
+    expect(/SHAPE_ICONS/.test(src), 'Game.js 에 SHAPE_ICONS 참조 없음').toBe(true);
+    expect(/getShapeCounts\s*\(/.test(src), 'Game.js 에 getShapeCounts 호출 없음').toBe(true);
+    // shape 뱃지 분기: ef.key 의 ':' 존재 여부로 분기
+    expect(
+      /ef\.key[\s\S]{0,80}(indexOf\s*\(\s*['"]:['"]\s*\)|includes\s*\(\s*['"]:['"]\s*\)|split\s*\(\s*['"]:['"]\s*\))/.test(src),
+      'Game.js _drawSynergyHUD 에 shape 뱃지 분기(ef.key 의 ":" 검사) 없음',
+    ).toBe(true);
+  });
 });

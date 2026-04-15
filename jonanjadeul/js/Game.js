@@ -736,6 +736,7 @@ const Game = (() => {
     const counts  = SynergySystem.getAttrCounts();
     const effects = SynergySystem.getActiveEffects();
     const icons   = SynergySystem.ATTR_ICONS;
+    const shapeIcons = SynergySystem.SHAPE_ICONS || {};
 
     // 장착된 무기 속성이 하나도 없으면 표시 안 함
     const hasAny  = Object.values(counts).some(v => v > 0);
@@ -758,12 +759,39 @@ const Game = (() => {
     ctx.fillText(attrParts.join('  '), x0, y);
     y += 16;
 
-    // 활성 시너지 목록
+    // Phase B-5: 모양 분포 (LINE/L/BLOCK 별 합계) — shape 시너지 대상 무기만 집계
+    const shapeCounts = (SynergySystem.getShapeCounts && SynergySystem.getShapeCounts()) || {};
+    const shapeAgg = { LINE: 0, L: 0, BLOCK: 0 };
+    for (const k in shapeCounts) {
+      const sh = k.split(':')[1];
+      if (shapeAgg[sh] !== undefined) shapeAgg[sh] += shapeCounts[k];
+    }
+    const shapeParts = [];
+    for (const sh of ['LINE', 'L', 'BLOCK']) {
+      if (shapeAgg[sh] > 0) shapeParts.push(`${shapeIcons[sh] || sh}×${shapeAgg[sh]}`);
+    }
+    if (shapeParts.length > 0) {
+      ctx.fillStyle = '#64748b'; // 속성 카운트보다 한 단계 흐리게 — 시각적 계층 분리
+      ctx.fillText(shapeParts.join('  '), x0, y);
+      y += 16;
+    }
+
+    // 활성 시너지 목록 — shape 시너지는 [속성+모양] 뱃지 prefix 로 구분
     const totalMult = SynergySystem.getDamageMult();
     if (effects.length > 0) {
       for (const ef of effects) {
         ctx.fillStyle = ef.color;
-        ctx.fillText(`${ef.name} ×${ef.mult.toFixed(2)}`, x0, y);
+        let label;
+        if (ef.key && ef.key.indexOf(':') >= 0) {
+          // shape 시너지: 'FIRE:LINE' → 🔥━ 화염 사선 ×1.15
+          const parts = ef.key.split(':');
+          const badge = `${icons[parts[0]] || ''}${shapeIcons[parts[1]] || ''}`;
+          label = `${badge} ${ef.name} ×${ef.mult.toFixed(2)}`;
+        } else {
+          // attr 시너지: 뱃지 없음
+          label = `${ef.name} ×${ef.mult.toFixed(2)}`;
+        }
+        ctx.fillText(label, x0, y);
         y += 14;
       }
       // 총 배율

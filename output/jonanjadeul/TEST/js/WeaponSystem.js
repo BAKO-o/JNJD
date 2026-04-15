@@ -52,6 +52,18 @@ const WeaponSystem = (() => {
     WPN_TYPHOON:     { cooldown: 0.5,  damage: 1.8,  range: 250, color: '#0ea5e9', fire: 'flak8'        },
     WPN_ANNIHILATOR: { cooldown: 2.5,  damage: 5.0,  range: 380, color: '#dc2626', fire: 'chain5'       },
     WPN_OMEGA:       { cooldown: 6.0,  damage: 3.0,  range: 340, color: '#818cf8', fire: 'nova24'       },
+    // ── NUKE 기본 무기
+    WPN_NUKE_SHELL:  { cooldown: 5.0,  damage: 8.0,  range: 550, color: '#4ade80', fire: 'nuke_shell'   },
+    WPN_RADIATOR_BASE:{ cooldown: 0.0, damage: 2.0,  range: 90,  color: '#86efac', fire: 'radiator'     },
+    // ── 조합 결과 무기
+    WPN_ION_BLAST:   { cooldown: 3.5,  damage: 6.0,  range: 420, color: '#c4b5fd', fire: 'nova8'        },
+    WPN_EXPLOSIVE_MISSILE:{ cooldown:3.0, damage:7.0, range:520, color: '#f97316', fire: 'homing'        },
+    WPN_MINIGUN:     { cooldown: 0.10, damage: 0.8,  range: 340, color: '#fca5a5', fire: 'multi5'       },
+    WPN_ION_CANNON:  { cooldown: 2.0,  damage: 12.0, range: 650, color: '#818cf8', fire: 'railgun'      },
+    WPN_INCENDIARY:  { cooldown: 2.2,  damage: 3.0,  range: 220, color: '#ef4444', fire: 'flak8'        },
+    WPN_NUKE_LAUNCHER:{ cooldown:8.0,  damage: 20.0, range: 600, color: '#4ade80', fire: 'nuke_shell'   },
+    WPN_RADIATOR:    { cooldown: 0.0,  damage: 3.5,  range: 110, color: '#86efac', fire: 'radiator'     },
+    WPN_GAMMA_RAY:   { cooldown: 1.8,  damage: 10.0, range: 750, color: '#bef264', fire: 'single'       },
   };
 
   // ── 풀 배열
@@ -60,11 +72,15 @@ const WeaponSystem = (() => {
   // ── 보조 무기 슬롯 목록
   const secondaries = [];  // [{ type, timer, orbitAngle, orbitTimers }]
 
+  // ── 피격 이벤트 (Game.js에서 폭발 이펙트 생성에 사용)
+  const _hitEvents = [];
+
   // ── 상태
   let worldW, worldH;
-  let _zoom       = 1.0;
-  let fireTimer   = 0; // 자동무기 다음 발사까지 남은 시간
-  let cannonTimer = 0; // 포탄 재사용 대기 시간
+  let _zoom           = 1.0;
+  let fireTimer       = 0; // 자동무기 다음 발사까지 남은 시간
+  let cannonTimer     = 0; // 포탄 재사용 대기 시간
+  let _cooldownMult   = 1.0; // 환경 쿨다운 배율 (CRYO: 1.3)
 
   // ── 플레이어 무기 슬롯 (Phase 4 확장용)
   // 현재는 단일 기본 무기만 사용
@@ -86,6 +102,8 @@ const WeaponSystem = (() => {
       homingTarget: null,     // 호밍 타겟 적 객체
       chainCount:   0,        // 남은 체인 횟수
       pierceLeft:   0,        // 관통 횟수 (레일건 등, 0이면 첫 충돌시 소멸)
+      isCrit:       false,    // Phase B-3a — ELECTRIC:L 크리 성공 여부 (HUD/이펙트용)
+      stunDuration: 0,        // Phase B-3b-1 — ELECTRIC:BLOCK 활성 시 피격 적에게 적용될 기절 초
     };
   }
 
@@ -142,11 +160,13 @@ const WeaponSystem = (() => {
     p.vx       = Math.cos(player.angle) * CANNON_SPEED;
     p.vy       = Math.sin(player.angle) * CANNON_SPEED;
     p.radius   = CANNON_RADIUS;
-    p.damage   = CANNON_DAMAGE * player.damageMult;
+    p.damage   = CANNON_DAMAGE * (player.damageMult * SynergySystem.getDamageMult());
     p.lifetime = CANNON_LIFETIME;
     p.color    = '#fb923c';
     p.type     = 'cannon';
     p.splashR  = CANNON_SPLASH_R;
+    p.attr     = null;
+    _applyShapeHooks(p);
   }
 
   /**
@@ -168,18 +188,29 @@ const WeaponSystem = (() => {
     p.vx       = (dx / dist) * PROJ_SPEED;
     p.vy       = (dy / dist) * PROJ_SPEED;
     p.radius   = PROJ_RADIUS;
-    p.damage   = weapon.damage * player.damageMult;
+    p.damage   = weapon.damage * (player.damageMult * SynergySystem.getDamageMult());
     p.lifetime = PROJ_LIFETIME;
     p.color    = weapon.projColor;
     p.type     = 'auto';
     p.splashR  = 0;
+    p.attr     = weapon.attr ?? null;
+    _applyShapeHooks(p);
   }
 
   /**
    * 보조 무기 장착 (TetrisGrid._applyBonus에서 호출)
    */
-  function addSecondary(type) {
-    secondaries.push({ type, timer: 0, orbitAngle: 0, orbitTimers: [0, 0, 0] });
+  function addSecondary(type, attr) {
+    secondaries.push({ type, timer: 0, orbitAngle: 0, orbitTimers: [0, 0, 0], attr: attr ?? null });
+  }
+
+  /**
+   * 보조 무기 해제 (TetrisGrid.unequipModule에서 호출)
+   * 해당 type 중 첫 번째 항목을 제거한다.
+   */
+  function removeSecondary(type) {
+    const idx = secondaries.findIndex(s => s.type === type);
+    if (idx >= 0) secondaries.splice(idx, 1);
   }
 
   /**
@@ -187,6 +218,7 @@ const WeaponSystem = (() => {
    */
   function _fireSecondary(sec, def, player, target, activeEnemies) {
     const fire = def.fire;
+    const secAttr = sec.attr ?? null;
 
     if (fire === 'single') {
       const p = acquireProjectile(); if (!p || !target) return;
@@ -194,9 +226,10 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED; p.vy = (dy/dist) * PROJ_SPEED;
-      p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
-      p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+      p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      _applyShapeHooks(p);
 
     } else if (fire === 'multi3') {
       const targets = activeEnemies
@@ -211,9 +244,10 @@ const WeaponSystem = (() => {
         const dist = Math.hypot(dx, dy); if (dist === 0) continue;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = (dx/dist) * PROJ_SPEED * 1.3; p.vy = (dy/dist) * PROJ_SPEED * 1.3;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME; p.color = def.color;
-        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'spread5') {
@@ -226,9 +260,10 @@ const WeaponSystem = (() => {
         const a = baseAngle + (i / 2) * spread;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED; p.vy = Math.sin(a) * PROJ_SPEED;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.75; p.color = def.color;
-        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'spread7') {
@@ -242,9 +277,10 @@ const WeaponSystem = (() => {
         const a = baseAngle + (i / 3) * spread;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED * 0.9; p.vy = Math.sin(a) * PROJ_SPEED * 0.9;
-        p.radius = PROJ_RADIUS + 1; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS + 1; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.85; p.color = def.color;
-        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'homing') {
@@ -253,10 +289,11 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED * 0.8; p.vy = (dy/dist) * PROJ_SPEED * 0.8;
-      p.radius = PROJ_RADIUS + 3; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS + 3; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME * 1.5; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = true;
-      p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0;
+      p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      _applyShapeHooks(p);
 
     } else if (fire === 'flak8') {
       for (let i = 0; i < 8; i++) {
@@ -264,20 +301,22 @@ const WeaponSystem = (() => {
         const a = (i / 8) * Math.PI * 2;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED * 0.7; p.vy = Math.sin(a) * PROJ_SPEED * 0.7;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / (PROJ_SPEED * 0.7);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
-        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'mine') {
       const p = acquireProjectile(); if (!p) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = 0; p.vy = 0;
-      p.radius = 9; p.damage = def.damage * player.damageMult;
+      p.radius = 9; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = 15; p.color = def.color;
       p.type = 'cannon'; p.splashR = 60;
-      p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+      p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      _applyShapeHooks(p);
 
     } else if (fire === 'chain3') {
       const p = acquireProjectile(); if (!p || !target) return;
@@ -285,10 +324,11 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED; p.vy = (dy/dist) * PROJ_SPEED;
-      p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false;
-      p.chainCount = 2; p.pierceLeft = 0;  // 2번 추가 체인
+      p.chainCount = 2; p.pierceLeft = 0; p.attr = secAttr;  // 2번 추가 체인
+      _applyShapeHooks(p);
 
     } else if (fire === 'chain5') {
       // 5연쇄 고데미지 충격파 (소멸자)
@@ -297,10 +337,11 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED; p.vy = (dy/dist) * PROJ_SPEED;
-      p.radius = PROJ_RADIUS + 2; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS + 2; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false;
-      p.chainCount = 4; p.pierceLeft = 0;  // 4번 추가 체인 (총 5회)
+      p.chainCount = 4; p.pierceLeft = 0; p.attr = secAttr;  // 4번 추가 체인 (총 5회)
+      _applyShapeHooks(p);
 
     } else if (fire === 'railgun') {
       // 관통탄 — 최대 3적 관통, 고속·고데미지
@@ -309,10 +350,11 @@ const WeaponSystem = (() => {
       const dist = Math.hypot(dx, dy); if (dist === 0) return;
       p.active = true; p.x = player.x; p.y = player.y;
       p.vx = (dx/dist) * PROJ_SPEED * 1.8; p.vy = (dy/dist) * PROJ_SPEED * 1.8;
-      p.radius = PROJ_RADIUS + 3; p.damage = def.damage * player.damageMult;
+      p.radius = PROJ_RADIUS + 3; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME * 1.5; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0;
-      p.pierceLeft = 3;  // 최대 4적 관통
+      p.pierceLeft = 3; p.attr = secAttr;  // 최대 4적 관통
+      _applyShapeHooks(p);
 
     } else if (fire === 'nova12') {
       for (let i = 0; i < 12; i++) {
@@ -320,10 +362,11 @@ const WeaponSystem = (() => {
         const a = (i / 12) * Math.PI * 2;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED * 0.85; p.vy = Math.sin(a) * PROJ_SPEED * 0.85;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / (PROJ_SPEED * 0.85);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
-        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'nova24') {
@@ -333,18 +376,105 @@ const WeaponSystem = (() => {
         const a = (i / 24) * Math.PI * 2;
         p.active = true; p.x = player.x; p.y = player.y;
         p.vx = Math.cos(a) * PROJ_SPEED; p.vy = Math.sin(a) * PROJ_SPEED;
-        p.radius = PROJ_RADIUS; p.damage = def.damage * player.damageMult;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = def.range / PROJ_SPEED;
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
-        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0;
+        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
+
+    } else if (fire === 'multi5') {
+      // 5방향 동시 연사 (미니건)
+      const targets = activeEnemies
+        .filter(e => e.active)
+        .map(e => ({ e, dsq: Collision.wrappedDistSq(player.x, player.y, e.x, e.y, worldW, worldH) }))
+        .filter(t => t.dsq < def.range * def.range)
+        .sort((a, b) => a.dsq - b.dsq)
+        .slice(0, 5);
+      for (const { e: t } of targets) {
+        const p = acquireProjectile(); if (!p) break;
+        const { dx, dy } = Collision.wrappedDelta(player.x, player.y, t.x, t.y, worldW, worldH);
+        const dist = Math.hypot(dx, dy); if (dist === 0) continue;
+        p.active = true; p.x = player.x; p.y = player.y;
+        p.vx = (dx/dist) * PROJ_SPEED * 1.4; p.vy = (dy/dist) * PROJ_SPEED * 1.4;
+        p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
+        p.lifetime = PROJ_LIFETIME * 0.85; p.color = def.color;
+        p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
+      }
+
+    } else if (fire === 'nova8') {
+      // 8발 전방향 (이온 방전포)
+      for (let i = 0; i < 8; i++) {
+        const p = acquireProjectile(); if (!p) break;
+        const a = (i / 8) * Math.PI * 2;
+        p.active = true; p.x = player.x; p.y = player.y;
+        p.vx = Math.cos(a) * PROJ_SPEED * 0.9; p.vy = Math.sin(a) * PROJ_SPEED * 0.9;
+        p.radius = PROJ_RADIUS + 2; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
+        p.lifetime = def.range / (PROJ_SPEED * 0.9);
+        p.color = def.color; p.type = 'auto'; p.splashR = 0;
+        p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
+      }
+
+    } else if (fire === 'nuke_shell') {
+      // 핵탄두: 느린 호밍 + 도달 시 광역 폭발 (r=100)
+      const p = acquireProjectile(); if (!p || !target) return;
+      const { dx, dy } = Collision.wrappedDelta(player.x, player.y, target.x, target.y, worldW, worldH);
+      const dist = Math.hypot(dx, dy); if (dist === 0) return;
+      p.active = true; p.x = player.x; p.y = player.y;
+      p.vx = (dx/dist) * PROJ_SPEED * 0.5; p.vy = (dy/dist) * PROJ_SPEED * 0.5;
+      p.radius = PROJ_RADIUS + 5; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
+      p.lifetime = PROJ_LIFETIME * 2.5; p.color = def.color;
+      p.type = 'cannon'; p.splashR = 100;
+      p.isHoming = true; p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      _applyShapeHooks(p);
     }
+  }
+
+  /**
+   * Phase B-3a — Shape Synergy 훅을 탄(projectile) 에 적용.
+   *
+   * SynergySystem.getShapeCounts() 를 조회해 (attr:shape) 쌍이 1개 이상 장착된
+   * 경우에만 훅을 주입. 탄이 생성된 직후, branch 종료 전에 호출한다.
+   *
+   *   LASER:LINE    → pierceLeft += 2       (관통+2, 기존 railgun 3 과 누적)
+   *   ELECTRIC:LINE → chainCount  += 1      (연쇄+1, chain3/chain5 와 누적)
+   *   FIRE:L        → splashR     *= 1.3    (splashR>0 인 탄만: 포탄·지뢰·핵탄두)
+   *   ELECTRIC:L    → 25% 확률로 damage*=2  (탄 단위 크리티컬 — isCrit 플래그)
+   *   ELECTRIC:BLOCK→ stunDuration = 0.8    (Phase B-3b-1 — 피격 시 EMP 펄스로 일반 적 기절)
+   *
+   * 데미지 배율(SynergySystem.getDamageMult)은 이미 탄 생성 시 곱해져 있음.
+   * 여기서는 "그 외" 비수치 훅 + 탄 단위 스토캐스틱 크리만 처리.
+   *
+   * @param {object} p — acquireProjectile() 로 얻은 활성화된 탄 객체
+   */
+  function _applyShapeHooks(p) {
+    if (!p || !p.active) return;
+    const SS = (typeof SynergySystem !== 'undefined') ? SynergySystem
+             : (typeof window !== 'undefined' && window.SynergySystem) ? window.SynergySystem
+             : null;
+    if (!SS || !SS.getShapeCounts) return;
+    const counts = SS.getShapeCounts();
+
+    if (counts['LASER:LINE'])    p.pierceLeft = (p.pierceLeft || 0) + 2;
+    if (counts['ELECTRIC:LINE']) p.chainCount = (p.chainCount || 0) + 1;
+    if (counts['FIRE:L'] && p.splashR > 0) p.splashR *= 1.3;
+    if (counts['ELECTRIC:L'] && Math.random() < 0.25) {
+      p.damage *= 2.0;
+      p.isCrit = true;
+    } else {
+      p.isCrit = false;
+    }
+    // Phase B-3b-1: ELECTRIC:BLOCK 활성 시 이 탄은 피격 적(보스 제외)을 0.8s 기절.
+    // 풀에서 재사용되는 탄이므로 매 발사 시 명시적으로 0 리셋 후 세팅.
+    p.stunDuration = counts['ELECTRIC:BLOCK'] ? 0.8 : 0;
   }
 
   /**
    * 체인 탄 연쇄 데미지 헬퍼
    */
-  function _chainHit(x, y, damage, remaining, activeEnemies, exclude) {
+  function _chainHit(x, y, damage, remaining, activeEnemies, exclude, attr, stunDur) {
     const CHAIN_R = 220;
     let nearest = null;
     let minDSq = CHAIN_R * CHAIN_R;
@@ -354,8 +484,11 @@ const WeaponSystem = (() => {
       if (dsq < minDSq) { minDSq = dsq; nearest = e; }
     }
     if (!nearest) return;
-    EnemyManager.damageEnemy(nearest, damage);
-    if (remaining > 0) _chainHit(nearest.x, nearest.y, damage, remaining - 1, activeEnemies, nearest);
+    EnemyManager.damageEnemy(nearest, damage, attr);
+    // Phase B-3b-1: 체인 탄도 EMP 펄스를 옮김 (연쇄 특성상 광역 CC 역할).
+    // stunEnemy 는 보스 면역 + 기존 timer 보다 큰 값만 반영 → 무한연장 없음.
+    if (stunDur > 0) EnemyManager.stunEnemy(nearest, stunDur);
+    if (remaining > 0) _chainHit(nearest.x, nearest.y, damage, remaining - 1, activeEnemies, nearest, attr, stunDur);
   }
 
   /**
@@ -379,7 +512,7 @@ const WeaponSystem = (() => {
       const target = findNearestEnemy(player, activeEnemies);
       if (target) {
         fire(player, target);
-        fireTimer = weapon.cooldown;
+        fireTimer = weapon.cooldown * _cooldownMult;
       } else {
         fireTimer = 0.05; // 타겟 없을 때 빠른 재탐색
       }
@@ -390,20 +523,33 @@ const WeaponSystem = (() => {
       const def = SECONDARY_DEFS[sec.type];
       if (!def) continue;
 
-      if (def.fire === 'orbit') {
+      if (def.fire === 'orbit' || def.fire === 'radiator') {
         // 궤도 탄: 투사체 풀 미사용, 직접 위치 계산 & 충돌
-        sec.orbitAngle += dt * 2.2;
-        const orbitR = Math.max(def.range, player.hitboxRadius + 15);
-        for (let i = 0; i < 3; i++) {
+        const isRadiator = def.fire === 'radiator';
+        const orbitSpeed = isRadiator ? 1.5 : 2.2;
+        const ballCount  = isRadiator ? 5 : 3;
+        const ballRadius = isRadiator ? 15 : 10;
+        sec.orbitAngle += dt * orbitSpeed;
+        // orbitTimers 배열 길이 확보
+        while (sec.orbitTimers.length < ballCount) sec.orbitTimers.push(0);
+        const orbitR = Math.max(def.range, player.hitboxRadius + (isRadiator ? 25 : 15));
+        for (let i = 0; i < ballCount; i++) {
           if (sec.orbitTimers[i] > 0) { sec.orbitTimers[i] -= dt; continue; }
-          const a = sec.orbitAngle + (i * Math.PI * 2 / 3);
+          const a = sec.orbitAngle + (i * Math.PI * 2 / ballCount);
           const ox = player.x + Math.cos(a) * orbitR;
           const oy = player.y + Math.sin(a) * orbitR;
           for (const e of activeEnemies) {
             if (!e.active) continue;
             const { dx, dy } = Collision.wrappedDelta(ox, oy, e.x, e.y, worldW, worldH);
             if (Math.hypot(dx, dy) < e.radius + 10) {
-              EnemyManager.damageEnemy(e, def.damage * player.damageMult);
+              // Phase B-3a: orbit/radiator 는 탄을 쓰지 않으므로 crit 만 여기서 굴림.
+              // pierce/chain/splash 훅은 탄 개념이 없어 미적용 (궤도 특성 그대로).
+              let dmg = def.damage * (player.damageMult * SynergySystem.getDamageMult());
+              const sc = SynergySystem.getShapeCounts ? SynergySystem.getShapeCounts() : null;
+              if (sc && sc['ELECTRIC:L'] && Math.random() < 0.25) dmg *= 2.0;
+              EnemyManager.damageEnemy(e, dmg, sec.attr);
+              // Phase B-3b-1: orbit/radiator 도 ELECTRIC:BLOCK 이면 접촉 시 EMP 펄스.
+              if (sc && sc['ELECTRIC:BLOCK']) EnemyManager.stunEnemy(e, 0.8);
               sec.orbitTimers[i] = 0.5;
               break;
             }
@@ -428,7 +574,7 @@ const WeaponSystem = (() => {
       }
 
       _fireSecondary(sec, def, player, target, activeEnemies);
-      sec.timer = def.cooldown;
+      sec.timer = def.cooldown * _cooldownMult;
     }
 
     // ── 투사체 이동 & 충돌
@@ -474,11 +620,15 @@ const WeaponSystem = (() => {
             e.x, e.y, e.radius,
             worldW, worldH
           )) {
-            EnemyManager.damageEnemy(e, p.damage);
+            EnemyManager.damageEnemy(e, p.damage, p.attr);
+            if (p.stunDuration > 0) EnemyManager.stunEnemy(e, p.stunDuration); // Phase B-3b-1
             hit = true;
           }
         }
-        if (hit) { p.active = false; }
+        if (hit) {
+          _hitEvents.push({ wx: p.x, wy: p.y, color: p.color, splashR: p.splashR, attr: p.attr, type: 'cannon' });
+          p.active = false;
+        }
       } else {
         // 자동무기: pierceLeft > 0이면 관통, 아니면 첫 충돌 소멸
         for (const e of activeEnemies) {
@@ -490,9 +640,11 @@ const WeaponSystem = (() => {
             worldW, worldH
           );
           if (hit) {
-            EnemyManager.damageEnemy(e, p.damage);
+            _hitEvents.push({ wx: p.x, wy: p.y, color: p.color, splashR: p.splashR, attr: p.attr, type: 'auto' });
+            EnemyManager.damageEnemy(e, p.damage, p.attr);
+            if (p.stunDuration > 0) EnemyManager.stunEnemy(e, p.stunDuration); // Phase B-3b-1
             if (p.chainCount > 0) {
-              _chainHit(e.x, e.y, p.damage, p.chainCount - 1, activeEnemies, e);
+              _chainHit(e.x, e.y, p.damage, p.chainCount - 1, activeEnemies, e, p.attr, p.stunDuration);
             }
             if (p.pierceLeft > 0) {
               p.pierceLeft--;  // 관통: 계속 진행
@@ -511,36 +663,42 @@ const WeaponSystem = (() => {
     const cullX = Math.ceil(W / _zoom / 2);
     const cullY = Math.ceil(H / _zoom / 2);
 
-    // 투사체
+    // 투사체 (이동 방향 기반 총알/포탄 모양)
     for (const p of projectiles) {
       if (!p.active) continue;
       const { sx, sy } = player.worldToScreen(p.x, p.y, worldW, worldH);
       if (sx < -cullX || sx > W + cullX || sy < -cullY || sy > H + cullY) continue;
+      const pAngle = Math.atan2(p.vy, p.vx);
       if (p.type === 'cannon') {
-        Renderer.drawCannonball(sx, sy, p.radius);
+        Renderer.drawCannonball(sx, sy, p.radius, pAngle);
       } else {
-        Renderer.drawProjectile(sx, sy, p.radius, p.color);
+        Renderer.drawProjectile(sx, sy, p.radius, p.color, pAngle);
       }
     }
 
-    // 궤도 탄 렌더 (WPN_ORBIT)
+    // 궤도 탄 렌더 (WPN_ORBIT, WPN_RADIATOR_BASE, WPN_RADIATOR)
     const ctx = Renderer.getCtx();
     for (const sec of secondaries) {
-      if (sec.type !== 'WPN_ORBIT') continue;
-      const def = SECONDARY_DEFS['WPN_ORBIT'];
+      const def = SECONDARY_DEFS[sec.type];
+      if (!def || (def.fire !== 'orbit' && def.fire !== 'radiator')) continue;
+      const isRadiator = def.fire === 'radiator';
+      const ballCount  = isRadiator ? 5 : 3;
+      const ballRadius = isRadiator ? 14 : 8;
+      const glowRadius = isRadiator ? 20 : 12;
+      const glowAlpha  = isRadiator ? 0.15 : 0.2;
       const { sx: pcx, sy: pcy } = player.worldToScreen(player.x, player.y, worldW, worldH);
-      const orbitR = Math.max(SECONDARY_DEFS['WPN_ORBIT'].range, player.hitboxRadius + 15);
-      for (let i = 0; i < 3; i++) {
-        const a = sec.orbitAngle + (i * Math.PI * 2 / 3);
+      const orbitR = Math.max(def.range, player.hitboxRadius + (isRadiator ? 25 : 15));
+      for (let i = 0; i < ballCount; i++) {
+        const a = sec.orbitAngle + (i * Math.PI * 2 / ballCount);
         const osx = pcx + Math.cos(a) * orbitR;
         const osy = pcy + Math.sin(a) * orbitR;
         ctx.beginPath();
-        ctx.arc(osx, osy, 8, 0, Math.PI * 2);
+        ctx.arc(osx, osy, ballRadius, 0, Math.PI * 2);
         ctx.fillStyle = def.color;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(osx, osy, 12, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(110,231,183,0.2)';
+        ctx.arc(osx, osy, glowRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(134,239,172,${glowAlpha})`;
         ctx.fill();
       }
     }
@@ -551,10 +709,19 @@ const WeaponSystem = (() => {
     if (key in weapon) weapon[key] = value;
   }
 
+  /**
+   * 환경 쿨다운 배율 설정 (CRYO: 1.3, 기본: 1.0)
+   * StageManager.js에서 호출
+   */
+  function setCooldownMult(mult) {
+    _cooldownMult = mult;
+  }
+
   /** 리셋 */
   function reset(ww, wh) {
     worldW = ww; worldH = wh;
     _zoom = 1.0;
+    _cooldownMult = 1.0;
     for (const p of projectiles) p.active = false;
     fireTimer        = 0;
     cannonTimer      = 0;
@@ -565,7 +732,20 @@ const WeaponSystem = (() => {
   /** 현재 무기 스탯 읽기 (Game.js 업그레이드 계산용) */
   function getWeaponStat(key) { return weapon[key]; }
 
-  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, reset, setZoom };
+  /** 피격 이벤트 소비 — Game.js에서 폭발 이펙트 생성 시 사용 */
+  function consumeHitEvents() {
+    const ev = _hitEvents.slice();
+    _hitEvents.length = 0;
+    return ev;
+  }
+
+  return {
+    init, update, draw, upgradeWeapon, getWeaponStat,
+    addSecondary, removeSecondary, reset, setZoom, setCooldownMult,
+    consumeHitEvents, SECONDARY_DEFS,
+    // Phase B-3a — 테스트/디버그 노출
+    _applyShapeHooks,
+  };
 })();
 
 window.WeaponSystem = WeaponSystem;

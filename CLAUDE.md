@@ -1,7 +1,7 @@
 # CLAUDE.md — JNJD 프로젝트 지침
 
 > **프로젝트**: 잔해의 귀환 (JNJD) — HTML5 Canvas 우주 슈터 + 테트리스 모듈 조립 게임
-> **현재 버전**: v1.7.0 (2026-04-15, Phase B-3b-2 반사 DoT + 피격 반사 — FIRE:BLOCK / LASER:L)
+> **현재 버전**: v1.8.0 (2026-04-16, Phase B-5 HUD 시각화 — SHAPE_ICONS + 모양 분포 + 뱃지 prefix)
 > **스택**: Vanilla JavaScript (프레임워크·라이브러리·외부 에셋 0개)
 > **이 문서는 200줄 이내 유지**. 세부 지침은 `rules/`·`GUIDE.md` 참조.
 
@@ -135,7 +135,8 @@ state-as-parameter 패턴으로 render 측에서는 상태를 매 호출 수신�
 | **B-3a** | ✅ v1.5.0 | `WeaponSystem._applyShapeHooks` — 탄 단위 비수치 훅 4종: LASER:LINE 관통+2 · ELECTRIC:LINE 연쇄+1 · FIRE:L 폭발 반경 ×1.3 · ELECTRIC:L 크리 25%×2.0. 17개 발사 지점 + orbit/radiator crit 분기. |
 | **B-3b-1** | ✅ v1.6.0 | ELECTRIC:BLOCK → EMP 펄스. 적 `stunTimer` 필드 + `EnemyManager.stunEnemy(e, dur)` + update 루프 AI 스킵 분기. 탄에 `stunDuration=0.8s` 전파 → cannon/auto/chain/orbit 4경로에서 피격 시 `stunEnemy`. **보스 면역**, 기존 timer 보다 큰 값만 반영(무한연장 방지). |
 | **B-3b-2** | ✅ v1.7.0 | FIRE:BLOCK → 피격 반사 DoT (2.0s · 3dps 화염). LASER:L → 받은 피해 50% 즉시 반사. `TetrisGrid.hitShip(x, y, dmg, player, attacker)` 시그니처 확장 · 적 `burnTimer`/`burnDps` 필드 + `EnemyManager.applyBurn(e, dur, dps)` + update 루프 DoT 틱 (AI/stun 판정 전). 반사는 보스 허용(단순 데미지), `invincibleTime` 가드 공유로 무효 타격은 반사도 발동하지 않음. |
-| **B-4** | 🔜 | 플레이테스트 밸런싱. 9조합 HUD 가시화(ShapeBadge) 및 이펙트 연결은 B-5 로 이관 검토. |
+| **B-5** | ✅ v1.8.0 | 9조합 HUD 시각화. `SynergySystem.SHAPE_ICONS = { LINE:'━', L:'∟', BLOCK:'■' }` 노출. `Game.js` `_drawSynergyHUD` 에 (1) **모양 분포 라인** (━×n ∟×n ■×n, `#64748b` 흐림) 과 (2) **shape 시너지 뱃지 prefix** (`🔥∟ 화염 포위 ×1.20`, `ef.key.indexOf(':') >= 0` 분기) 추가. attr-pair 시너지는 뱃지 없이 기존 포맷 유지 → 시각적 계층 자연스럽게 분리. |
+| **B-4** | 🔜 | 플레이테스트 밸런싱 (9조합 배율 1.15~1.30 구간 조정 + 훅 상호작용 검증). |
 
 9조합 = FIRE/ELECTRIC/LASER × LINE/L/BLOCK. KINETIC/NUKE 및 DOT/OTHER 는 shape
 시너지 비대상(단순한 기반 무기 · 특수 모양 → 프로토타입 범위 축소). 배율은 1.15~1.30

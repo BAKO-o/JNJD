@@ -40,34 +40,35 @@ const EnemyManager = (() => {
   function _tierRadiusMult(tier) { return Math.pow(1.2, tier - 1); }
 
   // ── 20종 일반 적 타입 (tier: minWave 그룹 → 1~10)
+  // 속성 배율: weak(약점) ×1.5, resist(저항) ×0.6
   const ENEMY_TYPES = {
-    DRONE:      { tier:1,  radiusMult:0.55, hpMult:0.40, speedMult:0.75, damageMult:0.5, xpMult:0.4,  weight:8, behavior:'chase',    minWave:1  },
-    RUSHER:     { tier:1,  radiusMult:0.50, hpMult:0.35, speedMult:2.20, damageMult:0.6, xpMult:0.5,  weight:7, behavior:'chase',    minWave:1  },
-    SWARM:      { tier:2,  radiusMult:0.42, hpMult:0.30, speedMult:2.40, damageMult:0.4, xpMult:0.3,  weight:9, behavior:'chase',    minWave:4  },
-    ZIGZAGGER:  { tier:2,  radiusMult:0.90, hpMult:1.00, speedMult:1.30, damageMult:0.9, xpMult:1.2,  weight:5, behavior:'zigzag',   minWave:4  },
-    GRUNT:      { tier:3,  radiusMult:1.00, hpMult:1.00, speedMult:1.00, damageMult:1.0, xpMult:1.0,  weight:6, behavior:'chase',    minWave:7  },
-    DASHER:     { tier:3,  radiusMult:0.85, hpMult:1.20, speedMult:0.70, damageMult:1.5, xpMult:1.5,  weight:4, behavior:'dash',     minWave:7  },
-    LANCER:     { tier:4,  radiusMult:0.80, hpMult:0.90, speedMult:1.70, damageMult:1.3, xpMult:1.5,  weight:5, behavior:'chase',    minWave:10 },
-    SHADE:      { tier:4,  radiusMult:1.00, hpMult:1.50, speedMult:1.00, damageMult:1.2, xpMult:2.0,  weight:3, behavior:'chase',    minWave:10 },
-    BRUTE:      { tier:5,  radiusMult:1.80, hpMult:5.00, speedMult:0.60, damageMult:2.0, xpMult:3.0,  weight:3, behavior:'chase',    minWave:13 },
-    BOMBER:     { tier:5,  radiusMult:1.40, hpMult:2.00, speedMult:0.70, damageMult:3.5, xpMult:2.5,  weight:3, behavior:'chase',    minWave:13 },
-    SPLITTER:   { tier:6,  radiusMult:1.60, hpMult:3.00, speedMult:0.60, damageMult:1.3, xpMult:3.0,  weight:2, behavior:'splitter', minWave:16 },
-    SENTINEL:   { tier:6,  radiusMult:2.00, hpMult:7.00, speedMult:0.45, damageMult:2.0, xpMult:4.0,  weight:2, behavior:'chase',    minWave:16 },
-    PHANTOM:    { tier:7,  radiusMult:1.00, hpMult:2.00, speedMult:1.70, damageMult:1.8, xpMult:3.5,  weight:2, behavior:'zigzag',   minWave:19 },
-    RAVAGER:    { tier:7,  radiusMult:1.20, hpMult:2.50, speedMult:1.90, damageMult:2.5, xpMult:4.0,  weight:2, behavior:'dash',     minWave:19 },
-    JUGGERNAUT: { tier:8,  radiusMult:2.50, hpMult:12.0, speedMult:0.35, damageMult:3.0, xpMult:7.0,  weight:1, behavior:'chase',    minWave:22 },
-    WRAITH:     { tier:8,  radiusMult:0.90, hpMult:3.00, speedMult:2.10, damageMult:2.0, xpMult:4.5,  weight:2, behavior:'dash',     minWave:22 },
-    ANCHOR:     { tier:9,  radiusMult:3.00, hpMult:20.0, speedMult:0.18, damageMult:6.0, xpMult:10.0, weight:1, behavior:'chase',    minWave:26 },
-    ELITE:      { tier:9,  radiusMult:1.20, hpMult:4.00, speedMult:1.50, damageMult:2.2, xpMult:5.0,  weight:2, behavior:'chase',    minWave:26 },
-    TITAN:      { tier:10, radiusMult:3.50, hpMult:35.0, speedMult:0.28, damageMult:5.0, xpMult:15.0, weight:1, behavior:'chase',    minWave:30 },
-    APEX:       { tier:10, radiusMult:2.00, hpMult:15.0, speedMult:1.20, damageMult:4.0, xpMult:12.0, weight:1, behavior:'dash',     minWave:30 },
+    DRONE:      { tier:1,  radiusMult:0.55, hpMult:0.40, speedMult:0.75, damageMult:0.5, xpMult:0.4,  weight:8, behavior:'chase',    minWave:1,  weak:['ELECTRIC'],          resist:[]             },
+    RUSHER:     { tier:1,  radiusMult:0.50, hpMult:0.35, speedMult:2.20, damageMult:0.6, xpMult:0.5,  weight:7, behavior:'chase',    minWave:1,  weak:['LASER'],             resist:['KINETIC']    },
+    SWARM:      { tier:2,  radiusMult:0.42, hpMult:0.30, speedMult:2.40, damageMult:0.4, xpMult:0.3,  weight:9, behavior:'chase',    minWave:4,  weak:['FIRE'],              resist:['LASER']      },
+    ZIGZAGGER:  { tier:2,  radiusMult:0.90, hpMult:1.00, speedMult:1.30, damageMult:0.9, xpMult:1.2,  weight:5, behavior:'zigzag',   minWave:4,  weak:['ELECTRIC'],          resist:['FIRE']       },
+    GRUNT:      { tier:3,  radiusMult:1.00, hpMult:1.00, speedMult:1.00, damageMult:1.0, xpMult:1.0,  weight:6, behavior:'chase',    minWave:7,  weak:['KINETIC'],           resist:[]             },
+    DASHER:     { tier:3,  radiusMult:0.85, hpMult:1.20, speedMult:0.70, damageMult:1.5, xpMult:1.5,  weight:4, behavior:'dash',     minWave:7,  weak:['LASER'],             resist:['KINETIC']    },
+    LANCER:     { tier:4,  radiusMult:0.80, hpMult:0.90, speedMult:1.70, damageMult:1.3, xpMult:1.5,  weight:5, behavior:'chase',    minWave:10, weak:['ELECTRIC'],          resist:['LASER']      },
+    SHADE:      { tier:4,  radiusMult:1.00, hpMult:1.50, speedMult:1.00, damageMult:1.2, xpMult:2.0,  weight:3, behavior:'chase',    minWave:10, weak:['LASER'],             resist:['ELECTRIC']   },
+    BRUTE:      { tier:5,  radiusMult:1.80, hpMult:5.00, speedMult:0.60, damageMult:2.0, xpMult:3.0,  weight:3, behavior:'chase',    minWave:13, weak:['FIRE'],              resist:['LASER']      },
+    BOMBER:     { tier:5,  radiusMult:1.40, hpMult:2.00, speedMult:0.70, damageMult:3.5, xpMult:2.5,  weight:3, behavior:'chase',    minWave:13, weak:['KINETIC'],           resist:['ELECTRIC']   },
+    SPLITTER:   { tier:6,  radiusMult:1.60, hpMult:3.00, speedMult:0.60, damageMult:1.3, xpMult:3.0,  weight:2, behavior:'splitter', minWave:16, weak:['ELECTRIC'],          resist:['KINETIC']    },
+    SENTINEL:   { tier:6,  radiusMult:2.00, hpMult:7.00, speedMult:0.45, damageMult:2.0, xpMult:4.0,  weight:2, behavior:'chase',    minWave:16, weak:['KINETIC'],           resist:['FIRE']       },
+    PHANTOM:    { tier:7,  radiusMult:1.00, hpMult:2.00, speedMult:1.70, damageMult:1.8, xpMult:3.5,  weight:2, behavior:'zigzag',   minWave:19, weak:['LASER'],             resist:['ELECTRIC']   },
+    RAVAGER:    { tier:7,  radiusMult:1.20, hpMult:2.50, speedMult:1.90, damageMult:2.5, xpMult:4.0,  weight:2, behavior:'dash',     minWave:19, weak:['FIRE'],              resist:['ELECTRIC']   },
+    JUGGERNAUT: { tier:8,  radiusMult:2.50, hpMult:12.0, speedMult:0.35, damageMult:3.0, xpMult:7.0,  weight:1, behavior:'chase',    minWave:22, weak:['ELECTRIC'],          resist:['KINETIC']    },
+    WRAITH:     { tier:8,  radiusMult:0.90, hpMult:3.00, speedMult:2.10, damageMult:2.0, xpMult:4.5,  weight:2, behavior:'dash',     minWave:22, weak:['LASER'],             resist:['KINETIC']    },
+    ANCHOR:     { tier:9,  radiusMult:3.00, hpMult:20.0, speedMult:0.18, damageMult:6.0, xpMult:10.0, weight:1, behavior:'chase',    minWave:26, weak:['FIRE'],              resist:['KINETIC']    },
+    ELITE:      { tier:9,  radiusMult:1.20, hpMult:4.00, speedMult:1.50, damageMult:2.2, xpMult:5.0,  weight:2, behavior:'chase',    minWave:26, weak:['ELECTRIC'],          resist:['FIRE']       },
+    TITAN:      { tier:10, radiusMult:3.50, hpMult:35.0, speedMult:0.28, damageMult:5.0, xpMult:15.0, weight:1, behavior:'chase',    minWave:30, weak:['LASER'],             resist:['KINETIC']    },
+    APEX:       { tier:10, radiusMult:2.00, hpMult:15.0, speedMult:1.20, damageMult:4.0, xpMult:12.0, weight:1, behavior:'dash',     minWave:30, weak:['KINETIC'],           resist:['LASER']      },
 
     // ── 5종 보스 (tier:11, weight:0 → _randomType에서 제외, isBoss:true)
-    OVERLORD:     { tier:11, radiusMult:3.8, hpMult:60,  speedMult:0.50, damageMult:3.0, xpMult:30,  weight:0, behavior:'boss', minWave:99, isBoss:true },
-    HIVEMOTHER:   { tier:11, radiusMult:4.2, hpMult:80,  speedMult:0.30, damageMult:2.5, xpMult:40,  weight:0, behavior:'boss', minWave:99, isBoss:true },
-    DREADNOUGHT:  { tier:11, radiusMult:4.0, hpMult:100, speedMult:0.40, damageMult:2.8, xpMult:50,  weight:0, behavior:'boss', minWave:99, isBoss:true },
-    SPECTER_LORD: { tier:11, radiusMult:3.2, hpMult:70,  speedMult:1.20, damageMult:2.2, xpMult:45,  weight:0, behavior:'boss', minWave:99, isBoss:true },
-    COLOSSUS:     { tier:11, radiusMult:5.0, hpMult:150, speedMult:0.20, damageMult:4.0, xpMult:60,  weight:0, behavior:'boss', minWave:99, isBoss:true },
+    OVERLORD:     { tier:11, radiusMult:3.8, hpMult:60,  speedMult:0.50, damageMult:3.0, xpMult:30,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['FIRE','NUKE'],          resist:['KINETIC']           },
+    HIVEMOTHER:   { tier:11, radiusMult:4.2, hpMult:80,  speedMult:0.30, damageMult:2.5, xpMult:40,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['FIRE'],                 resist:['ELECTRIC','NUKE']   },
+    DREADNOUGHT:  { tier:11, radiusMult:4.0, hpMult:100, speedMult:0.40, damageMult:2.8, xpMult:50,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['ELECTRIC','NUKE'],       resist:['FIRE']              },
+    SPECTER_LORD: { tier:11, radiusMult:3.2, hpMult:70,  speedMult:1.20, damageMult:2.2, xpMult:45,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['LASER','NUKE'],         resist:['ELECTRIC']          },
+    COLOSSUS:     { tier:11, radiusMult:5.0, hpMult:150, speedMult:0.20, damageMult:4.0, xpMult:60,  weight:0, behavior:'boss', minWave:99, isBoss:true, weak:['LASER'],                resist:['KINETIC','NUKE']    },
   };
 
   const TYPE_KEYS  = Object.keys(ENEMY_TYPES);
@@ -112,6 +113,7 @@ const EnemyManager = (() => {
   let spawnGroupCount = 0;
   let spawnGroupTimer = 0;
   let bossEnemy       = null;  // 현재 활성 보스 참조
+  let _stageClearConsumed = false; // 스테이지 클리어 중복 트리거 방지
 
   let _player = null;
 
@@ -123,6 +125,10 @@ const EnemyManager = (() => {
       contactCooldown:0, xpValue:0, type:'DRONE', isSplit:false,
       zigzagPhase:0, dashTimer:0, dashCooldown:0, shadeAlpha:1.0,
       tier:1, // 티어 (반경 배율·피해 면역 판정에 사용)
+      // Phase B-3b-1: EMP 펄스(ELECTRIC:BLOCK)에 의한 기절 잔여 시간(초). 0 이면 정상 상태.
+      stunTimer: 0,
+      // Phase B-3b-2: FIRE:BLOCK 반사 DoT — 피격 반사로 공격자에게 부여되는 화염 도트.
+      burnTimer: 0, burnDps: 0,
       // 보스 전용 필드
       isBoss:false, attackTimer:0, attackPhase:0, bossRotOffset:0, summonTimer:0,
     };
@@ -171,6 +177,7 @@ const EnemyManager = (() => {
     spawnPending    = waveKillTarget;
     spawnTimer      = 0; spawnSide = 0; spawnGroupCount = 0; spawnGroupTimer = 0;
     bossEnemy       = null;
+    _stageClearConsumed = false;
   }
 
   function setZoom(z) { _zoom = z; }
@@ -210,6 +217,9 @@ const EnemyManager = (() => {
     e.xpValue  = Math.floor(20 * def.xpMult * scale);
     e.zigzagPhase = 0; e.dashTimer = 0; e.dashCooldown = 1.0 + Math.random() * 0.8;
     e.shadeAlpha  = 1.0;
+    e.stunTimer   = 0;  // Phase B-3b-1: 풀에서 재사용되는 적의 기절 잔여 초기화
+    e.burnTimer   = 0;  // Phase B-3b-2: 풀 재사용 시 DoT 상태 초기화
+    e.burnDps     = 0;
     e.isBoss = false; e.attackTimer = 0; e.attackPhase = 0;
     e.bossRotOffset = 0; e.summonTimer = 0;
   }
@@ -241,6 +251,9 @@ const EnemyManager = (() => {
     e.zigzagPhase   = 0;
     e.dashTimer     = 0; e.dashCooldown = 2.0;
     e.shadeAlpha    = 1.0;
+    e.stunTimer     = 0;  // Phase B-3b-1: 보스는 stunEnemy 에서 무시되지만 방어적 초기화
+    e.burnTimer     = 0;  // Phase B-3b-2: 보스도 DoT 대상 (applyBurn 은 보스 허용)
+    e.burnDps       = 0;
 
     bossEnemy = e;
   }
@@ -440,6 +453,7 @@ const EnemyManager = (() => {
       if (restTimer <= 0) {
         isResting = false;
         waveNumber++;
+        _stageClearConsumed = false; // 다음 보스 킬을 위해 초기화
         waveKills      = 0;
         waveKillTarget = KILL_BASE + (waveNumber - 1) * KILL_PER_WAVE;
         spawnPending   = waveKillTarget;
@@ -494,10 +508,27 @@ const EnemyManager = (() => {
     const now = Date.now();
     for (const e of enemies) {
       if (!e.active) continue;
+
+      // Phase B-3b-2: FIRE:BLOCK 반사 DoT 틱 — AI/스턴 판정 전에 먼저 적용.
+      // 보스 포함 모든 적이 대상. 데미지로 사망 시 damageEnemy 가 e.active=false 처리 → 아래 루프 skip.
+      if (e.burnTimer > 0) {
+        const tickDmg = e.burnDps * dt;
+        e.burnTimer -= dt;
+        if (e.burnTimer <= 0) { e.burnTimer = 0; e.burnDps = 0; }
+        if (tickDmg > 0) damageEnemy(e, tickDmg, 'FIRE');
+        if (!e.active) continue;  // DoT 로 사망 시 이 프레임 AI/충돌 건너뜀
+      }
+
       const { dx, dy } = Collision.wrappedDelta(e.x, e.y, player.x, player.y, worldW, worldH);
       const dist = Math.hypot(dx, dy);
 
-      if (e.isBoss) {
+      // Phase B-3b-1: 기절 상태 — AI 스킵 (vx/vy 0 고정, 위치 적분만 수행)
+      // 보스는 stunEnemy 에서 이미 걸러지지만(stunTimer 가 설정되지 않음) 방어적으로 isBoss 검사.
+      if (!e.isBoss && e.stunTimer > 0) {
+        e.stunTimer -= dt;
+        e.vx = 0; e.vy = 0;
+        // 위치는 e.x += e.vx*dt 로 바뀌지 않음. 접촉 쿨다운만 자연스럽게 감소하도록 뒤 블록으로 폴스루.
+      } else if (e.isBoss) {
         _updateBoss(e, dt, player, dist, dx, dy);
       } else {
         if (dist > 0) {
@@ -539,7 +570,7 @@ const EnemyManager = (() => {
           const isLowTier = !e.isBoss && (maxActiveTier - e.tier >= 2);
           if (!isLowTier) {
             const dmg = Math.floor(ENEMY_DAMAGE * (ENEMY_TYPES[e.type]?.damageMult ?? 1));
-            TetrisGrid.hitShip(e.x, e.y, dmg, player);
+            TetrisGrid.hitShip(e.x, e.y, dmg, player, e);  // Phase B-3b-2: attacker 전달
           }
           e.contactCooldown = CONTACT_COOLDOWN;
           const { dx:pdx, dy:pdy } = Collision.wrappedDelta(player.x, player.y, e.x, e.y, worldW, worldH);
@@ -564,7 +595,8 @@ const EnemyManager = (() => {
       if (p.lifetime <= 0) { p.active = false; continue; }
       const { dx, dy } = Collision.wrappedDelta(p.x, p.y, player.x, player.y, worldW, worldH);
       if (Math.hypot(dx, dy) < p.radius + player.hitboxRadius * 0.5) {
-        TetrisGrid.hitShip(p.x, p.y, p.damage, player); p.active = false;
+        // Phase B-3b-2: 보스 투사체 hit — attacker 는 보스 본체(있다면). bossEnemy 가 null 이면 attacker=null.
+        TetrisGrid.hitShip(p.x, p.y, p.damage, player, bossEnemy); p.active = false;
       }
     }
 
@@ -595,8 +627,14 @@ const EnemyManager = (() => {
     return { levelUp: didLevelUp };
   }
 
-  function damageEnemy(enemy, dmg) {
-    enemy.hp -= dmg;
+  function damageEnemy(enemy, dmg, attr) {
+    let finalDmg = dmg;
+    if (attr) {
+      const def = ENEMY_TYPES[enemy.type];
+      if (def?.weak?.includes(attr))   finalDmg *= 1.5;
+      if (def?.resist?.includes(attr)) finalDmg *= 0.6;
+    }
+    enemy.hp -= finalDmg;
     if (enemy.hp <= 0) {
       enemy.active = false;
       totalKills++; waveKills++;
@@ -633,6 +671,36 @@ const EnemyManager = (() => {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Phase B-3b-1: EMP 펄스로 일반 적을 기절시킨다.
+   * - 보스는 면역 (게임 밸런스: 2인칭 스토리 축인 보스전 트리비얼화 방지)
+   * - 기존 stunTimer 보다 큰 duration 만 반영 (덮어쓰기 X → 짧은 뒤잇는 펄스로 무한연장 방지)
+   * @param {object} enemy - 활성 적
+   * @param {number} duration - 초 단위 기절 시간
+   */
+  function stunEnemy(enemy, duration) {
+    if (!enemy || !enemy.active) return;
+    if (enemy.isBoss) return;            // 보스 면역
+    if (!(duration > 0)) return;
+    if (enemy.stunTimer < duration) enemy.stunTimer = duration;
+  }
+
+  /**
+   * Phase B-3b-2: FIRE:BLOCK 반사 DoT — 공격자에게 화염 도트 부여.
+   * - 보스 포함 (DoT 는 CC 가 아닌 단순 데미지 → 보스 밸런스 영향 제한적)
+   * - duration / dps 각각 기존보다 큰 값만 반영 (max 덮어쓰기 규칙, stunEnemy 와 동일 철학)
+   * - 비활성 / 잘못된 인자 → noop
+   * @param {object} enemy
+   * @param {number} duration - 초
+   * @param {number} dps - 초당 데미지 (attr='FIRE' 로 damageEnemy 에 전달됨)
+   */
+  function applyBurn(enemy, duration, dps) {
+    if (!enemy || !enemy.active) return;
+    if (!(duration > 0) || !(dps > 0)) return;
+    if (enemy.burnTimer < duration) enemy.burnTimer = duration;
+    if (enemy.burnDps   < dps)      enemy.burnDps   = dps;
   }
 
   function draw(player) {
@@ -704,6 +772,24 @@ const EnemyManager = (() => {
   function getBoss()  { return bossEnemy && bossEnemy.active ? bossEnemy : null; }
   function getStats() { return { waveNumber, totalKills, waveKills, waveKillTarget, restTimer, isResting }; }
 
+  /**
+   * 현재 웨이브가 보스 웨이브이고 보스가 처치되었는지 확인
+   * Game.js에서 스테이지 클리어 감지에 사용
+   * @returns {boolean}
+   */
+  function isStageClear() {
+    if (_stageClearConsumed) return false;
+    return (waveNumber % 5 === 0) && (bossEnemy === null) && isResting && waveNumber > 0;
+  }
+
+  /**
+   * 스테이지 클리어를 '소비'하여 중복 트리거 방지
+   * Game.js _triggerStageClear()에서 호출
+   */
+  function consumeStageClear() {
+    _stageClearConsumed = true;
+  }
+
   function reset(ww, wh) {
     worldW = ww; worldH = wh;
     for (const e of enemies)     e.active=false;
@@ -714,10 +800,10 @@ const EnemyManager = (() => {
     waveNumber=1; totalKills=0; waveKills=0; waveKillTarget=KILL_BASE;
     isResting=false; restTimer=0;
     spawnPending=KILL_BASE; spawnTimer=0; spawnSide=0; spawnGroupCount=0; spawnGroupTimer=0;
-    bossEnemy=null;
+    bossEnemy=null; _stageClearConsumed=false;
   }
 
-  return { init, update, draw, damageEnemy, getActiveEnemies, getStats, reset, setZoom, getBoss };
+  return { init, update, draw, damageEnemy, stunEnemy, applyBurn, getActiveEnemies, getStats, reset, setZoom, getBoss, isStageClear, consumeStageClear };
 })();
 
 window.EnemyManager = EnemyManager;
