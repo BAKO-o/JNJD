@@ -127,6 +127,8 @@ const EnemyManager = (() => {
       tier:1, // 티어 (반경 배율·피해 면역 판정에 사용)
       // Phase B-3b-1: EMP 펄스(ELECTRIC:BLOCK)에 의한 기절 잔여 시간(초). 0 이면 정상 상태.
       stunTimer: 0,
+      // Phase B-3b-2: FIRE:BLOCK 반사 DoT — 피격 반사로 공격자에게 부여되는 화염 도트.
+      burnTimer: 0, burnDps: 0,
       // 보스 전용 필드
       isBoss:false, attackTimer:0, attackPhase:0, bossRotOffset:0, summonTimer:0,
     };
@@ -216,6 +218,8 @@ const EnemyManager = (() => {
     e.zigzagPhase = 0; e.dashTimer = 0; e.dashCooldown = 1.0 + Math.random() * 0.8;
     e.shadeAlpha  = 1.0;
     e.stunTimer   = 0;  // Phase B-3b-1: 풀에서 재사용되는 적의 기절 잔여 초기화
+    e.burnTimer   = 0;  // Phase B-3b-2: 풀 재사용 시 DoT 상태 초기화
+    e.burnDps     = 0;
     e.isBoss = false; e.attackTimer = 0; e.attackPhase = 0;
     e.bossRotOffset = 0; e.summonTimer = 0;
   }
@@ -248,6 +252,8 @@ const EnemyManager = (() => {
     e.dashTimer     = 0; e.dashCooldown = 2.0;
     e.shadeAlpha    = 1.0;
     e.stunTimer     = 0;  // Phase B-3b-1: 보스는 stunEnemy 에서 무시되지만 방어적 초기화
+    e.burnTimer     = 0;  // Phase B-3b-2: 보스도 DoT 대상 (applyBurn 은 보스 허용)
+    e.burnDps       = 0;
 
     bossEnemy = e;
   }
@@ -502,6 +508,17 @@ const EnemyManager = (() => {
     const now = Date.now();
     for (const e of enemies) {
       if (!e.active) continue;
+
+      // Phase B-3b-2: FIRE:BLOCK 반사 DoT 틱 — AI/스턴 판정 전에 먼저 적용.
+      // 보스 포함 모든 적이 대상. 데미지로 사망 시 damageEnemy 가 e.active=false 처리 → 아래 루프 skip.
+      if (e.burnTimer > 0) {
+        const tickDmg = e.burnDps * dt;
+        e.burnTimer -= dt;
+        if (e.burnTimer <= 0) { e.burnTimer = 0; e.burnDps = 0; }
+        if (tickDmg > 0) damageEnemy(e, tickDmg, 'FIRE');
+        if (!e.active) continue;  // DoT 로 사망 시 이 프레임 AI/충돌 건너뜀
+      }
+
       const { dx, dy } = Collision.wrappedDelta(e.x, e.y, player.x, player.y, worldW, worldH);
       const dist = Math.hypot(dx, dy);
 
@@ -553,7 +570,7 @@ const EnemyManager = (() => {
           const isLowTier = !e.isBoss && (maxActiveTier - e.tier >= 2);
           if (!isLowTier) {
             const dmg = Math.floor(ENEMY_DAMAGE * (ENEMY_TYPES[e.type]?.damageMult ?? 1));
-            TetrisGrid.hitShip(e.x, e.y, dmg, player);
+            TetrisGrid.hitShip(e.x, e.y, dmg, player, e);  // Phase B-3b-2: attacker 전달
           }
           e.contactCooldown = CONTACT_COOLDOWN;
           const { dx:pdx, dy:pdy } = Collision.wrappedDelta(player.x, player.y, e.x, e.y, worldW, worldH);
@@ -578,7 +595,8 @@ const EnemyManager = (() => {
       if (p.lifetime <= 0) { p.active = false; continue; }
       const { dx, dy } = Collision.wrappedDelta(p.x, p.y, player.x, player.y, worldW, worldH);
       if (Math.hypot(dx, dy) < p.radius + player.hitboxRadius * 0.5) {
-        TetrisGrid.hitShip(p.x, p.y, p.damage, player); p.active = false;
+        // Phase B-3b-2: 보스 투사체 hit — attacker 는 보스 본체(있다면). bossEnemy 가 null 이면 attacker=null.
+        TetrisGrid.hitShip(p.x, p.y, p.damage, player, bossEnemy); p.active = false;
       }
     }
 
@@ -667,6 +685,22 @@ const EnemyManager = (() => {
     if (enemy.isBoss) return;            // 보스 면역
     if (!(duration > 0)) return;
     if (enemy.stunTimer < duration) enemy.stunTimer = duration;
+  }
+
+  /**
+   * Phase B-3b-2: FIRE:BLOCK 반사 DoT — 공격자에게 화염 도트 부여.
+   * - 보스 포함 (DoT 는 CC 가 아닌 단순 데미지 → 보스 밸런스 영향 제한적)
+   * - duration / dps 각각 기존보다 큰 값만 반영 (max 덮어쓰기 규칙, stunEnemy 와 동일 철학)
+   * - 비활성 / 잘못된 인자 → noop
+   * @param {object} enemy
+   * @param {number} duration - 초
+   * @param {number} dps - 초당 데미지 (attr='FIRE' 로 damageEnemy 에 전달됨)
+   */
+  function applyBurn(enemy, duration, dps) {
+    if (!enemy || !enemy.active) return;
+    if (!(duration > 0) || !(dps > 0)) return;
+    if (enemy.burnTimer < duration) enemy.burnTimer = duration;
+    if (enemy.burnDps   < dps)      enemy.burnDps   = dps;
   }
 
   function draw(player) {
@@ -769,7 +803,7 @@ const EnemyManager = (() => {
     bossEnemy=null; _stageClearConsumed=false;
   }
 
-  return { init, update, draw, damageEnemy, stunEnemy, getActiveEnemies, getStats, reset, setZoom, getBoss, isStageClear, consumeStageClear };
+  return { init, update, draw, damageEnemy, stunEnemy, applyBurn, getActiveEnemies, getStats, reset, setZoom, getBoss, isStageClear, consumeStageClear };
 })();
 
 window.EnemyManager = EnemyManager;

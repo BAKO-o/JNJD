@@ -526,13 +526,35 @@ const TetrisGrid = (() => {
    *  - 장갑판 계열(hp > 0): 내구도 감소 → 0 이하면 파괴
    *  - 비장갑 모듈(hp === 0): 즉시 파괴
    *  - 모듈 없음: 코어 직격 → player.takeDamage()
+   *
+   * Phase B-3b-2: attacker 가 전달되면 shape 시너지의 피격 반사 훅을 실행한다.
+   *   - FIRE:BLOCK 활성 → attacker 에게 2.0s · 3 dps 화염 DoT
+   *   - LASER:L   활성 → attacker 에게 받은 dmg × 0.5 즉시 반사 (attr='LASER')
+   * invincibleTime 보호로 hitShip 자체가 스킵되면 반사도 발동하지 않는다 (공격이 무효).
+   *
    * @param {number} impactX - 공격자 월드 X
    * @param {number} impactY - 공격자 월드 Y
    * @param {number} dmg     - 피해량
    * @param {object} player
+   * @param {object} [attacker] - Phase B-3b-2: 피격 반사 대상 적 (있으면)
    */
-  function hitShip(impactX, impactY, dmg, player) {
+  function hitShip(impactX, impactY, dmg, player, attacker) {
     if (!player || player.invincibleTime > 0) return;
+
+    // Phase B-3b-2: shape 시너지 피격 반사 — 모듈 판정 전에 실행해도 OK
+    // (공격을 "받은 시점" 의 이벤트이며 플레이어 피해량 계산과 독립).
+    if (attacker && attacker.active) {
+      const SS = (typeof SynergySystem !== 'undefined') ? SynergySystem
+               : (typeof window !== 'undefined' && window.SynergySystem) ? window.SynergySystem : null;
+      const EM = (typeof EnemyManager !== 'undefined') ? EnemyManager
+               : (typeof window !== 'undefined' && window.EnemyManager) ? window.EnemyManager : null;
+      const counts = (SS && SS.getShapeCounts) ? SS.getShapeCounts() : null;
+      if (counts && EM) {
+        if (counts['FIRE:BLOCK'] && EM.applyBurn)  EM.applyBurn(attacker, 2.0, 3);
+        if (counts['LASER:L']    && EM.damageEnemy) EM.damageEnemy(attacker, dmg * 0.5, 'LASER');
+      }
+    }
+
     if (placedModules.length === 0) { player.takeDamage(dmg); return; }
 
     // 공격 방향 → 플레이어 로컬 좌표계로 변환

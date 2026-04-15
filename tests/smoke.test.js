@@ -303,4 +303,74 @@ describe('JNJD 스모크 테스트', () => {
     const calls = wpn.match(/EnemyManager\.stunEnemy\s*\(/g) || [];
     expect(calls.length, `EnemyManager.stunEnemy 호출: ${calls.length} (기대: ≥4 — cannon/auto/chain/orbit)`).toBeGreaterThanOrEqual(4);
   });
+
+  /**
+   * 10. Phase B-3b-2 — EnemyManager.applyBurn 계약
+   *    - 일반 적 · 보스 모두 대상 (DoT 는 CC 가 아니라 단순 데미지)
+   *    - duration / dps 각각 Math.max(prev, new) 로 덮어쓰기 (약한 소스로 축소되지 않음)
+   *    - 비활성 / duration<=0 / dps<=0 / null → noop
+   */
+  it('EnemyManager.applyBurn 이 max 덮어쓰기 규칙을 지키고 보스도 허용한다', () => {
+    const js = readFileSync(resolve(JS_DIR, 'EnemyManager.js'), 'utf8');
+    const sandbox = { window: {}, console, Math, Date, Object };
+    createContext(sandbox);
+    runInContext(js, sandbox);
+    const EM = sandbox.window.EnemyManager;
+    expect(EM && EM.applyBurn, 'applyBurn 미노출').toBeTruthy();
+
+    const e = { active: true, isBoss: false, burnTimer: 0, burnDps: 0 };
+    EM.applyBurn(e, 2.0, 3);
+    expect(e.burnTimer).toBeCloseTo(2.0, 5);
+    expect(e.burnDps).toBe(3);
+
+    // 약한 소스 — 축소 없음
+    EM.applyBurn(e, 0.5, 1);
+    expect(e.burnTimer).toBeCloseTo(2.0, 5);
+    expect(e.burnDps).toBe(3);
+
+    // 더 긴 duration 만 반영
+    EM.applyBurn(e, 5.0, 2);
+    expect(e.burnTimer).toBeCloseTo(5.0, 5);
+    expect(e.burnDps).toBe(3);
+
+    // 더 높은 dps 만 반영
+    EM.applyBurn(e, 1.0, 10);
+    expect(e.burnTimer).toBeCloseTo(5.0, 5);
+    expect(e.burnDps).toBe(10);
+
+    // 보스도 DoT 대상
+    const boss = { active: true, isBoss: true, burnTimer: 0, burnDps: 0 };
+    EM.applyBurn(boss, 2.0, 3);
+    expect(boss.burnTimer).toBeCloseTo(2.0, 5);
+    expect(boss.burnDps).toBe(3);
+
+    // 잘못된 인자 — noop
+    const e2 = { active: true, isBoss: false, burnTimer: 0, burnDps: 0 };
+    EM.applyBurn(e2, 0, 3);
+    EM.applyBurn(e2, 2.0, 0);
+    EM.applyBurn(e2, -1, 3);
+    EM.applyBurn({ active: false, burnTimer: 0, burnDps: 0 }, 2.0, 3);
+    EM.applyBurn(null, 2.0, 3);
+    expect(e2.burnTimer).toBe(0);
+    expect(e2.burnDps).toBe(0);
+  });
+
+  /**
+   * 11. Phase B-3b-2 — TetrisGrid.hitShip 이 shape 시너지 피격 반사에 연결돼 있음
+   *    regression guard: 누군가 hitShip 을 리팩토링하면서 반사 훅을 빼먹지 않도록.
+   *    소스에 FIRE:BLOCK → applyBurn / LASER:L → damageEnemy 두 분기가 모두 있어야 한다.
+   */
+  it('TetrisGrid.hitShip 에 FIRE:BLOCK (applyBurn) + LASER:L (damageEnemy) 반사 분기가 모두 존재한다', () => {
+    const src = readFileSync(resolve(JS_DIR, 'TetrisGrid.js'), 'utf8');
+    expect(
+      /['"]FIRE:BLOCK['"][\s\S]{0,120}applyBurn\s*\(/.test(src),
+      'FIRE:BLOCK → applyBurn 분기 누락',
+    ).toBe(true);
+    expect(
+      /['"]LASER:L['"][\s\S]{0,120}damageEnemy\s*\(/.test(src),
+      'LASER:L → damageEnemy 분기 누락',
+    ).toBe(true);
+    // hitShip 시그니처에 attacker 파라미터 존재
+    expect(/function\s+hitShip\s*\([^)]*attacker[^)]*\)/.test(src), 'hitShip(attacker) 파라미터 없음').toBe(true);
+  });
 });
