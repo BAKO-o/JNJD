@@ -13,7 +13,7 @@
  */
 'use strict';
 
-window.JNJD_VERSION = 'v1.3.0'; // P0-2: TetrisGrid.js → tetris/ 서브모듈 분할 (−59.0% LOC)
+window.JNJD_VERSION = 'v1.4.0'; // Phase B-1/B-2: Shape Synergy 9조합 데미지 배율 시스템 도입
 
 // Game.js 는 이 전역(window.JNJD_VERSION)을 단일 소스로 사용한다.
 // 새 버전 배포 시 이 파일 한 줄만 수정하면 됨.

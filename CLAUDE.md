@@ -1,7 +1,7 @@
 # CLAUDE.md — JNJD 프로젝트 지침
 
 > **프로젝트**: 잔해의 귀환 (JNJD) — HTML5 Canvas 우주 슈터 + 테트리스 모듈 조립 게임
-> **현재 버전**: v1.3.0 (2026-04-15, P0-2 TetrisGrid 분할 완료)
+> **현재 버전**: v1.4.0 (2026-04-15, Phase B-1/B-2 Shape Synergy 9조합 도입)
 > **스택**: Vanilla JavaScript (프레임워크·라이브러리·외부 에셋 0개)
 > **이 문서는 200줄 이내 유지**. 세부 지침은 `rules/`·`GUIDE.md` 참조.
 
@@ -41,7 +41,7 @@
 **단일 소스**: `jonanjadeul/js/version.js` — `window.JNJD_VERSION`
 
 ```js
-window.JNJD_VERSION = 'v1.3.0'; // 코멘트에 요약
+window.JNJD_VERSION = 'v1.4.0'; // 코멘트에 요약
 ```
 
 `index.html` 이 `version.js` 를 다른 모든 스크립트보다 먼저 로드한다. 다른 파일은 `window.JNJD_VERSION` 을 참조한다 (`Game.js` 의 `document.getElementById('version-display').textContent = window.JNJD_VERSION` 참조). **`const VERSION` 같은 레거시 상수를 다시 만들지 말 것** — 스모크 테스트가 실패시킨다.
@@ -122,6 +122,22 @@ Phase B 이후 검토: state.js 분리(pending/zoom 등 내부 가변 상태를 
 state-as-parameter 패턴으로 render 측에서는 상태를 매 호출 수신하므로 긴급도 낮음.
 
 상세: [`ANALYSIS.md`](ANALYSIS.md) / [`analysis/05-recommendations.md`](analysis/05-recommendations.md)
+
+### 4.1 Phase B — Shape Synergy (진행 중)
+
+"속성 × 모양" 2축 시너지 도입. 테트리스 배치 결과가 단순히 "무기가 추가되었다"에
+그치지 않고 **어떤 모양으로 배치했는가** 까지 의미를 갖도록 하는 게임 디자인 축.
+
+| 단계 | 상태 | 내용 |
+|---|---|---|
+| **B-1** | ✅ v1.4.0 | `MODULE_DEFS[*].shape` 자동 주입 (DOT/LINE/L/BLOCK/OTHER 5분류) — `tetris/defs.js` 의 `classifyShape()` |
+| **B-2** | ✅ v1.4.0 | `SynergySystem.addShapeAttr/removeShapeAttr` + `SHAPE_SYNERGY_TABLE` (9조합, 3속성 × 3모양) — damage 배율만 적용. 비수치 훅은 B-3. |
+| **B-3** | 🔜 | 관통·연쇄·크리·반사 등 비수치 훅을 `WeaponSystem` 과 연동. |
+| **B-4** | 🔜 | 플레이테스트 밸런싱. |
+
+9조합 = FIRE/ELECTRIC/LASER × LINE/L/BLOCK. KINETIC/NUKE 및 DOT/OTHER 는 shape
+시너지 비대상(단순한 기반 무기 · 특수 모양 → 프로토타입 범위 축소). 배율은 1.15~1.30
+구간에서 운영. 기존 "속성 쌍" 시너지와 **곱연산**으로 누적된다.
 
 ## 5. 세션 관리 팁 (Claude Code 모범 사례)
 
