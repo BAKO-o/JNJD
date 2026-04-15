@@ -1,7 +1,7 @@
 # CLAUDE.md — JNJD 프로젝트 지침
 
 > **프로젝트**: 잔해의 귀환 (JNJD) — HTML5 Canvas 우주 슈터 + 테트리스 모듈 조립 게임
-> **현재 버전**: v1.4.0 (2026-04-15, Phase B-1/B-2 Shape Synergy 9조합 도입)
+> **현재 버전**: v1.5.0 (2026-04-15, Phase B-3a Shape Synergy 비수치 훅 4종)
 > **스택**: Vanilla JavaScript (프레임워크·라이브러리·외부 에셋 0개)
 > **이 문서는 200줄 이내 유지**. 세부 지침은 `rules/`·`GUIDE.md` 참조.
 
@@ -41,7 +41,7 @@
 **단일 소스**: `jonanjadeul/js/version.js` — `window.JNJD_VERSION`
 
 ```js
-window.JNJD_VERSION = 'v1.4.0'; // 코멘트에 요약
+window.JNJD_VERSION = 'v1.5.0'; // 코멘트에 요약
 ```
 
 `index.html` 이 `version.js` 를 다른 모든 스크립트보다 먼저 로드한다. 다른 파일은 `window.JNJD_VERSION` 을 참조한다 (`Game.js` 의 `document.getElementById('version-display').textContent = window.JNJD_VERSION` 참조). **`const VERSION` 같은 레거시 상수를 다시 만들지 말 것** — 스모크 테스트가 실패시킨다.
@@ -131,8 +131,9 @@ state-as-parameter 패턴으로 render 측에서는 상태를 매 호출 수신�
 | 단계 | 상태 | 내용 |
 |---|---|---|
 | **B-1** | ✅ v1.4.0 | `MODULE_DEFS[*].shape` 자동 주입 (DOT/LINE/L/BLOCK/OTHER 5분류) — `tetris/defs.js` 의 `classifyShape()` |
-| **B-2** | ✅ v1.4.0 | `SynergySystem.addShapeAttr/removeShapeAttr` + `SHAPE_SYNERGY_TABLE` (9조합, 3속성 × 3모양) — damage 배율만 적용. 비수치 훅은 B-3. |
-| **B-3** | 🔜 | 관통·연쇄·크리·반사 등 비수치 훅을 `WeaponSystem` 과 연동. |
+| **B-2** | ✅ v1.4.0 | `SynergySystem.addShapeAttr/removeShapeAttr` + `SHAPE_SYNERGY_TABLE` (9조합, 3속성 × 3모양) — damage 배율만 적용. |
+| **B-3a** | ✅ v1.5.0 | `WeaponSystem._applyShapeHooks` — 탄 단위 비수치 훅 4종: LASER:LINE 관통+2 · ELECTRIC:LINE 연쇄+1 · FIRE:L 폭발 반경 ×1.3 · ELECTRIC:L 크리 25%×2.0. 17개 발사 지점 + orbit/radiator crit 분기. |
+| **B-3b** | 🔜 | 상태 필드가 필요한 훅: ELECTRIC:BLOCK EMP 펄스(적 stunned) · FIRE:BLOCK 피격 반사 DoT · LASER:L 피격 반사. |
 | **B-4** | 🔜 | 플레이테스트 밸런싱. |
 
 9조합 = FIRE/ELECTRIC/LASER × LINE/L/BLOCK. KINETIC/NUKE 및 DOT/OTHER 는 shape

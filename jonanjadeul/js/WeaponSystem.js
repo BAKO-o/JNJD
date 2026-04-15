@@ -102,6 +102,7 @@ const WeaponSystem = (() => {
       homingTarget: null,     // 호밍 타겟 적 객체
       chainCount:   0,        // 남은 체인 횟수
       pierceLeft:   0,        // 관통 횟수 (레일건 등, 0이면 첫 충돌시 소멸)
+      isCrit:       false,    // Phase B-3a — ELECTRIC:L 크리 성공 여부 (HUD/이펙트용)
     };
   }
 
@@ -164,6 +165,7 @@ const WeaponSystem = (() => {
     p.type     = 'cannon';
     p.splashR  = CANNON_SPLASH_R;
     p.attr     = null;
+    _applyShapeHooks(p);
   }
 
   /**
@@ -191,6 +193,7 @@ const WeaponSystem = (() => {
     p.type     = 'auto';
     p.splashR  = 0;
     p.attr     = weapon.attr ?? null;
+    _applyShapeHooks(p);
   }
 
   /**
@@ -225,6 +228,7 @@ const WeaponSystem = (() => {
       p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      _applyShapeHooks(p);
 
     } else if (fire === 'multi3') {
       const targets = activeEnemies
@@ -242,6 +246,7 @@ const WeaponSystem = (() => {
         p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME; p.color = def.color;
         p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'spread5') {
@@ -257,6 +262,7 @@ const WeaponSystem = (() => {
         p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.75; p.color = def.color;
         p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'spread7') {
@@ -273,6 +279,7 @@ const WeaponSystem = (() => {
         p.radius = PROJ_RADIUS + 1; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.85; p.color = def.color;
         p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'homing') {
@@ -285,6 +292,7 @@ const WeaponSystem = (() => {
       p.lifetime = PROJ_LIFETIME * 1.5; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = true;
       p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      _applyShapeHooks(p);
 
     } else if (fire === 'flak8') {
       for (let i = 0; i < 8; i++) {
@@ -296,6 +304,7 @@ const WeaponSystem = (() => {
         p.lifetime = def.range / (PROJ_SPEED * 0.7);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
         p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'mine') {
@@ -306,6 +315,7 @@ const WeaponSystem = (() => {
       p.lifetime = 15; p.color = def.color;
       p.type = 'cannon'; p.splashR = 60;
       p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      _applyShapeHooks(p);
 
     } else if (fire === 'chain3') {
       const p = acquireProjectile(); if (!p || !target) return;
@@ -317,6 +327,7 @@ const WeaponSystem = (() => {
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false;
       p.chainCount = 2; p.pierceLeft = 0; p.attr = secAttr;  // 2번 추가 체인
+      _applyShapeHooks(p);
 
     } else if (fire === 'chain5') {
       // 5연쇄 고데미지 충격파 (소멸자)
@@ -329,6 +340,7 @@ const WeaponSystem = (() => {
       p.lifetime = PROJ_LIFETIME; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false;
       p.chainCount = 4; p.pierceLeft = 0; p.attr = secAttr;  // 4번 추가 체인 (총 5회)
+      _applyShapeHooks(p);
 
     } else if (fire === 'railgun') {
       // 관통탄 — 최대 3적 관통, 고속·고데미지
@@ -341,6 +353,7 @@ const WeaponSystem = (() => {
       p.lifetime = PROJ_LIFETIME * 1.5; p.color = def.color;
       p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0;
       p.pierceLeft = 3; p.attr = secAttr;  // 최대 4적 관통
+      _applyShapeHooks(p);
 
     } else if (fire === 'nova12') {
       for (let i = 0; i < 12; i++) {
@@ -352,6 +365,7 @@ const WeaponSystem = (() => {
         p.lifetime = def.range / (PROJ_SPEED * 0.85);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
         p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'nova24') {
@@ -365,6 +379,7 @@ const WeaponSystem = (() => {
         p.lifetime = def.range / PROJ_SPEED;
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
         p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'multi5') {
@@ -384,6 +399,7 @@ const WeaponSystem = (() => {
         p.radius = PROJ_RADIUS; p.damage = def.damage * (player.damageMult * SynergySystem.getDamageMult());
         p.lifetime = PROJ_LIFETIME * 0.85; p.color = def.color;
         p.type = 'auto'; p.splashR = 0; p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'nova8') {
@@ -397,6 +413,7 @@ const WeaponSystem = (() => {
         p.lifetime = def.range / (PROJ_SPEED * 0.9);
         p.color = def.color; p.type = 'auto'; p.splashR = 0;
         p.isHoming = false; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+        _applyShapeHooks(p);
       }
 
     } else if (fire === 'nuke_shell') {
@@ -410,6 +427,42 @@ const WeaponSystem = (() => {
       p.lifetime = PROJ_LIFETIME * 2.5; p.color = def.color;
       p.type = 'cannon'; p.splashR = 100;
       p.isHoming = true; p.homingTarget = target; p.chainCount = 0; p.pierceLeft = 0; p.attr = secAttr;
+      _applyShapeHooks(p);
+    }
+  }
+
+  /**
+   * Phase B-3a — Shape Synergy 훅을 탄(projectile) 에 적용.
+   *
+   * SynergySystem.getShapeCounts() 를 조회해 (attr:shape) 쌍이 1개 이상 장착된
+   * 경우에만 훅을 주입. 탄이 생성된 직후, branch 종료 전에 호출한다.
+   *
+   *   LASER:LINE    → pierceLeft += 2       (관통+2, 기존 railgun 3 과 누적)
+   *   ELECTRIC:LINE → chainCount  += 1      (연쇄+1, chain3/chain5 와 누적)
+   *   FIRE:L        → splashR     *= 1.3    (splashR>0 인 탄만: 포탄·지뢰·핵탄두)
+   *   ELECTRIC:L    → 25% 확률로 damage*=2  (탄 단위 크리티컬 — isCrit 플래그)
+   *
+   * 데미지 배율(SynergySystem.getDamageMult)은 이미 탄 생성 시 곱해져 있음.
+   * 여기서는 "그 외" 비수치 훅 + 탄 단위 스토캐스틱 크리만 처리.
+   *
+   * @param {object} p — acquireProjectile() 로 얻은 활성화된 탄 객체
+   */
+  function _applyShapeHooks(p) {
+    if (!p || !p.active) return;
+    const SS = (typeof SynergySystem !== 'undefined') ? SynergySystem
+             : (typeof window !== 'undefined' && window.SynergySystem) ? window.SynergySystem
+             : null;
+    if (!SS || !SS.getShapeCounts) return;
+    const counts = SS.getShapeCounts();
+
+    if (counts['LASER:LINE'])    p.pierceLeft = (p.pierceLeft || 0) + 2;
+    if (counts['ELECTRIC:LINE']) p.chainCount = (p.chainCount || 0) + 1;
+    if (counts['FIRE:L'] && p.splashR > 0) p.splashR *= 1.3;
+    if (counts['ELECTRIC:L'] && Math.random() < 0.25) {
+      p.damage *= 2.0;
+      p.isCrit = true;
+    } else {
+      p.isCrit = false;
     }
   }
 
@@ -481,7 +534,12 @@ const WeaponSystem = (() => {
             if (!e.active) continue;
             const { dx, dy } = Collision.wrappedDelta(ox, oy, e.x, e.y, worldW, worldH);
             if (Math.hypot(dx, dy) < e.radius + 10) {
-              EnemyManager.damageEnemy(e, def.damage * (player.damageMult * SynergySystem.getDamageMult()), sec.attr);
+              // Phase B-3a: orbit/radiator 는 탄을 쓰지 않으므로 crit 만 여기서 굴림.
+              // pierce/chain/splash 훅은 탄 개념이 없어 미적용 (궤도 특성 그대로).
+              let dmg = def.damage * (player.damageMult * SynergySystem.getDamageMult());
+              const sc = SynergySystem.getShapeCounts ? SynergySystem.getShapeCounts() : null;
+              if (sc && sc['ELECTRIC:L'] && Math.random() < 0.25) dmg *= 2.0;
+              EnemyManager.damageEnemy(e, dmg, sec.attr);
               sec.orbitTimers[i] = 0.5;
               break;
             }
@@ -669,7 +727,13 @@ const WeaponSystem = (() => {
     return ev;
   }
 
-  return { init, update, draw, upgradeWeapon, getWeaponStat, addSecondary, removeSecondary, reset, setZoom, setCooldownMult, consumeHitEvents, SECONDARY_DEFS };
+  return {
+    init, update, draw, upgradeWeapon, getWeaponStat,
+    addSecondary, removeSecondary, reset, setZoom, setCooldownMult,
+    consumeHitEvents, SECONDARY_DEFS,
+    // Phase B-3a — 테스트/디버그 노출
+    _applyShapeHooks,
+  };
 })();
 
 window.WeaponSystem = WeaponSystem;

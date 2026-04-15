@@ -162,4 +162,84 @@ describe('JNJD 스모크 테스트', () => {
     expect(defs.MODULE_DEFS.TITAN_HULL.shape).toBe('LINE');        // 수직 I4
     expect(defs.MODULE_DEFS.RESONANCE_CORE.shape).toBe('OTHER');   // 4셀 T자
   });
+
+  /**
+   * 6. Phase B-3a — WeaponSystem._applyShapeHooks 탄 단위 비수치 훅
+   *    SynergySystem 을 먼저 로드하고, WeaponSystem 을 같은 sandbox 에 로드한 뒤:
+   *    - LASER:LINE 활성 → pierceLeft += 2
+   *    - ELECTRIC:LINE 활성 → chainCount += 1
+   *    - FIRE:L 활성 + splashR>0 → splashR *= 1.3 (splashR=0 탄은 변화 없음)
+   *    - ELECTRIC:L 활성 + Math.random 을 0 으로 고정 → damage *= 2.0, isCrit=true
+   *    - ELECTRIC:L 활성 + Math.random 을 0.9 로 고정 → damage 그대로, isCrit=false
+   */
+  it('WeaponSystem._applyShapeHooks 가 4종 훅을 올바르게 적용한다', () => {
+    const synJs = readFileSync(resolve(JS_DIR, 'SynergySystem.js'), 'utf8');
+    const wpnJs = readFileSync(resolve(JS_DIR, 'WeaponSystem.js'), 'utf8');
+    const sandbox = { window: {}, Math: Object.create(Math) };
+    createContext(sandbox);
+    runInContext(synJs, sandbox);
+    runInContext(wpnJs, sandbox);
+    const W = sandbox.window.WeaponSystem;
+    const S = sandbox.window.SynergySystem;
+    expect(W && W._applyShapeHooks, 'WeaponSystem._applyShapeHooks 가 노출되지 않음').toBeTruthy();
+
+    // ── LASER:LINE → pierceLeft +2
+    S.reset();
+    S.addShapeAttr('LASER', 'LINE');
+    const p1 = { active: true, damage: 1, pierceLeft: 0, chainCount: 0, splashR: 0, isCrit: false };
+    W._applyShapeHooks(p1);
+    expect(p1.pierceLeft).toBe(2);
+
+    // ── ELECTRIC:LINE → chainCount +1 (기존 chain 값 누적)
+    S.reset();
+    S.addShapeAttr('ELECTRIC', 'LINE');
+    const p2 = { active: true, damage: 1, pierceLeft: 0, chainCount: 2, splashR: 0, isCrit: false };
+    W._applyShapeHooks(p2);
+    expect(p2.chainCount).toBe(3);
+
+    // ── FIRE:L → splashR *= 1.3 (splashR>0 인 탄만)
+    S.reset();
+    S.addShapeAttr('FIRE', 'L');
+    const cannon = { active: true, damage: 1, pierceLeft: 0, chainCount: 0, splashR: 100, isCrit: false };
+    const auto   = { active: true, damage: 1, pierceLeft: 0, chainCount: 0, splashR: 0,   isCrit: false };
+    W._applyShapeHooks(cannon);
+    W._applyShapeHooks(auto);
+    expect(cannon.splashR).toBeCloseTo(130, 5);
+    expect(auto.splashR).toBe(0);   // 자동무기 탄은 splashR 0 유지
+
+    // ── ELECTRIC:L 크리: Math.random 을 고정해 둘 다 검증
+    S.reset();
+    S.addShapeAttr('ELECTRIC', 'L');
+    // 성공: random=0 → 0<0.25 → 크리
+    sandbox.Math.random = () => 0;
+    const pCrit = { active: true, damage: 5, pierceLeft: 0, chainCount: 0, splashR: 0, isCrit: false };
+    W._applyShapeHooks(pCrit);
+    expect(pCrit.damage).toBe(10);
+    expect(pCrit.isCrit).toBe(true);
+    // 실패: random=0.9 → 크리 미발동
+    sandbox.Math.random = () => 0.9;
+    const pMiss = { active: true, damage: 5, pierceLeft: 0, chainCount: 0, splashR: 0, isCrit: false };
+    W._applyShapeHooks(pMiss);
+    expect(pMiss.damage).toBe(5);
+    expect(pMiss.isCrit).toBe(false);
+
+    // ── shape 시너지 비활성 → 아무 훅도 적용되지 않음
+    S.reset();
+    const pNone = { active: true, damage: 1, pierceLeft: 0, chainCount: 0, splashR: 50, isCrit: false };
+    W._applyShapeHooks(pNone);
+    expect(pNone.pierceLeft).toBe(0);
+    expect(pNone.chainCount).toBe(0);
+    expect(pNone.splashR).toBe(50);
+  });
+
+  /**
+   * 7. Phase B-3a — WeaponSystem 소스에 17개 발사 지점 + _applyShapeHooks 호출
+   *    regression guard: 누군가 새 무기 분기를 추가하면서 훅을 빼먹지 않도록.
+   *    (fireCannon + fire + _fireSecondary 의 15개 분기 + nuke_shell 등 = 17)
+   */
+  it('WeaponSystem 에 _applyShapeHooks 호출이 최소 17곳 이상 존재한다', () => {
+    const wpn = readFileSync(resolve(JS_DIR, 'WeaponSystem.js'), 'utf8');
+    const calls = wpn.match(/_applyShapeHooks\s*\(\s*p\s*\)\s*;/g) || [];
+    expect(calls.length, `_applyShapeHooks 호출: ${calls.length} (기대: ≥17)`).toBeGreaterThanOrEqual(17);
+  });
 });
